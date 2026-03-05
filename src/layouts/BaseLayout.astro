@@ -139,7 +139,7 @@ const canonicalUrl = canonical || Astro.url.href
       })} />
     )}
 
-    <!-- Google Analytics 4 (brand=skids namespace) -->
+    <!-- Google Analytics 4 (brand=skids namespace — STRICT COMPLIANCE) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-T5E4SKLMG3"></script>
     <script is:inline>
       window.dataLayer = window.dataLayer || [];
@@ -147,11 +147,12 @@ const canonicalUrl = canonical || Astro.url.href
       gtag('js', new Date());
       gtag('config', 'G-T5E4SKLMG3', {
         brand: 'skids',
+        center: 'online',
         send_page_view: true
       });
     </script>
 
-    <!-- Meta Pixel (brand=skids namespace) -->
+    <!-- Meta Pixel (brand=skids namespace — STRICT COMPLIANCE) -->
     <script is:inline>
       !function(f,b,e,v,n,t,s)
       {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -162,20 +163,145 @@ const canonicalUrl = canonical || Astro.url.href
       s.parentNode.insertBefore(t,s)}(window, document,'script',
       'https://connect.facebook.net/en_US/fbevents.js');
       fbq('init', '9115270055242145');
-      fbq('track', 'PageView', {}, {eventID: undefined});
+      fbq('track', 'PageView', { brand: 'skids' });
     </script>
     <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=9115270055242145&ev=PageView&noscript=1" /></noscript>
 
     <!-- Cloudflare Web Analytics (brand=skids) -->
     <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "309a8c94a071430fbbec01c920007bda"}'></script>
 
-    <!-- SKIDS Analytics Helper (brand namespace for all custom events) -->
+    <!--
+      SKIDS Analytics SDK (brand=skids STRICT COMPLIANCE)
+      ====================================================
+      Rules enforced:
+      1. brand=skids on EVERY event — no exceptions
+      2. GA4 params: brand, center, funnel_stage, asset_code
+      3. Meta Pixel custom_data: brand: "skids"
+      4. UTM campaign must start with "skids_" — non-compliant URLs flagged
+      5. Lead capture requires brand field — never blank
+    -->
     <script is:inline>
-      window.skidsTrack = function(eventName, params) {
-        var p = Object.assign({ brand: 'skids' }, params || {});
-        if (typeof gtag === 'function') gtag('event', eventName, p);
-        if (typeof fbq === 'function') fbq('trackCustom', eventName, p);
-      };
+      (function() {
+        var BRAND = 'skids';
+
+        // ─── UTM Parser + Validator ───
+        function parseUTM() {
+          var p = new URLSearchParams(window.location.search);
+          var campaign = p.get('utm_campaign');
+          if (campaign && campaign.indexOf('skids_') !== 0) {
+            console.warn('[SKIDS] NON-COMPLIANT UTM: campaign="' + campaign +
+              '" must start with "skids_". Format: skids_<service>_<city>_<offer>_<month>');
+          }
+          return {
+            utm_source: p.get('utm_source') || undefined,
+            utm_medium: p.get('utm_medium') || undefined,
+            utm_campaign: campaign || undefined,
+            utm_content: p.get('utm_content') || undefined,
+            asset: p.get('asset') || undefined
+          };
+        }
+
+        // Store UTM for session
+        var utm = parseUTM();
+        if (utm.utm_source) {
+          try { sessionStorage.setItem('skids_utm', JSON.stringify(utm)); } catch(e) {}
+        }
+
+        // ─── skidsTrack: Unified event tracking (GA4 + Meta + console) ───
+        // MANDATORY params: brand (auto-injected), funnel_stage
+        // OPTIONAL params: center, asset_code, + any custom params
+        window.skidsTrack = function(eventName, params) {
+          var p = Object.assign({
+            brand: BRAND,
+            center: 'online'
+          }, params || {});
+
+          // Warn if funnel_stage missing
+          if (!p.funnel_stage) {
+            console.warn('[SKIDS] Event "' + eventName + '" missing funnel_stage. ' +
+              'Required: awareness|interest|consideration|intent|conversion|retention');
+          }
+
+          // Merge UTM if available
+          var savedUTM;
+          try { savedUTM = JSON.parse(sessionStorage.getItem('skids_utm') || '{}'); } catch(e) { savedUTM = {}; }
+          if (savedUTM.utm_source) {
+            p.utm_source = p.utm_source || savedUTM.utm_source;
+            p.utm_medium = p.utm_medium || savedUTM.utm_medium;
+            p.utm_campaign = p.utm_campaign || savedUTM.utm_campaign;
+            p.asset_code = p.asset_code || savedUTM.asset;
+          }
+
+          // Fire to GA4
+          if (typeof gtag === 'function') {
+            gtag('event', eventName, p);
+          }
+
+          // Fire to Meta Pixel (brand in custom_data)
+          if (typeof fbq === 'function') {
+            fbq('trackCustom', eventName, p);
+          }
+        };
+
+        // ─── skidsCaptureLead: Lead capture with brand=skids enforced ───
+        // For Neodove CRM integration (server-side push)
+        window.skidsCaptureLead = function(leadData) {
+          var lead = Object.assign({
+            brand: BRAND,
+            center: 'online',
+            created_at: new Date().toISOString()
+          }, leadData);
+
+          // Validate required fields
+          var required = ['brand', 'name', 'phone', 'source', 'funnel_stage'];
+          var missing = required.filter(function(f) { return !lead[f]; });
+          if (missing.length > 0) {
+            console.error('[SKIDS] Lead capture BLOCKED — missing required fields: ' + missing.join(', '));
+            return null;
+          }
+
+          // Merge UTM
+          var savedUTM;
+          try { savedUTM = JSON.parse(sessionStorage.getItem('skids_utm') || '{}'); } catch(e) { savedUTM = {}; }
+          lead.utm_source = lead.source || savedUTM.utm_source || 'organic';
+          lead.utm_campaign = lead.campaign || savedUTM.utm_campaign;
+
+          // Fire conversion event
+          window.skidsTrack('lead_capture', {
+            funnel_stage: lead.funnel_stage,
+            asset_code: lead.asset_code,
+            center: lead.center
+          });
+
+          // Post to server API for Neodove + BHASH
+          fetch('/api/lead', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(lead)
+          }).catch(function(err) {
+            console.error('[SKIDS] Lead API error:', err);
+          });
+
+          return lead;
+        };
+
+        // ─── Auto-track page context ───
+        window.skidsTrack('page_view', {
+          funnel_stage: (function() {
+            var path = window.location.pathname;
+            if (path === '/') return 'awareness';
+            if (path.indexOf('/blog') === 0) return 'awareness';
+            if (path.indexOf('/discover') === 0) return 'interest';
+            if (path.indexOf('/timeline') === 0) return 'consideration';
+            if (path.indexOf('/services') === 0) return 'intent';
+            if (path.indexOf('/me') === 0) return 'retention';
+            return 'awareness';
+          })(),
+          asset_code: window.location.pathname.replace(/\//g, '_').replace(/^_|_$/g, '') || 'home',
+          page_path: window.location.pathname
+        });
+
+      })();
     </script>
 
     <style is:global>

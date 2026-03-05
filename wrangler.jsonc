@@ -26,11 +26,35 @@
     "binding": "AI"
   },
 
-  // Environment variables
+  // Environment variables (non-secret)
   "vars": {
     "FIREBASE_PROJECT_ID": "skidsparent",
-    "SITE_URL": "https://skidsparent.pages.dev"
+    "SITE_URL": "https://skidsparent.pages.dev",
+    "BRAND": "skids"
   }
+
+  // ──────────────────────────────────────────────────────
+  // SECRETS (set via: wrangler pages secret put <KEY>)
+  // Do NOT put secret values in this file.
+  //
+  // BHASH WhatsApp API:
+  //   BHASH_USER     = Santaan_01
+  //   BHASH_PASS     = Santaan@123
+  //   BHASH_SENDER   = BUZWAP
+  //
+  // Neodove CRM:
+  //   NEODOVE_CUSTOM_INTEGRATION_URL = https://fd47b1c5-527b-47b4-adc4-40e5f3a3395e.neodove.com/integration/custom/b21e9337-ebc4-4db2-bde7-3638ee6bd791/leads
+  //   NEODOVE_WEBHOOK_SECRET         = 941395c0160f70ca0c9ed94dca486b7e0db5eb02ae7d5f8353d2af820fdedb54
+  //
+  // Razorpay:
+  //   RAZORPAY_KEY_ID     = rzp_live_SMF2s2zO79dVSr
+  //   RAZORPAY_KEY_SECRET = (set via secret)
+  //
+  // Firebase Admin:
+  //   FIREBASE_ADMIN_KEY  = (service account JSON)
+  //
+  // To set: cd skids-parent && npx wrangler pages secret put BHASH_USER
+  // ──────────────────────────────────────────────────────
 
   // R2 bucket (skidsparent) — on account 9f4998a66a5d7bd7a230d0222544fbe6
   // Will add when needed for Phase 3 (report uploads)
