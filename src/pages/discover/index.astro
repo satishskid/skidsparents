@@ -2,30 +2,12 @@
 import BaseLayout from '@/layouts/BaseLayout.astro'
 import Navbar from '@/components/common/Navbar.astro'
 import Footer from '@/components/common/Footer.astro'
+import { ORGANS } from '@/lib/content/organs'
 
 export const prerender = true
 
-const bodySystems = [
-  { slug: 'heart', emoji: '❤️', name: 'Heart & Circulation', fact: 'Beats 100,000 times a day', duration: '15 min', gradient: 'from-red-500 to-rose-500' },
-  { slug: 'brain', emoji: '🧠', name: 'Brain & Nervous System', fact: '86 billion neurons, 1M connections/sec', duration: '20 min', gradient: 'from-purple-500 to-violet-500' },
-  { slug: 'lungs', emoji: '🫁', name: 'Lungs & Breathing', fact: '20,000 breaths every single day', duration: '15 min', gradient: 'from-sky-500 to-blue-500' },
-  { slug: 'eyes', emoji: '👁️', name: 'Eyes & Vision', fact: '80% of learning is through vision', duration: '15 min', gradient: 'from-amber-500 to-yellow-500' },
-  { slug: 'ears', emoji: '👂', name: 'Ears & Hearing', fact: 'Contains the 3 smallest bones in the body', duration: '15 min', gradient: 'from-indigo-500 to-blue-500' },
-  { slug: 'digestive', emoji: '🍎', name: 'Digestive System', fact: '30 feet of incredible food processing', duration: '18 min', gradient: 'from-orange-500 to-amber-500' },
-  { slug: 'skin', emoji: '🛡️', name: 'Skin & Protection', fact: 'Completely renews every 28 days', duration: '15 min', gradient: 'from-pink-500 to-rose-500' },
-  { slug: 'muscles', emoji: '🦴', name: 'Muscles & Bones', fact: '600+ muscles, 206 bones — 5x stronger than steel', duration: '20 min', gradient: 'from-emerald-500 to-green-500' },
-  { slug: 'immune', emoji: '🛡️', name: 'Immune System', fact: 'Makes 25 billion new white cells daily', duration: '18 min', gradient: 'from-teal-500 to-cyan-500' },
-  { slug: 'hormones', emoji: '⚡', name: 'Hormones & Growth', fact: '50+ chemical messengers controlling growth', duration: '16 min', gradient: 'from-yellow-500 to-orange-500' },
-  { slug: 'kidneys', emoji: '💧', name: 'Kidneys & Filtering', fact: 'Filters 50 gallons of blood daily', duration: '15 min', gradient: 'from-cyan-500 to-sky-500' },
-]
-
-const developmentDomains = [
-  { slug: 'learning', emoji: '📚', name: 'Learning & Cognition', fact: 'Working memory holds 7±2 items at once', duration: '20 min', gradient: 'from-violet-500 to-purple-500' },
-  { slug: 'language', emoji: '🗣️', name: 'Language Development', fact: 'Children learn 9 new words every day', duration: '18 min', gradient: 'from-rose-500 to-pink-500' },
-  { slug: 'emotions', emoji: '💛', name: 'Social-Emotional', fact: 'Empathy begins developing at 18 months', duration: '20 min', gradient: 'from-fuchsia-500 to-pink-500' },
-  { slug: 'movement', emoji: '🏃', name: 'Motor Development', fact: '3 balance systems working together', duration: '18 min', gradient: 'from-lime-500 to-green-500' },
-  { slug: 'senses', emoji: '🌈', name: 'Sensory Processing', fact: 'Brain processes 11 million bits per second', duration: '20 min', gradient: 'from-blue-500 to-indigo-500' },
-]
+const bodySystems = ORGANS.slice(0, 11)
+const developmentDomains = ORGANS.slice(11)
 ---
 
 <BaseLayout
@@ -66,7 +48,7 @@ const developmentDomains = [
                 <h3 class="font-display font-bold text-gray-900 group-hover:text-green-600 transition-colors">
                   {organ.name}
                 </h3>
-                <p class="mt-1 text-sm text-gray-500">{organ.fact}</p>
+                <p class="mt-1 text-sm text-gray-500">{organ.wonderFact}</p>
                 <div class="mt-3 flex items-center gap-3 text-xs text-gray-400">
                   <span class="flex items-center gap-1">
                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -103,7 +85,7 @@ const developmentDomains = [
                 <h3 class="font-display font-bold text-gray-900 group-hover:text-green-600 transition-colors">
                   {domain.name}
                 </h3>
-                <p class="mt-1 text-sm text-gray-500">{domain.fact}</p>
+                <p class="mt-1 text-sm text-gray-500">{domain.wonderFact}</p>
                 <div class="mt-3 flex items-center gap-3 text-xs text-gray-400">
                   <span class="flex items-center gap-1">
                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

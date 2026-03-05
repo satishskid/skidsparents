@@ -1,5 +1,5 @@
 /**
- * POST /api/admin/init-db — Create the leads table if it doesn't exist
+ * POST /api/admin/init-db — Create all tables if they don't exist
  * Safe to call multiple times (IF NOT EXISTS).
  */
 
@@ -39,11 +39,40 @@ CREATE TABLE IF NOT EXISTS leads (
 );
 `
 
+const CREATE_PARENTS_TABLE = `
+CREATE TABLE IF NOT EXISTS parents (
+  id TEXT PRIMARY KEY,
+  firebase_uid TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL DEFAULT '',
+  email TEXT,
+  phone TEXT,
+  avatar_url TEXT,
+  city TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+`
+
+const CREATE_CHILDREN_TABLE = `
+CREATE TABLE IF NOT EXISTS children (
+  id TEXT PRIMARY KEY,
+  parent_id TEXT NOT NULL REFERENCES parents(id),
+  name TEXT NOT NULL,
+  dob TEXT NOT NULL,
+  gender TEXT,
+  photo_url TEXT,
+  blood_group TEXT,
+  allergies_json TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+`
+
 const CREATE_INDEXES = `
 CREATE INDEX IF NOT EXISTS idx_leads_brand ON leads(brand);
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
 CREATE INDEX IF NOT EXISTS idx_leads_created ON leads(created_at);
 CREATE INDEX IF NOT EXISTS idx_leads_phone ON leads(phone);
+CREATE INDEX IF NOT EXISTS idx_parents_firebase ON parents(firebase_uid);
+CREATE INDEX IF NOT EXISTS idx_children_parent ON children(parent_id);
 `
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -61,10 +90,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     await db.exec(CREATE_LEADS_TABLE)
+    await db.exec(CREATE_PARENTS_TABLE)
+    await db.exec(CREATE_CHILDREN_TABLE)
     await db.exec(CREATE_INDEXES)
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Leads table ready' }),
+      JSON.stringify({ success: true, message: 'All tables ready (leads, parents, children)' }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
   } catch (err) {

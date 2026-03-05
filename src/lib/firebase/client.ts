@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from 'firebase/app'
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithPhoneNumber, RecaptchaVerifier, type User } from 'firebase/auth'
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithPhoneNumber, RecaptchaVerifier, type User, type ConfirmationResult } from 'firebase/auth'
 
 const firebaseConfig = {
   apiKey: 'AIzaSyCeTY7TJeD7ZIB21SiYhoGp14rw9sVecPE',
@@ -33,6 +33,14 @@ export async function getIdToken(): Promise<string | null> {
 /** Sign out */
 export async function signOut(): Promise<void> {
   await auth.signOut()
+}
+
+/** Send phone OTP — returns ConfirmationResult to verify later */
+export async function sendPhoneOTP(phoneNumber: string, containerId: string): Promise<ConfirmationResult> {
+  const recaptcha = new RecaptchaVerifier(auth, containerId, { size: 'invisible' })
+  // Ensure phone has +91 prefix
+  const formatted = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber.replace(/\D/g, '')}`
+  return signInWithPhoneNumber(auth, formatted, recaptcha)
 }
 
 /** Listen to auth state changes */
