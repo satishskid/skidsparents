@@ -100,7 +100,7 @@ const categoryColors: Record<string, string> = {
                 class="blog-card card-hover group block rounded-2xl overflow-hidden bg-white border border-gray-100 shadow-sm"
                 data-category={blog.category || ''}
               >
-                <a href={`https://skids.clinic/blog/${blog.blogId}`} target="_blank" rel="noopener">
+                <a href={`/blog/${blog.blogId}`}>
                   {blog.thumbnail && (
                     <div class="aspect-[16/9] overflow-hidden bg-gray-100">
                       <img

@@ -1,4 +1,6 @@
 ---
+import { SOCIAL, BRAND } from '@/lib/config/social'
+
 interface Props {
   title: string
   description?: string
@@ -6,6 +8,16 @@ interface Props {
   ogType?: string
   canonical?: string
   noIndex?: boolean
+  /** For blog pages — article structured data */
+  article?: {
+    headline: string
+    author: string
+    datePublished: string
+    dateModified?: string
+    image: string
+    category: string
+    description: string
+  }
 }
 
 const {
@@ -15,9 +27,10 @@ const {
   ogType = 'website',
   canonical,
   noIndex = false,
+  article,
 } = Astro.props
 
-const siteUrl = 'https://parent.skids.clinic'
+const siteUrl = BRAND.siteUrl
 const fullTitle = title === 'SKIDS Parent' ? title : `${title} | SKIDS Parent`
 const ogImageUrl = ogImage.startsWith('http') ? ogImage : `${siteUrl}${ogImage}`
 const canonicalUrl = canonical || Astro.url.href
@@ -46,6 +59,7 @@ const canonicalUrl = canonical || Astro.url.href
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content={SOCIAL.twitterHandle} />
     <meta name="twitter:title" content={fullTitle} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImageUrl} />
@@ -69,19 +83,100 @@ const canonicalUrl = canonical || Astro.url.href
       rel="stylesheet"
     />
 
-    <!-- Structured Data -->
+    <!-- Structured Data — Organization -->
     <script type="application/ld+json" set:html={JSON.stringify({
       "@context": "https://schema.org",
       "@type": "Organization",
-      "name": "SKIDS Parent",
+      "name": BRAND.name,
+      "legalName": BRAND.legalName,
       "url": siteUrl,
-      "logo": `${siteUrl}/images/logo.png`,
-      "description": "Evidence-based child health platform for modern parents",
+      "logo": `${siteUrl}/icons/icon-512.png`,
+      "description": BRAND.tagline,
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": SOCIAL.whatsapp,
+        "contactType": "customer service",
+        "availableLanguage": ["English", "Hindi"]
+      },
       "sameAs": [
-        "https://skids.clinic",
-        "https://medium.com/@skids_health"
+        SOCIAL.instagram,
+        SOCIAL.twitter,
+        SOCIAL.facebook,
+        SOCIAL.youtube,
+        SOCIAL.linkedin,
+        SOCIAL.medium,
+        SOCIAL.clinic
       ]
     })} />
+
+    {/* Structured Data — Article (for blog pages) */}
+    {article && (
+      <script type="application/ld+json" set:html={JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        "headline": article.headline,
+        "image": article.image,
+        "author": {
+          "@type": "Person",
+          "name": article.author
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": BRAND.name,
+          "logo": {
+            "@type": "ImageObject",
+            "url": `${siteUrl}/icons/icon-512.png`
+          }
+        },
+        "datePublished": article.datePublished,
+        "dateModified": article.dateModified || article.datePublished,
+        "description": article.description,
+        "articleSection": article.category,
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": canonicalUrl
+        }
+      })} />
+    )}
+
+    <!-- Google Analytics 4 (brand=skids namespace) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-T5E4SKLMG3"></script>
+    <script is:inline>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-T5E4SKLMG3', {
+        brand: 'skids',
+        send_page_view: true
+      });
+    </script>
+
+    <!-- Meta Pixel (brand=skids namespace) -->
+    <script is:inline>
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', '9115270055242145');
+      fbq('track', 'PageView', {}, {eventID: undefined});
+    </script>
+    <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=9115270055242145&ev=PageView&noscript=1" /></noscript>
+
+    <!-- Cloudflare Web Analytics (brand=skids) -->
+    <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "309a8c94a071430fbbec01c920007bda"}'></script>
+
+    <!-- SKIDS Analytics Helper (brand namespace for all custom events) -->
+    <script is:inline>
+      window.skidsTrack = function(eventName, params) {
+        var p = Object.assign({ brand: 'skids' }, params || {});
+        if (typeof gtag === 'function') gtag('event', eventName, p);
+        if (typeof fbq === 'function') fbq('trackCustom', eventName, p);
+      };
+    </script>
 
     <style is:global>
       @import '../styles/global.css';

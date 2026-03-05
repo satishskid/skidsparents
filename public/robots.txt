@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://parent.skids.clinic/sitemap-index.xml

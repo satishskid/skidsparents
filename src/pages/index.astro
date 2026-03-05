@@ -104,7 +104,7 @@ const metaPrompts = {
           </p>
 
           <a
-            href={`https://skids.clinic/blog/${heroBlog.blogId}`}
+            href={`/blog/${heroBlog.blogId}`}
             target="_blank"
             rel="noopener"
             class="inline-flex self-start items-center gap-2 px-6 py-3 rounded-xl bg-white text-gray-900 font-semibold text-sm hover:bg-gray-100 transition-colors shadow-lg"
@@ -365,7 +365,7 @@ const metaPrompts = {
             category={blog.category}
             author={blog.author}
             date={blog.createdAt}
-            link={`https://skids.clinic/blog/${blog.blogId}`}
+            link={`/blog/${blog.blogId}`}
           />
         ))}
       </ContentRow>
@@ -383,7 +383,7 @@ const metaPrompts = {
           Like a timeline for health — milestone tracking, expert guidance, and a complete record that grows with your child.
         </p>
         <div class="mt-8">
-          <a href="/dashboard" class="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-white text-gray-900 font-bold text-sm hover:bg-gray-100 transition-colors shadow-lg">
+          <a href="/timeline" class="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-white text-gray-900 font-bold text-sm hover:bg-gray-100 transition-colors shadow-lg">
             Start Your Child's Timeline
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
