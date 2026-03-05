@@ -1,0 +1,141 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import Navbar from '@/components/common/Navbar.astro'
+import Footer from '@/components/common/Footer.astro'
+import MobileTabBar from '@/components/common/MobileTabBar.astro'
+---
+
+<BaseLayout
+  title="My Profile"
+  description="Manage your child's profile, settings, and preferences on SKIDS Parent."
+>
+  <Navbar />
+
+  <main class="max-w-2xl mx-auto px-4 py-6 pb-24 md:pb-12">
+    <!-- Profile Card -->
+    <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-100">
+      <div class="flex items-center gap-4">
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-green-500/20">
+          P
+        </div>
+        <div>
+          <h1 class="text-xl font-display font-bold text-gray-900">My Child</h1>
+          <p class="text-sm text-gray-500 mt-0.5">Add your child's details to get personalized guidance</p>
+        </div>
+      </div>
+      <button class="mt-4 w-full py-2.5 px-4 rounded-xl bg-white text-green-700 text-sm font-semibold border border-green-200 hover:bg-green-50 transition-colors">
+        Set Up Child Profile
+      </button>
+    </div>
+
+    <!-- Quick Stats (placeholder) -->
+    <div class="mt-6 grid grid-cols-3 gap-3">
+      <div class="bg-white rounded-xl p-4 border border-gray-100 text-center">
+        <div class="text-2xl font-bold text-green-600">0</div>
+        <div class="text-[10px] text-gray-500 mt-1 font-medium uppercase tracking-wide">Timeline Notes</div>
+      </div>
+      <div class="bg-white rounded-xl p-4 border border-gray-100 text-center">
+        <div class="text-2xl font-bold text-blue-600">0</div>
+        <div class="text-[10px] text-gray-500 mt-1 font-medium uppercase tracking-wide">Milestones</div>
+      </div>
+      <div class="bg-white rounded-xl p-4 border border-gray-100 text-center">
+        <div class="text-2xl font-bold text-purple-600">0</div>
+        <div class="text-[10px] text-gray-500 mt-1 font-medium uppercase tracking-wide">Habits Tracked</div>
+      </div>
+    </div>
+
+    <!-- Menu Items -->
+    <div class="mt-6 space-y-2">
+      <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-3">Settings</h2>
+
+      <a href="/timeline" class="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors group">
+        <div class="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center text-green-600 group-hover:bg-green-100 transition-colors">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+          </svg>
+        </div>
+        <div class="flex-1">
+          <div class="text-sm font-semibold text-gray-900">Health Timeline</div>
+          <div class="text-xs text-gray-500">Chat with Dr. SKIDS & view your child's record</div>
+        </div>
+        <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+        </svg>
+      </a>
+
+      <a href="/discover" class="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors group">
+        <div class="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 group-hover:bg-blue-100 transition-colors">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+          </svg>
+        </div>
+        <div class="flex-1">
+          <div class="text-sm font-semibold text-gray-900">Discover</div>
+          <div class="text-xs text-gray-500">Explore organs, habits & development guides</div>
+        </div>
+        <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+        </svg>
+      </a>
+
+      <a href="/services" class="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors group">
+        <div class="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600 group-hover:bg-purple-100 transition-colors">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016A3.001 3.001 0 0021 9.349m-18 0a2.999 2.999 0 00.74-1.716L4.636 3.13A1.126 1.126 0 015.756 2.25h12.489a1.126 1.126 0 011.12.879l.895 4.503a2.999 2.999 0 00.74 1.717" />
+          </svg>
+        </div>
+        <div class="flex-1">
+          <div class="text-sm font-semibold text-gray-900">Services</div>
+          <div class="text-xs text-gray-500">Telemedicine, consultations & more</div>
+        </div>
+        <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+        </svg>
+      </a>
+
+      <a href="/about" class="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors group">
+        <div class="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 group-hover:bg-amber-100 transition-colors">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+          </svg>
+        </div>
+        <div class="flex-1">
+          <div class="text-sm font-semibold text-gray-900">About SKIDS</div>
+          <div class="text-xs text-gray-500">Our mission, team & evidence-based approach</div>
+        </div>
+        <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+        </svg>
+      </a>
+    </div>
+
+    <!-- Notifications -->
+    <div class="mt-6 space-y-2">
+      <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-3">Notifications</h2>
+
+      <div class="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-gray-100">
+        <div class="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center text-red-500">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+          </svg>
+        </div>
+        <div class="flex-1">
+          <div class="text-sm font-semibold text-gray-900">Push Notifications</div>
+          <div class="text-xs text-gray-500">Get milestone reminders & health tips</div>
+        </div>
+        <div class="w-10 h-6 rounded-full bg-gray-200 relative cursor-pointer">
+          <div class="absolute left-0.5 top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- App Info -->
+    <div class="mt-8 text-center text-xs text-gray-400">
+      <p>SKIDS Parent v1.0</p>
+      <p class="mt-1">Evidence-based child health for modern parents</p>
+    </div>
+  </main>
+
+  <Footer />
+  <MobileTabBar />
+</BaseLayout>

@@ -1,0 +1,56 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import Navbar from '@/components/common/Navbar.astro'
+import MobileTabBar from '@/components/common/MobileTabBar.astro'
+import ChatWidget from '@/components/chat/ChatWidget'
+---
+
+<BaseLayout
+  title="Timeline"
+  description="Your child's health timeline — talk to Dr. SKIDS, track milestones, log observations, and build the most complete health record for your pediatrician."
+>
+  <Navbar />
+
+  <main class="timeline-main">
+    <!-- Header — visible on all screens -->
+    <div class="bg-gradient-to-r from-green-600 to-emerald-600 text-white">
+      <div class="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-lg font-bold">S</div>
+        <div>
+          <h1 class="text-base font-bold">Dr. SKIDS</h1>
+          <p class="text-xs text-white/70">Your child's health timeline &mdash; every note builds their story</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Full-screen chat -->
+    <div class="chat-container">
+      <ChatWidget fullScreen={true} client:load />
+    </div>
+  </main>
+
+  <MobileTabBar />
+</BaseLayout>
+
+<style>
+  .timeline-main {
+    display: flex;
+    flex-direction: column;
+    /* Full viewport minus navbar (56px) minus mobile tab bar (56px + safe area) */
+    height: calc(100vh - 56px);
+    height: calc(100dvh - 56px);
+  }
+
+  .chat-container {
+    flex: 1;
+    min-height: 0;
+    /* On mobile, account for bottom tab bar */
+    padding-bottom: 56px;
+  }
+
+  @media (min-width: 768px) {
+    .chat-container {
+      padding-bottom: 0;
+    }
+  }
+</style>

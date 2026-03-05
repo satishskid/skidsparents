@@ -2,455 +2,422 @@
 import BaseLayout from '@/layouts/BaseLayout.astro'
 import Navbar from '@/components/common/Navbar.astro'
 import Footer from '@/components/common/Footer.astro'
-
-// Static page — maximum SEO
+import MobileTabBar from '@/components/common/MobileTabBar.astro'
+import ContentRow from '@/components/blog/ContentRow'
+import BlogCard from '@/components/blog/BlogCard'
+import ChatWidget from '@/components/chat/ChatWidget'
+import { getOrganForCategory, getTodaysOrgan } from '@/lib/content/organs'
+import { HABITS } from '@/lib/content/habits'
 export const prerender = true
 
-// Fetch latest blogs for the landing page
+// ─── Fetch & sort blogs (latest first by createdAt) ───
 let blogs: any[] = []
 try {
   const res = await fetch('https://9vhd0onw23.execute-api.ap-south-1.amazonaws.com/published-blogs')
   if (res.ok) {
-    const data = await res.json()
-    blogs = (data as any[]).slice(0, 6)
+    blogs = (await res.json()) as any[]
+    blogs.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   }
 } catch {
-  // Fallback: empty — will show skeleton
+  // Fallback: empty
 }
 
-const organHighlights = [
-  { slug: 'brain', emoji: '🧠', name: 'Brain & Mind', fact: '86 billion neurons forming 1 million new connections every second' },
-  { slug: 'heart', emoji: '❤️', name: 'Heart & Blood', fact: 'Beats 100,000 times a day, pumping 2,000 gallons of blood' },
-  { slug: 'eyes', emoji: '👁️', name: 'Vision & Sight', fact: '80% of learning happens through vision in the first 12 years' },
-  { slug: 'ears', emoji: '👂', name: 'Hearing & Sound', fact: 'Language development depends on hearing — critical window: 0-3 years' },
-  { slug: 'emotions', emoji: '💛', name: 'Emotional Health', fact: 'Children can identify 30+ emotions by age 5' },
-  { slug: 'digestive', emoji: '🍎', name: 'Nutrition & Gut', fact: 'The gut produces 95% of your child\'s serotonin (happy hormone)' },
-]
+// ─── TODAY'S BLOG → ORGAN → HABIT (linked chain) ───
+const heroBlog = blogs[0] || null
+const remainingBlogs = blogs.slice(1) // everything except hero, no repeats
 
-const d2cServices = [
-  { icon: '🥗', name: 'NutreeAI Nutrition', desc: 'AI-powered meal plans personalized to your child\'s growth', badge: 'AI-Powered' },
-  { icon: '🧠', name: 'Behavioral Assessment', desc: 'Screen for ADHD, autism, anxiety with standardized tools', badge: 'Clinical' },
-  { icon: '😴', name: 'Sleep Program', desc: '4-week evidence-based sleep intervention for better rest', badge: 'New' },
-  { icon: '🗣️', name: 'Speech Therapy', desc: 'Online sessions with certified speech-language pathologists', badge: 'Telehealth' },
-  { icon: '👨‍👩‍👧', name: 'Parenting Coach', desc: 'Expert guidance for modern parenting challenges', badge: 'Popular' },
-  { icon: '📊', name: 'Growth Tracking Pro', desc: 'WHO z-score monitoring with AI trend analysis', badge: 'AI-Powered' },
-]
+// Organ linked to hero blog's category
+const linkedOrgan = heroBlog
+  ? getOrganForCategory(heroBlog.category || '') || getTodaysOrgan()
+  : getTodaysOrgan()
 
-const stats = [
-  { value: '32+', label: 'Health Modules' },
-  { value: '113+', label: 'Conditions Screened' },
-  { value: '50+', label: 'Daily Articles' },
-  { value: '16', label: 'Organ Discoveries' },
-]
+// Habit linked to the organ's relatedHabit field
+const linkedHabit = HABITS.find((h) => h.key === linkedOrgan.relatedHabit) || HABITS[0]
+
+// Hero blog date
+const heroDate = heroBlog?.createdAt
+  ? new Date(heroBlog.createdAt).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    })
+  : ''
+
+// ─── CONTEXTUAL META-PROMPTS (from today's linked chain) ───
+const organName = linkedOrgan.name.toLowerCase()
+const habitName = linkedHabit.name.toLowerCase()
+const metaPrompts = {
+  digDeeper: {
+    emoji: '📰',
+    label: 'Dig Deeper',
+    sublabel: `Today's focus: ${linkedOrgan.name}`,
+    prompt: `How does ${organName} development affect my child's daily life?`,
+  },
+  milestone: {
+    emoji: '🧒',
+    label: 'Milestone Check',
+    sublabel: 'Personalized for your child',
+    prompt: `Is my child's ${organName} development on track for their age?`,
+  },
+  healthNote: {
+    emoji: '📋',
+    label: 'Health Note',
+    sublabel: 'Build your child\'s timeline',
+    prompt: `I want to note something about my child's ${habitName} routine`,
+  },
+}
 ---
 
-<BaseLayout title="SKIDS Parent" description="The place where today's parents come to raise smart, healthy S-Kids. Evidence-based child health, AI-powered insights, and personalized care — all in one place.">
+<BaseLayout title="SKIDS Parent" description="The place where today's parents come to raise smart, healthy S-Kids. Evidence-based child health, AI-powered insights, and personalized care.">
   <Navbar />
 
   <main>
-    <!-- Hero -->
-    <section class="relative overflow-hidden">
-      <div class="absolute inset-0 bg-gradient-to-br from-green-50 via-white to-blue-50"></div>
-      <div class="absolute top-20 right-10 w-72 h-72 bg-green-100 rounded-full blur-3xl opacity-40"></div>
-      <div class="absolute bottom-10 left-10 w-60 h-60 bg-blue-100 rounded-full blur-3xl opacity-30"></div>
+    <!-- ═══════════════════════════════════════
+         HERO — Today's Latest Blog (ONE, not carousel)
+         ═══════════════════════════════════════ -->
+    {heroBlog ? (
+      <section class="relative w-full h-[70vh] sm:h-[60vh] overflow-hidden">
+        <!-- Blog image -->
+        <img
+          src={heroBlog.thumbnail}
+          alt=""
+          class="absolute inset-0 w-full h-full object-cover"
+          loading="eager"
+        />
 
-      <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-20 lg:pt-24 lg:pb-28">
-        <div class="max-w-3xl mx-auto text-center">
-          <!-- Badge -->
-          <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-green-50 border border-green-200 mb-8">
-            <span class="w-2 h-2 rounded-full bg-green-500 pulse-dot"></span>
-            <span class="text-sm font-medium text-green-700">Evidence-based child health</span>
-          </div>
+        <!-- Gradient overlays -->
+        <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/5" />
+        <div class="absolute inset-0 bg-gradient-to-r from-black/50 via-transparent to-transparent" />
 
-          <!-- Headline -->
-          <h1 class="text-4xl sm:text-5xl lg:text-6xl font-display font-extrabold tracking-tight leading-[1.1]">
-            Raise Smart,<br />
-            Healthy <span class="gradient-text">S-Kids</span>
+        <!-- Content -->
+        <div class="absolute inset-0 flex flex-col justify-end p-6 sm:p-10 lg:p-16 max-w-3xl">
+          <span class="inline-flex self-start px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-white text-xs font-semibold uppercase tracking-wider mb-3">
+            {heroBlog.category || 'Health'}
+          </span>
+
+          <h1 class="text-2xl sm:text-4xl lg:text-5xl font-display font-extrabold text-white leading-tight mb-3 drop-shadow-lg">
+            {heroBlog.title}
           </h1>
 
-          <p class="mt-6 text-lg sm:text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
-            The new way of parenting. Holistic care for your child's physical, mental, and social health — powered by science, AI, and love.
+          <p class="text-white/60 text-sm mb-5">
+            by {heroBlog.author || 'SKIDS Team'} · {heroDate}
           </p>
 
-          <!-- CTA -->
-          <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a href="/blog" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-2xl bg-gray-900 text-white font-semibold text-base hover:bg-gray-800 transition-all shadow-lg shadow-gray-900/10 hover:shadow-xl hover:shadow-gray-900/15">
-              Explore Health Insights
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-              </svg>
-            </a>
-            <a href="/discover" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-2xl bg-white text-gray-700 font-semibold text-base border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all">
-              Discover Your Child's Body
-            </a>
-          </div>
-
-          <!-- Stats -->
-          <div class="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-6">
-            {stats.map((stat) => (
-              <div class="text-center">
-                <div class="text-2xl sm:text-3xl font-display font-bold text-gray-900">{stat.value}</div>
-                <div class="mt-1 text-xs sm:text-sm text-gray-500">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Why SKIDS -->
-    <section class="py-20 bg-white">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="max-w-2xl mx-auto text-center mb-16">
-          <span class="text-sm font-semibold text-green-600 uppercase tracking-wider">The SKIDS Philosophy</span>
-          <h2 class="mt-3 text-3xl sm:text-4xl font-display font-bold">Every child deserves to be a Super Kid</h2>
-          <p class="mt-4 text-gray-500 text-lg">
-            SKIDS takes a holistic approach — physical, mental, and social health — because a child is not just a body. Early detection + right intervention = limitless potential.
-          </p>
-        </div>
-
-        <div class="grid md:grid-cols-3 gap-8">
-          <div class="p-8 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100">
-            <div class="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center text-2xl mb-5">🔬</div>
-            <h3 class="text-lg font-display font-bold text-gray-900">Evidence-Based</h3>
-            <p class="mt-2 text-sm text-gray-600 leading-relaxed">
-              Every recommendation backed by AAP, IAP, and Gulf pediatric guidelines. No guesswork, no old wives' tales.
-            </p>
-          </div>
-          <div class="p-8 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
-            <div class="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center text-2xl mb-5">🤖</div>
-            <h3 class="text-lg font-display font-bold text-gray-900">AI-Powered</h3>
-            <p class="mt-2 text-sm text-gray-600 leading-relaxed">
-              24/7 Dr. SKIDS chatbot, AI nutrition analysis, smart milestone tracking, and personalized health insights.
-            </p>
-          </div>
-          <div class="p-8 rounded-2xl bg-gradient-to-br from-purple-50 to-fuchsia-50 border border-purple-100">
-            <div class="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center text-2xl mb-5">❤️</div>
-            <h3 class="text-lg font-display font-bold text-gray-900">Empathy-Driven</h3>
-            <p class="mt-2 text-sm text-gray-600 leading-relaxed">
-              Warm, supportive, never scary. We empower parents with knowledge, not anxiety. Your partner in raising S-Kids.
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Organ Discovery Preview -->
-    <section class="py-20 bg-gray-50">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="max-w-2xl mx-auto text-center mb-16">
-          <span class="text-sm font-semibold text-purple-600 uppercase tracking-wider">Organ Discovery</span>
-          <h2 class="mt-3 text-3xl sm:text-4xl font-display font-bold">Discover the wonders inside your child</h2>
-          <p class="mt-4 text-gray-500 text-lg">
-            16 interactive journeys through your child's amazing body. Understand how each organ develops — and what you can do to nurture it.
-          </p>
-        </div>
-
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {organHighlights.map((organ) => (
-            <a href={`/discover/${organ.slug}`} class="group card-hover block p-6 rounded-2xl bg-white border border-gray-100 shadow-sm">
-              <div class="flex items-start gap-4">
-                <span class="text-3xl">{organ.emoji}</span>
-                <div class="flex-1 min-w-0">
-                  <h3 class="text-base font-display font-bold text-gray-900 group-hover:text-green-600 transition-colors">
-                    {organ.name}
-                  </h3>
-                  <p class="mt-1.5 text-sm text-gray-500 leading-relaxed">{organ.fact}</p>
-                </div>
-              </div>
-              <div class="mt-4 flex items-center gap-1 text-xs font-medium text-green-600">
-                <span>Explore journey</span>
-                <svg class="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                </svg>
-              </div>
-            </a>
-          ))}
-        </div>
-
-        <div class="mt-10 text-center">
-          <a href="/discover" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-gray-700 bg-white border border-gray-200 hover:border-gray-300 shadow-sm hover:shadow transition-all">
-            View all 16 discoveries
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <a
+            href={`https://skids.clinic/blog/${heroBlog.blogId}`}
+            target="_blank"
+            rel="noopener"
+            class="inline-flex self-start items-center gap-2 px-6 py-3 rounded-xl bg-white text-gray-900 font-semibold text-sm hover:bg-gray-100 transition-colors shadow-lg"
+          >
+            Read Article
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
             </svg>
           </a>
         </div>
-      </div>
-    </section>
-
-    <!-- PHR Section -->
-    <section class="py-20 bg-white">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="grid lg:grid-cols-2 gap-16 items-center">
-          <div>
-            <span class="text-sm font-semibold text-blue-600 uppercase tracking-wider">Child Health Record</span>
-            <h2 class="mt-3 text-3xl sm:text-4xl font-display font-bold">
-              The best PHR for your child
-            </h2>
-            <p class="mt-4 text-gray-500 text-lg leading-relaxed">
-              Your observations + screening data + pediatric reports — all in one timeline. Watch your child's health story unfold, backed by evidence and AI insights.
-            </p>
-
-            <div class="mt-8 space-y-4">
-              <div class="flex items-start gap-3">
-                <div class="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <svg class="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                  </svg>
-                </div>
-                <div>
-                  <h4 class="font-semibold text-gray-900">Track milestones as you see them</h4>
-                  <p class="text-sm text-gray-500">Motor, cognitive, social, language — observe and record your child's growth</p>
-                </div>
-              </div>
-              <div class="flex items-start gap-3">
-                <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <svg class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                  </svg>
-                </div>
-                <div>
-                  <h4 class="font-semibold text-gray-900">Auto-import SKIDS screening data</h4>
-                  <p class="text-sm text-gray-500">When your child is screened at school or clinic, reports appear automatically</p>
-                </div>
-              </div>
-              <div class="flex items-start gap-3">
-                <div class="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <svg class="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                  </svg>
-                </div>
-                <div>
-                  <h4 class="font-semibold text-gray-900">Upload any pediatric report</h4>
-                  <p class="text-sm text-gray-500">AI extracts key findings from PDFs and images into your child's timeline</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- PHR Visual -->
-          <div class="relative">
-            <div class="rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 p-6 shadow-lg">
-              <!-- Simulated timeline -->
-              <div class="space-y-4">
-                <div class="flex items-center gap-3 p-3 rounded-xl bg-white border border-gray-100">
-                  <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-lg">✅</div>
-                  <div class="flex-1">
-                    <div class="text-sm font-semibold text-gray-900">First steps achieved!</div>
-                    <div class="text-xs text-gray-500">Parent observation · 12 months</div>
-                  </div>
-                  <span class="text-xs text-green-600 font-medium">On track</span>
-                </div>
-                <div class="flex items-center gap-3 p-3 rounded-xl bg-white border border-gray-100">
-                  <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-lg">🏥</div>
-                  <div class="flex-1">
-                    <div class="text-sm font-semibold text-gray-900">SKIDS School Screening</div>
-                    <div class="text-xs text-gray-500">Vision · Hearing · Dental · Neuro</div>
-                  </div>
-                  <span class="text-xs text-blue-600 font-medium">Auto-imported</span>
-                </div>
-                <div class="flex items-center gap-3 p-3 rounded-xl bg-white border border-gray-100">
-                  <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-lg">📄</div>
-                  <div class="flex-1">
-                    <div class="text-sm font-semibold text-gray-900">Pediatrician Visit Report</div>
-                    <div class="text-xs text-gray-500">Uploaded PDF · AI extracted</div>
-                  </div>
-                  <span class="text-xs text-purple-600 font-medium">Analyzed</span>
-                </div>
-                <div class="flex items-center gap-3 p-3 rounded-xl bg-white border border-gray-100">
-                  <div class="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center text-lg">📈</div>
-                  <div class="flex-1">
-                    <div class="text-sm font-semibold text-gray-900">AI Health Summary</div>
-                    <div class="text-xs text-gray-500">All data superimposed · trend analysis</div>
-                  </div>
-                  <span class="text-xs text-gray-600 font-medium">Updated today</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- D2C Services -->
-    <section class="py-20 bg-gray-50">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="max-w-2xl mx-auto text-center mb-16">
-          <span class="text-sm font-semibold text-orange-600 uppercase tracking-wider">Digital Health Services</span>
-          <h2 class="mt-3 text-3xl sm:text-4xl font-display font-bold">Medical-grade care, delivered digitally</h2>
-          <p class="mt-4 text-gray-500 text-lg">
-            Evidence-based interventions personalized to your child's journey. Nutrition, behavioral health, sleep, and more — from your phone.
-          </p>
-        </div>
-
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {d2cServices.map((service) => (
-            <div class="card-hover p-6 rounded-2xl bg-white border border-gray-100 shadow-sm">
-              <div class="flex items-center justify-between mb-4">
-                <span class="text-3xl">{service.icon}</span>
-                <span class="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 uppercase tracking-wider">
-                  {service.badge}
-                </span>
-              </div>
-              <h3 class="text-base font-display font-bold text-gray-900">{service.name}</h3>
-              <p class="mt-2 text-sm text-gray-500 leading-relaxed">{service.desc}</p>
-              <a href="/services" class="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-green-600 hover:text-green-700">
-                Learn more
-                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                </svg>
-              </a>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-
-    <!-- Dr. SKIDS Chatbot Teaser -->
-    <section class="py-20 bg-white">
-      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 text-white text-3xl mb-6 shadow-lg shadow-green-500/20">
-          🩺
-        </div>
-        <h2 class="text-3xl sm:text-4xl font-display font-bold">
-          Meet Dr. SKIDS — your 24/7 health companion
-        </h2>
-        <p class="mt-4 text-gray-500 text-lg max-w-2xl mx-auto leading-relaxed">
-          Ask anything about your child's health. Powered by expert knowledge from pediatricians, nutritionists, and child development specialists. Personalized to your child's age and profile.
-        </p>
-        <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
-          {[
-            'My 3-year-old isn\'t talking yet',
-            'Best foods for brain development',
-            'Is my child\'s height normal?',
-            'Screen time guidelines',
-          ].map((q) => (
-            <span class="px-4 py-2 rounded-full bg-gray-100 text-sm text-gray-600 border border-gray-200">
-              "{q}"
-            </span>
-          ))}
-        </div>
-        <div class="mt-10">
-          <a href="/dashboard" class="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold text-base hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg shadow-green-500/20">
-            Start a Conversation
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
-            </svg>
+      </section>
+    ) : (
+      <!-- Fallback hero if no blogs -->
+      <section class="relative w-full h-[60vh] overflow-hidden bg-gradient-to-br from-gray-900 via-green-900 to-emerald-900">
+        <div class="absolute inset-0 flex flex-col justify-end p-6 sm:p-10 lg:p-16 max-w-3xl">
+          <h1 class="text-3xl sm:text-5xl font-display font-extrabold text-white leading-tight mb-3">
+            Raise Smart, Healthy <span class="text-green-400">S-Kids</span>
+          </h1>
+          <p class="text-white/60 text-base mb-5">Science-backed insights, AI-powered tools, and expert care.</p>
+          <a href="/blog" class="inline-flex self-start items-center gap-2 px-6 py-3 rounded-xl bg-white text-gray-900 font-semibold text-sm">
+            Explore Articles
           </a>
-        </div>
-      </div>
-    </section>
-
-    <!-- H.A.B.I.T.S -->
-    <section class="py-20 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="max-w-2xl mx-auto text-center mb-16">
-          <span class="text-sm font-semibold text-teal-600 uppercase tracking-wider">Daily Healthy Habits</span>
-          <h2 class="mt-3 text-3xl sm:text-4xl font-display font-bold">Build lifelong H.A.B.I.T.S</h2>
-          <p class="mt-4 text-gray-500 text-lg">
-            The SKIDS 6-step framework for raising healthy, resilient children. Track daily, build streaks, see the difference.
-          </p>
-        </div>
-
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {[
-            { letter: 'H', name: 'Healthy Eating', desc: 'Rainbow plate, brain foods, mindful nutrition', color: 'bg-green-500' },
-            { letter: 'A', name: 'Active Movement', desc: 'Physical play that grows the brain', color: 'bg-blue-500' },
-            { letter: 'B', name: 'Balanced Stress', desc: 'Resilience building, not stress avoidance', color: 'bg-purple-500' },
-            { letter: 'I', name: 'Inner Coaching', desc: 'Growth mindset, positive self-talk', color: 'bg-pink-500' },
-            { letter: 'T', name: 'Timekeepers', desc: 'Circadian rhythm, routine mastery', color: 'bg-orange-500' },
-            { letter: 'S', name: 'Sufficient Sleep', desc: 'The brain\'s nightly recharge cycle', color: 'bg-indigo-500' },
-          ].map((habit) => (
-            <div class="card-hover flex items-start gap-4 p-5 rounded-2xl bg-white/80 backdrop-blur border border-white/50 shadow-sm">
-              <div class={`w-10 h-10 rounded-xl ${habit.color} flex items-center justify-center text-white font-display font-bold text-lg flex-shrink-0`}>
-                {habit.letter}
-              </div>
-              <div>
-                <h3 class="font-display font-bold text-gray-900">{habit.name}</h3>
-                <p class="mt-1 text-sm text-gray-500">{habit.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-
-    <!-- Latest Blog -->
-    {blogs.length > 0 && (
-      <section class="py-20 bg-white">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div class="flex items-center justify-between mb-12">
-            <div>
-              <span class="text-sm font-semibold text-green-600 uppercase tracking-wider">Latest Insights</span>
-              <h2 class="mt-2 text-3xl font-display font-bold">Today's parenting wisdom</h2>
-            </div>
-            <a href="/blog" class="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-gray-600 hover:text-gray-900">
-              View all articles
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-              </svg>
-            </a>
-          </div>
-
-          <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {blogs.map((blog: any) => (
-              <a href={`/blog/${blog.slug || blog.id}`} class="group card-hover block rounded-2xl overflow-hidden bg-white border border-gray-100 shadow-sm">
-                {blog.image && (
-                  <div class="aspect-[16/9] overflow-hidden bg-gray-100">
-                    <img
-                      src={blog.image}
-                      alt={blog.title}
-                      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      loading="lazy"
-                    />
-                  </div>
-                )}
-                <div class="p-5">
-                  <h3 class="text-base font-display font-bold text-gray-900 group-hover:text-green-600 transition-colors line-clamp-2">
-                    {blog.title}
-                  </h3>
-                  {blog.description && (
-                    <p class="mt-2 text-sm text-gray-500 line-clamp-2">{blog.description}</p>
-                  )}
-                </div>
-              </a>
-            ))}
-          </div>
-
-          <div class="mt-10 text-center sm:hidden">
-            <a href="/blog" class="inline-flex items-center gap-2 text-sm font-semibold text-green-600">
-              View all articles
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-              </svg>
-            </a>
-          </div>
         </div>
       </section>
     )}
 
-    <!-- Final CTA -->
-    <section class="py-20 bg-gray-900">
+    <!-- Dark-to-warm transition -->
+    <div class="hero-to-content"></div>
+
+    <!-- ═══════════════════════════════════════
+         ORGAN IN FOCUS — Big, linked to hero blog
+         ═══════════════════════════════════════ -->
+    <section class="px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
+      <div class="max-w-3xl mx-auto">
+        <div class={`rounded-2xl overflow-hidden bg-gradient-to-br ${linkedOrgan.gradient} p-[2px]`}>
+          <div class="rounded-[14px] bg-white p-6 sm:p-8">
+            <div class="flex items-center gap-2 mb-4">
+              <span class="text-xs font-bold text-purple-600 uppercase tracking-wider">Organ in Focus</span>
+              <span class="text-xs text-gray-400">— linked to today's article</span>
+            </div>
+
+            <div class="flex items-start gap-5">
+              <div class={`flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br ${linkedOrgan.gradient} flex items-center justify-center text-4xl sm:text-5xl shadow-lg`}>
+                {linkedOrgan.emoji}
+              </div>
+              <div class="flex-1 min-w-0">
+                <h3 class="text-xl sm:text-2xl font-display font-bold text-gray-900">
+                  {linkedOrgan.name}
+                </h3>
+                <p class="mt-2 text-sm text-gray-600 leading-relaxed">
+                  {linkedOrgan.description}
+                </p>
+                <p class="mt-3 text-xs text-purple-600 font-medium italic">
+                  "{linkedOrgan.wonderFact}"
+                </p>
+              </div>
+            </div>
+
+            <div class="mt-6 flex items-center justify-between">
+              <a
+                href={`/discover/${linkedOrgan.slug}`}
+                class="inline-flex items-center gap-1.5 text-sm font-semibold text-green-600 hover:text-green-700 transition-colors"
+              >
+                Explore {linkedOrgan.name}
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                </svg>
+              </a>
+              <a
+                href="/discover"
+                class="text-xs font-medium text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                All 16 organs →
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════
+         TODAY'S HABIT — Big dark card, linked to organ
+         ═══════════════════════════════════════ -->
+    <section class="px-4 sm:px-6 lg:px-10 py-4 sm:py-6">
+      <div class="max-w-3xl mx-auto">
+        <div class="rounded-2xl bg-gradient-to-br from-gray-900 to-gray-800 p-6 sm:p-8 text-white overflow-hidden relative">
+          <!-- Background letter -->
+          <div class="absolute top-2 right-4 text-[8rem] sm:text-[10rem] font-display font-black text-white/[0.03] leading-none select-none">
+            {linkedHabit.letter}
+          </div>
+
+          <div class="relative">
+            <!-- H.A.B.I.T.S letters -->
+            <div class="flex items-center gap-2 mb-5">
+              {HABITS.map((h) => (
+                <span
+                  class:list={[
+                    'habit-letter',
+                    h.bgColor,
+                    h.key === linkedHabit.key ? 'habit-letter-active' : 'opacity-30',
+                  ]}
+                >
+                  {h.letter}
+                </span>
+              ))}
+            </div>
+
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-xl">{linkedHabit.emoji}</span>
+              <span class="text-xs font-bold text-green-400 uppercase tracking-wider">Today's Habit</span>
+            </div>
+            <h3 class="text-xl sm:text-2xl font-display font-bold">{linkedHabit.name}</h3>
+            <p class="mt-1 text-sm text-white/50 font-medium">{linkedHabit.tagline}</p>
+
+            <p class="mt-4 text-sm text-white/80 leading-relaxed max-w-lg">
+              {linkedHabit.description}
+            </p>
+
+            <div class="mt-5 p-3.5 rounded-xl bg-white/10 backdrop-blur-sm border border-white/10">
+              <p class="text-sm text-white/90 font-medium">
+                💡 {linkedHabit.tip}
+              </p>
+            </div>
+
+            <div class="mt-5 flex items-center justify-between">
+              <a
+                href="/discover"
+                class="text-xs font-medium text-green-400 hover:text-green-300 flex items-center gap-1"
+              >
+                All 6 habits →
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════
+         DR. SKIDS — Contextual Health Companion
+         Meta-prompts tied to today's blog/organ/habit
+         ═══════════════════════════════════════ -->
+    <section class="px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
+      <div class="max-w-3xl mx-auto">
+        <div class="rounded-2xl bg-gradient-to-br from-green-600 via-emerald-600 to-teal-700 p-6 sm:p-8 text-white relative overflow-hidden">
+          <!-- Background pattern -->
+          <div class="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4"></div>
+          <div class="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/4"></div>
+
+          <div class="relative">
+            <!-- Header -->
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-xl">
+                🩺
+              </div>
+              <div>
+                <h3 class="text-lg font-display font-bold">Dr. SKIDS</h3>
+                <p class="text-[11px] text-white/60">Your child's health companion</p>
+              </div>
+            </div>
+
+            <p class="text-xs text-white/70 mb-5 leading-relaxed">
+              Every question builds your child's health timeline. Ask, track, and grow together.
+            </p>
+
+            <!-- Contextual Prompt Cards -->
+            <div class="space-y-2.5 mb-5">
+              <!-- Dig Deeper — tied to today's content -->
+              <button
+                class="quick-q-pill w-full text-left p-3.5 rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 hover:bg-white/20 transition-all cursor-pointer group"
+                data-question={metaPrompts.digDeeper.prompt}
+              >
+                <div class="flex items-start gap-3">
+                  <span class="text-lg mt-0.5">{metaPrompts.digDeeper.emoji}</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-0.5">
+                      <span class="text-xs font-bold text-white/90 uppercase tracking-wider">{metaPrompts.digDeeper.label}</span>
+                      <span class="text-[10px] text-white/40">{metaPrompts.digDeeper.sublabel}</span>
+                    </div>
+                    <p class="text-sm text-white/80 leading-snug group-hover:text-white transition-colors">
+                      "{metaPrompts.digDeeper.prompt}"
+                    </p>
+                  </div>
+                  <svg class="w-4 h-4 text-white/30 group-hover:text-white/60 transition-colors flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                  </svg>
+                </div>
+              </button>
+
+              <!-- Milestone Check — personalized nudge -->
+              <button
+                class="quick-q-pill w-full text-left p-3.5 rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 hover:bg-white/20 transition-all cursor-pointer group"
+                data-question={metaPrompts.milestone.prompt}
+              >
+                <div class="flex items-start gap-3">
+                  <span class="text-lg mt-0.5">{metaPrompts.milestone.emoji}</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-0.5">
+                      <span class="text-xs font-bold text-white/90 uppercase tracking-wider">{metaPrompts.milestone.label}</span>
+                      <span class="text-[10px] text-white/40">{metaPrompts.milestone.sublabel}</span>
+                    </div>
+                    <p class="text-sm text-white/80 leading-snug group-hover:text-white transition-colors">
+                      "{metaPrompts.milestone.prompt}"
+                    </p>
+                  </div>
+                  <svg class="w-4 h-4 text-white/30 group-hover:text-white/60 transition-colors flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                  </svg>
+                </div>
+              </button>
+
+              <!-- Health Note — PHR builder -->
+              <button
+                class="quick-q-pill w-full text-left p-3.5 rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 hover:bg-white/20 transition-all cursor-pointer group"
+                data-question={metaPrompts.healthNote.prompt}
+              >
+                <div class="flex items-start gap-3">
+                  <span class="text-lg mt-0.5">{metaPrompts.healthNote.emoji}</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-0.5">
+                      <span class="text-xs font-bold text-white/90 uppercase tracking-wider">{metaPrompts.healthNote.label}</span>
+                      <span class="text-[10px] text-white/40">{metaPrompts.healthNote.sublabel}</span>
+                    </div>
+                    <p class="text-sm text-white/80 leading-snug group-hover:text-white transition-colors">
+                      "{metaPrompts.healthNote.prompt}"
+                    </p>
+                  </div>
+                  <svg class="w-4 h-4 text-white/30 group-hover:text-white/60 transition-colors flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                  </svg>
+                </div>
+              </button>
+            </div>
+
+            <!-- Main CTA -->
+            <button
+              id="open-chat-btn"
+              class="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-white text-green-700 font-bold text-sm hover:bg-green-50 transition-colors shadow-lg"
+            >
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+              </svg>
+              Start Your Child's Timeline
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════
+         MORE ARTICLES — ONE carousel, no repeats
+         ═══════════════════════════════════════ -->
+    {remainingBlogs.length > 0 && (
+      <ContentRow title="More Articles" emoji="📚" seeAllHref="/blog" client:visible>
+        {remainingBlogs.map((blog: any) => (
+          <BlogCard
+            title={blog.title || 'Untitled'}
+            thumbnail={blog.thumbnail}
+            category={blog.category}
+            author={blog.author}
+            date={blog.createdAt}
+            link={`https://skids.clinic/blog/${blog.blogId}`}
+          />
+        ))}
+      </ContentRow>
+    )}
+
+    <!-- ═══════════════════════════════════════
+         FINAL CTA
+         ═══════════════════════════════════════ -->
+    <section class="py-14 sm:py-20 bg-gray-900">
       <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <h2 class="text-3xl sm:text-4xl font-display font-bold text-white">
-          Start your child's health journey today
+        <h2 class="text-2xl sm:text-3xl font-display font-bold text-white">
+          Every question builds your child's health story
         </h2>
-        <p class="mt-4 text-lg text-gray-400 max-w-xl mx-auto">
-          Join thousands of modern parents who are raising smart, healthy S-Kids with evidence-based care.
+        <p class="mt-3 text-sm text-gray-400 max-w-xl mx-auto">
+          Like a timeline for health — milestone tracking, expert guidance, and a complete record that grows with your child.
         </p>
-        <div class="mt-10">
-          <a href="/dashboard" class="inline-flex items-center gap-2 px-10 py-4 rounded-2xl bg-white text-gray-900 font-bold text-base hover:bg-gray-100 transition-colors shadow-lg">
-            Get Started — It's Free
+        <div class="mt-8">
+          <a href="/dashboard" class="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-white text-gray-900 font-bold text-sm hover:bg-gray-100 transition-colors shadow-lg">
+            Start Your Child's Timeline
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
             </svg>
           </a>
         </div>
-        <p class="mt-4 text-sm text-gray-500">No credit card required. Free blog access + health tracking.</p>
+        <p class="mt-3 text-xs text-gray-500">No credit card required. Free blog + health tracking.</p>
       </div>
     </section>
   </main>
 
   <Footer />
+
+  <!-- Bottom spacer for mobile tab bar -->
+  <div class="h-16 md:hidden"></div>
+
+  <!-- Floating ChatWidget -->
+  <ChatWidget client:idle />
+
+  <!-- Mobile bottom tab bar -->
+  <MobileTabBar />
 </BaseLayout>
+
+<script>
+  // Wire the "Start Conversation" button to open ChatWidget
+  document.getElementById('open-chat-btn')?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('open-dr-skids'))
+  })
+
+  // Wire quick-question pills — open chat with that question pre-filled
+  document.querySelectorAll('.quick-q-pill').forEach((pill) => {
+    pill.addEventListener('click', () => {
+      const question = (pill as HTMLElement).dataset.question || ''
+      window.dispatchEvent(new CustomEvent('open-dr-skids', { detail: { question } }))
+    })
+  })
+</script>

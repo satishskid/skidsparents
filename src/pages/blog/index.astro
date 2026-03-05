@@ -2,22 +2,24 @@
 import BaseLayout from '@/layouts/BaseLayout.astro'
 import Navbar from '@/components/common/Navbar.astro'
 import Footer from '@/components/common/Footer.astro'
+import MobileTabBar from '@/components/common/MobileTabBar.astro'
+import ChatWidget from '@/components/chat/ChatWidget'
 
 export const prerender = true
 
-// Fetch blogs from SKIDS feed
+// Fetch blogs from SKIDS API
 let blogs: any[] = []
 let categories: string[] = []
 try {
   const res = await fetch('https://9vhd0onw23.execute-api.ap-south-1.amazonaws.com/published-blogs')
   if (res.ok) {
     blogs = (await res.json()) as any[]
-    // Extract unique categories
+    // Sort by createdAt (latest first)
+    blogs.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    // Extract unique categories from blog.category (singular field)
     const catSet = new Set<string>()
     blogs.forEach((b: any) => {
-      if (b.categories) {
-        ;(Array.isArray(b.categories) ? b.categories : [b.categories]).forEach((c: string) => catSet.add(c))
-      }
+      if (b.category) catSet.add(b.category)
     })
     categories = Array.from(catSet).sort()
   }
@@ -26,12 +28,13 @@ try {
 }
 
 const categoryColors: Record<string, string> = {
-  "Parent's Corner": 'bg-pink-100 text-pink-700',
-  'Expert Talks': 'bg-purple-100 text-purple-700',
-  'School Hub': 'bg-blue-100 text-blue-700',
-  'Health Tips': 'bg-green-100 text-green-700',
-  'Nutrition': 'bg-orange-100 text-orange-700',
-  'Development': 'bg-teal-100 text-teal-700',
+  'Mental Health': 'bg-purple-100 text-purple-700',
+  'Parental Guidance': 'bg-pink-100 text-pink-700',
+  'Physical Health': 'bg-green-100 text-green-700',
+  'Nutrition & Diet': 'bg-orange-100 text-orange-700',
+  'Kids Vision': 'bg-amber-100 text-amber-700',
+  'Wellness': 'bg-teal-100 text-teal-700',
+  'Child Development': 'bg-blue-100 text-blue-700',
 }
 ---
 
@@ -42,33 +45,33 @@ const categoryColors: Record<string, string> = {
 >
   <Navbar />
 
-  <main class="min-h-screen bg-gray-50">
+  <main class="min-h-screen section-warm">
     <!-- Header -->
     <section class="bg-white border-b border-gray-100">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
         <div class="max-w-2xl">
-          <span class="text-sm font-semibold text-green-600 uppercase tracking-wider">Health Blog</span>
-          <h1 class="mt-3 text-3xl sm:text-4xl font-display font-bold text-gray-900">
+          <span class="text-xs font-semibold text-green-600 uppercase tracking-wider">Health Blog</span>
+          <h1 class="mt-2 text-2xl sm:text-3xl font-display font-bold text-gray-900">
             Today's parenting wisdom
           </h1>
-          <p class="mt-4 text-lg text-gray-500">
+          <p class="mt-3 text-sm text-gray-500">
             Daily insights from pediatricians, nutritionists, and child development experts. Evidence-based, empathy-driven.
           </p>
         </div>
 
         <!-- Category Filters -->
         {categories.length > 0 && (
-          <div class="mt-8 flex flex-wrap gap-2" id="category-filters">
+          <div class="mt-6 flex flex-wrap gap-2" id="category-filters">
             <button
               data-category="all"
-              class="category-btn px-4 py-2 rounded-full text-sm font-medium bg-gray-900 text-white transition-colors"
+              class="category-btn px-3.5 py-1.5 rounded-full text-sm font-medium bg-gray-900 text-white transition-colors"
             >
               All
             </button>
             {categories.map((cat) => (
               <button
                 data-category={cat}
-                class="category-btn px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                class="category-btn px-3.5 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
               >
                 {cat}
               </button>
@@ -79,7 +82,7 @@ const categoryColors: Record<string, string> = {
     </section>
 
     <!-- Blog Grid -->
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {blogs.length === 0 ? (
         <div class="text-center py-20">
           <div class="text-4xl mb-4">📝</div>
@@ -87,19 +90,21 @@ const categoryColors: Record<string, string> = {
           <p class="mt-2 text-gray-500">Check back soon for the latest health insights.</p>
         </div>
       ) : (
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6" id="blog-grid">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5" id="blog-grid">
           {blogs.map((blog: any) => {
-            const blogCategories = Array.isArray(blog.categories) ? blog.categories : blog.categories ? [blog.categories] : []
+            const blogDate = blog.createdAt
+              ? new Date(blog.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+              : undefined
             return (
               <article
                 class="blog-card card-hover group block rounded-2xl overflow-hidden bg-white border border-gray-100 shadow-sm"
-                data-categories={JSON.stringify(blogCategories)}
+                data-category={blog.category || ''}
               >
-                <a href={blog.link || `/blog/${blog.slug || blog.id}`} target={blog.link ? '_blank' : undefined} rel={blog.link ? 'noopener' : undefined}>
-                  {blog.image && (
+                <a href={`https://skids.clinic/blog/${blog.blogId}`} target="_blank" rel="noopener">
+                  {blog.thumbnail && (
                     <div class="aspect-[16/9] overflow-hidden bg-gray-100">
                       <img
-                        src={blog.image}
+                        src={blog.thumbnail}
                         alt={blog.title}
                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         loading="lazy"
@@ -107,29 +112,22 @@ const categoryColors: Record<string, string> = {
                       />
                     </div>
                   )}
-                  <div class="p-5">
-                    <!-- Categories -->
-                    {blogCategories.length > 0 && (
-                      <div class="flex flex-wrap gap-1.5 mb-3">
-                        {blogCategories.map((cat: string) => (
-                          <span class={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${categoryColors[cat] || 'bg-gray-100 text-gray-600'}`}>
-                            {cat}
-                          </span>
-                        ))}
-                      </div>
+                  <div class="p-4">
+                    <!-- Category -->
+                    {blog.category && (
+                      <span class={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full ${categoryColors[blog.category] || 'bg-gray-100 text-gray-600'} uppercase tracking-wider`}>
+                        {blog.category}
+                      </span>
                     )}
 
-                    <h2 class="text-base font-display font-bold text-gray-900 group-hover:text-green-600 transition-colors line-clamp-2">
+                    <h2 class="mt-2 text-sm font-display font-bold text-gray-900 group-hover:text-green-600 transition-colors line-clamp-2">
                       {blog.title}
                     </h2>
 
-                    {blog.description && (
-                      <p class="mt-2 text-sm text-gray-500 line-clamp-2">{blog.description}</p>
-                    )}
-
-                    <div class="mt-4 flex items-center justify-between text-xs text-gray-400">
+                    <div class="mt-3 flex items-center gap-1.5 text-xs text-gray-400">
                       {blog.author && <span>{blog.author}</span>}
-                      {blog.pubDate && <time>{new Date(blog.pubDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</time>}
+                      {blog.author && blogDate && <span>·</span>}
+                      {blogDate && <time>{blogDate}</time>}
                     </div>
                   </div>
                 </a>
@@ -142,6 +140,9 @@ const categoryColors: Record<string, string> = {
   </main>
 
   <Footer />
+  <div class="h-16 md:hidden"></div>
+  <ChatWidget client:idle />
+  <MobileTabBar />
 </BaseLayout>
 
 <script>
@@ -163,8 +164,8 @@ const categoryColors: Record<string, string> = {
 
       // Filter cards
       cards.forEach((card) => {
-        const cardCategories = JSON.parse((card as HTMLElement).dataset.categories || '[]')
-        if (category === 'all' || cardCategories.includes(category)) {
+        const cardCategory = (card as HTMLElement).dataset.category || ''
+        if (category === 'all' || cardCategory === category) {
           ;(card as HTMLElement).style.display = ''
         } else {
           ;(card as HTMLElement).style.display = 'none'
