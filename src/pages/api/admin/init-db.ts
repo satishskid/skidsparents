@@ -66,16 +66,24 @@ CREATE TABLE IF NOT EXISTS children (
 );
 `
 
-const CREATE_INDEXES = `
-CREATE INDEX IF NOT EXISTS idx_leads_brand ON leads(brand);
-CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
-CREATE INDEX IF NOT EXISTS idx_leads_created ON leads(created_at);
-CREATE INDEX IF NOT EXISTS idx_leads_phone ON leads(phone);
-CREATE INDEX IF NOT EXISTS idx_parents_firebase ON parents(firebase_uid);
-CREATE INDEX IF NOT EXISTS idx_children_parent ON children(parent_id);
-`
+const INDEX_STATEMENTS = [
+  `CREATE INDEX IF NOT EXISTS idx_leads_brand ON leads(brand)`,
+  `CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status)`,
+  `CREATE INDEX IF NOT EXISTS idx_leads_created ON leads(created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_leads_phone ON leads(phone)`,
+  `CREATE INDEX IF NOT EXISTS idx_parents_firebase ON parents(firebase_uid)`,
+  `CREATE INDEX IF NOT EXISTS idx_children_parent ON children(parent_id)`,
+]
+
+export const GET: APIRoute = async (ctx) => {
+  return handleInit(ctx.request, ctx.locals)
+}
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  return handleInit(request, locals)
+}
+
+async function handleInit(request: Request, locals: any) {
   const runtime = (locals as any).runtime
   const env = runtime?.env || {}
 
@@ -89,17 +97,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    await db.exec(CREATE_LEADS_TABLE)
-    await db.exec(CREATE_PARENTS_TABLE)
-    await db.exec(CREATE_CHILDREN_TABLE)
-    await db.exec(CREATE_INDEXES)
+    await db.prepare(CREATE_LEADS_TABLE).run()
+    await db.prepare(CREATE_PARENTS_TABLE).run()
+    await db.prepare(CREATE_CHILDREN_TABLE).run()
+    for (const stmt of INDEX_STATEMENTS) {
+      await db.prepare(stmt).run()
+    }
 
     return new Response(
       JSON.stringify({ success: true, message: 'All tables ready (leads, parents, children)' }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
-  } catch (err) {
+  } catch (err: any) {
     console.error('[Admin] Init DB error:', err)
-    return new Response(JSON.stringify({ error: 'Failed to init DB' }), { status: 500 })
+    return new Response(
+      JSON.stringify({ error: 'Failed to init DB', detail: err?.message || String(err) }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    )
   }
 }
