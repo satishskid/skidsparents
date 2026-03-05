@@ -9,24 +9,7 @@
     {
       "binding": "DB",
       "database_name": "skids-parent-db",
-      "database_id": "" // Will be filled after `wrangler d1 create skids-parent-db`
-    }
-  ],
-
-  // Cloudflare Vectorize (RAG embeddings)
-  "vectorize": [
-    {
-      "binding": "VECTORIZE",
-      "index_name": "skids-knowledge"
-      // Will be created with: wrangler vectorize create skids-knowledge --dimensions=768 --metric=cosine
-    }
-  ],
-
-  // Cloudflare R2 (file storage — uploaded reports, images)
-  "r2_buckets": [
-    {
-      "binding": "R2",
-      "bucket_name": "skids-parent-files"
+      "database_id": "a7112b48-e72d-43d7-b675-0dda65829c7e"
     }
   ],
 
@@ -34,7 +17,7 @@
   "kv_namespaces": [
     {
       "binding": "KV",
-      "id": "" // Will be filled after `wrangler kv namespace create SESSIONS`
+      "id": "b6177c3fce4d485f9cc0bc5a0792fa77"
     }
   ],
 
@@ -48,4 +31,7 @@
     "FIREBASE_PROJECT_ID": "skidsparent",
     "SITE_URL": "https://skidsparent.pages.dev"
   }
+
+  // R2 bucket (skidsparent) — on account 9f4998a66a5d7bd7a230d0222544fbe6
+  // Will add when needed for Phase 3 (report uploads)
 }
