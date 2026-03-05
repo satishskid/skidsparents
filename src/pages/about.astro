@@ -1,0 +1,98 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import Navbar from '@/components/common/Navbar.astro'
+import Footer from '@/components/common/Footer.astro'
+
+export const prerender = true
+---
+
+<BaseLayout title="Why SKIDS?" description="SKIDS takes a holistic approach to child health — physical, mental, and social. Early detection + right intervention = limitless potential for every child.">
+  <Navbar />
+
+  <main>
+    <!-- Hero -->
+    <section class="relative overflow-hidden bg-gradient-to-br from-green-50 via-white to-blue-50 py-20 lg:py-28">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <span class="text-sm font-semibold text-green-600 uppercase tracking-wider">The SKIDS Philosophy</span>
+        <h1 class="mt-4 text-4xl sm:text-5xl font-display font-extrabold tracking-tight leading-[1.1]">
+          Every child is born with<br />
+          <span class="gradient-text">limitless potential</span>
+        </h1>
+        <p class="mt-6 text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
+          SKIDS exists to unlock it. Through holistic screening, evidence-based interventions, and a new way of parenting.
+        </p>
+      </div>
+    </section>
+
+    <!-- The Problem -->
+    <section class="py-20 bg-white">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 class="text-3xl font-display font-bold text-center mb-12">The hidden crisis in child health</h2>
+        <div class="grid sm:grid-cols-2 gap-6">
+          {[
+            { stat: '1 in 4', desc: 'children have undetected vision problems that affect learning', icon: '👁️' },
+            { stat: '60%', desc: 'of developmental delays are caught too late for optimal intervention', icon: '⏰' },
+            { stat: '1 in 6', desc: 'children have a developmental disability — most undiagnosed', icon: '🧠' },
+            { stat: '3 years', desc: 'average delay between first concern and diagnosis', icon: '📅' },
+          ].map((item) => (
+            <div class="p-6 rounded-2xl bg-red-50 border border-red-100">
+              <div class="flex items-center gap-3 mb-3">
+                <span class="text-2xl">{item.icon}</span>
+                <span class="text-2xl font-display font-bold text-red-700">{item.stat}</span>
+              </div>
+              <p class="text-sm text-red-800 leading-relaxed">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- The SKIDS Way -->
+    <section class="py-20 bg-gray-50">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 class="text-3xl font-display font-bold text-center mb-4">The SKIDS Way</h2>
+        <p class="text-center text-gray-500 text-lg mb-12 max-w-2xl mx-auto">
+          A complete ecosystem for child health — from awareness to action.
+        </p>
+
+        <div class="space-y-6">
+          {[
+            { step: '01', title: 'Discover', desc: 'Learn the wonders of your child\'s body. 16 interactive organ discovery journeys that help you understand how each system develops and what to watch for.', color: 'from-green-500 to-emerald-500' },
+            { step: '02', title: 'Understand', desc: 'Track developmental milestones, build daily H.A.B.I.T.S, and get personalized AI insights. Your child\'s health record — parent observations superimposed with clinical data.', color: 'from-blue-500 to-indigo-500' },
+            { step: '03', title: 'Screen', desc: '113+ conditions across 32 health modules. FDA/CE approved devices. Non-invasive, child-friendly. At school, at clinic, or at home. The 4D Report: Defects, Delay, Disability, Deficiency.', color: 'from-purple-500 to-violet-500' },
+            { step: '04', title: 'Intervene', desc: 'Evidence-based interventions personalized to your child. Nutrition, vision, hearing, behavioral therapy, sleep programs, speech therapy — digitally delivered or through SKIDS partner clinics.', color: 'from-orange-500 to-red-500' },
+            { step: '05', title: 'Nurture', desc: 'Continuous engagement. Daily blog insights, chatbot support, community of parents, expert consultations. The journey never stops — because parenting doesn\'t.', color: 'from-pink-500 to-rose-500' },
+          ].map((item) => (
+            <div class="flex items-start gap-5 p-6 rounded-2xl bg-white border border-gray-100 shadow-sm">
+              <div class={`w-12 h-12 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center text-white font-display font-bold text-sm flex-shrink-0`}>
+                {item.step}
+              </div>
+              <div>
+                <h3 class="text-lg font-display font-bold text-gray-900">{item.title}</h3>
+                <p class="mt-1.5 text-sm text-gray-600 leading-relaxed">{item.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="py-20 bg-gray-900">
+      <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h2 class="text-3xl font-display font-bold text-white">Ready to give your child the SKIDS advantage?</h2>
+        <p class="mt-4 text-lg text-gray-400">Start with the daily blog. Stay for the journey.</p>
+        <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <a href="/blog" class="px-8 py-3.5 rounded-2xl bg-white text-gray-900 font-semibold hover:bg-gray-100 transition-colors">
+            Read Today's Insights
+          </a>
+          <a href="/discover" class="px-8 py-3.5 rounded-2xl border border-gray-600 text-gray-300 font-semibold hover:border-gray-400 hover:text-white transition-colors">
+            Explore Organ Discovery
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</BaseLayout>

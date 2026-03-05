@@ -1,0 +1,51 @@
+{
+  "name": "skids-parent",
+  "compatibility_date": "2025-03-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "pages_build_output_dir": "./dist",
+
+  // Cloudflare D1 Database
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "skids-parent-db",
+      "database_id": "" // Will be filled after `wrangler d1 create skids-parent-db`
+    }
+  ],
+
+  // Cloudflare Vectorize (RAG embeddings)
+  "vectorize": [
+    {
+      "binding": "VECTORIZE",
+      "index_name": "skids-knowledge"
+      // Will be created with: wrangler vectorize create skids-knowledge --dimensions=768 --metric=cosine
+    }
+  ],
+
+  // Cloudflare R2 (file storage — uploaded reports, images)
+  "r2_buckets": [
+    {
+      "binding": "R2",
+      "bucket_name": "skids-parent-files"
+    }
+  ],
+
+  // Cloudflare KV (sessions, cache)
+  "kv_namespaces": [
+    {
+      "binding": "KV",
+      "id": "" // Will be filled after `wrangler kv namespace create SESSIONS`
+    }
+  ],
+
+  // Cloudflare Workers AI
+  "ai": {
+    "binding": "AI"
+  },
+
+  // Environment variables
+  "vars": {
+    "FIREBASE_PROJECT_ID": "skidsparent",
+    "SITE_URL": "https://skidsparent.pages.dev"
+  }
+}

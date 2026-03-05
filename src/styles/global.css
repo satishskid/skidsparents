@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+@theme {
+  --color-skids-green: #16a34a;
+  --color-skids-green-light: #dcfce7;
+  --color-skids-blue: #2563eb;
+  --color-skids-blue-light: #dbeafe;
+  --color-skids-purple: #7c3aed;
+  --color-skids-purple-light: #ede9fe;
+  --color-skids-orange: #ea580c;
+  --color-skids-orange-light: #fff7ed;
+  --color-skids-pink: #db2777;
+  --color-skids-pink-light: #fce7f3;
+  --color-skids-teal: #0d9488;
+  --color-skids-teal-light: #ccfbf1;
+
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Selection color */
+::selection {
+  background-color: var(--color-skids-green-light);
+  color: var(--color-skids-green);
+}
+
+/* Focus ring */
+*:focus-visible {
+  outline: 2px solid var(--color-skids-blue);
+  outline-offset: 2px;
+}
+
+/* Hide scrollbar but allow scrolling */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Blog content prose */
+.prose-skids h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.prose-skids p {
+  line-height: 1.75;
+  margin-bottom: 1rem;
+}
+
+.prose-skids img {
+  border-radius: 0.75rem;
+  margin: 1.5rem 0;
+}
+
+/* Card hover effect */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 10px -6px rgba(0, 0, 0, 0.05);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, var(--color-skids-green), var(--color-skids-blue));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Shimmer loading */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Pulse dot (for live/active indicators) */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}

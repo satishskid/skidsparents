@@ -1,0 +1,106 @@
+---
+const currentPath = Astro.url.pathname
+
+const navLinks = [
+  { href: '/blog', label: 'Blog' },
+  { href: '/discover', label: 'Discover' },
+  { href: '/services', label: 'Services' },
+  { href: '/about', label: 'Why SKIDS?' },
+]
+
+function isActive(href: string): boolean {
+  if (href === '/') return currentPath === '/'
+  return currentPath.startsWith(href)
+}
+---
+
+<header class="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-gray-100">
+  <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+      <!-- Logo -->
+      <a href="/" class="flex items-center gap-2.5 group">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-sm shadow-sm group-hover:shadow-md transition-shadow">
+          S
+        </div>
+        <div class="flex flex-col">
+          <span class="text-lg font-display font-bold leading-tight text-gray-900">SKIDS</span>
+          <span class="text-[10px] font-medium text-gray-400 leading-none tracking-wider uppercase">Parent</span>
+        </div>
+      </a>
+
+      <!-- Desktop Nav -->
+      <div class="hidden md:flex items-center gap-1">
+        {navLinks.map((link) => (
+          <a
+            href={link.href}
+            class:list={[
+              'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+              isActive(link.href)
+                ? 'bg-green-50 text-green-700'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50',
+            ]}
+          >
+            {link.label}
+          </a>
+        ))}
+      </div>
+
+      <!-- Auth Button -->
+      <div class="flex items-center gap-3">
+        <a
+          href="/dashboard"
+          class="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 transition-colors shadow-sm"
+        >
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+          </svg>
+          My Dashboard
+        </a>
+
+        <!-- Mobile menu button -->
+        <button
+          id="mobile-menu-btn"
+          class="md:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100"
+          aria-label="Toggle menu"
+        >
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Nav -->
+    <div id="mobile-menu" class="hidden md:hidden pb-4">
+      <div class="flex flex-col gap-1 pt-2 border-t border-gray-100">
+        {navLinks.map((link) => (
+          <a
+            href={link.href}
+            class:list={[
+              'px-4 py-2.5 rounded-lg text-sm font-medium transition-colors',
+              isActive(link.href)
+                ? 'bg-green-50 text-green-700'
+                : 'text-gray-600 hover:bg-gray-50',
+            ]}
+          >
+            {link.label}
+          </a>
+        ))}
+        <a
+          href="/dashboard"
+          class="mt-2 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium"
+        >
+          My Dashboard
+        </a>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<script>
+  const btn = document.getElementById('mobile-menu-btn')
+  const menu = document.getElementById('mobile-menu')
+  btn?.addEventListener('click', () => {
+    menu?.classList.toggle('hidden')
+  })
+</script>

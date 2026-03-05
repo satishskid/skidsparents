@@ -1,0 +1,86 @@
+---
+interface Props {
+  title: string
+  description?: string
+  ogImage?: string
+  ogType?: string
+  canonical?: string
+  noIndex?: boolean
+}
+
+const {
+  title,
+  description = 'SKIDS Parent — The place where today\'s parents come to raise smart, healthy S-Kids. Evidence-based child health, developmental tracking, and personalized care.',
+  ogImage = '/og/default.png',
+  ogType = 'website',
+  canonical,
+  noIndex = false,
+} = Astro.props
+
+const siteUrl = 'https://parent.skids.clinic'
+const fullTitle = title === 'SKIDS Parent' ? title : `${title} | SKIDS Parent`
+const ogImageUrl = ogImage.startsWith('http') ? ogImage : `${siteUrl}${ogImage}`
+const canonicalUrl = canonical || Astro.url.href
+---
+
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+
+    <!-- SEO -->
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl} />
+    {noIndex && <meta name="robots" content="noindex,nofollow" />}
+
+    <!-- Open Graph -->
+    <meta property="og:type" content={ogType} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:site_name" content="SKIDS Parent" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageUrl} />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Structured Data -->
+    <script type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "SKIDS Parent",
+      "url": siteUrl,
+      "logo": `${siteUrl}/images/logo.png`,
+      "description": "Evidence-based child health platform for modern parents",
+      "sameAs": [
+        "https://skids.clinic",
+        "https://medium.com/@skids_health"
+      ]
+    })} />
+
+    <style is:global>
+      @import '../styles/global.css';
+    </style>
+  </head>
+  <body class="min-h-screen bg-white text-gray-900 font-sans antialiased">
+    <slot />
+  </body>
+</html>

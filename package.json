@@ -1,0 +1,44 @@
+{
+  "name": "skids-parent",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "SKIDS Parent — The place where today's parents come to raise smart, healthy S-Kids",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "wrangler d1 migrations apply skids-parent-db --local",
+    "db:migrate:prod": "wrangler d1 migrations apply skids-parent-db --remote",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "astro": "^5.7.0",
+    "@astrojs/cloudflare": "^12.0.0",
+    "@astrojs/react": "^4.2.0",
+    "@astrojs/sitemap": "^3.3.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "drizzle-orm": "^0.44.0",
+    "hono": "^4.7.0",
+    "firebase": "^11.6.0",
+    "firebase-auth-cloudflare-workers": "^2.0.0",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^3.0.0",
+    "class-variance-authority": "^0.7.1",
+    "lucide-react": "^0.475.0",
+    "date-fns": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "typescript": "^5.8.0",
+    "tailwindcss": "^4.1.0",
+    "@tailwindcss/vite": "^4.1.0",
+    "drizzle-kit": "^0.31.0",
+    "wrangler": "^4.14.0",
+    "@cloudflare/workers-types": "^4.20250313.0"
+  }
+}

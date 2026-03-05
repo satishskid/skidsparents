@@ -1,0 +1,175 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import Navbar from '@/components/common/Navbar.astro'
+import Footer from '@/components/common/Footer.astro'
+
+export const prerender = true
+
+// Fetch blogs from SKIDS feed
+let blogs: any[] = []
+let categories: string[] = []
+try {
+  const res = await fetch('https://9vhd0onw23.execute-api.ap-south-1.amazonaws.com/published-blogs')
+  if (res.ok) {
+    blogs = (await res.json()) as any[]
+    // Extract unique categories
+    const catSet = new Set<string>()
+    blogs.forEach((b: any) => {
+      if (b.categories) {
+        ;(Array.isArray(b.categories) ? b.categories : [b.categories]).forEach((c: string) => catSet.add(c))
+      }
+    })
+    categories = Array.from(catSet).sort()
+  }
+} catch {
+  blogs = []
+}
+
+const categoryColors: Record<string, string> = {
+  "Parent's Corner": 'bg-pink-100 text-pink-700',
+  'Expert Talks': 'bg-purple-100 text-purple-700',
+  'School Hub': 'bg-blue-100 text-blue-700',
+  'Health Tips': 'bg-green-100 text-green-700',
+  'Nutrition': 'bg-orange-100 text-orange-700',
+  'Development': 'bg-teal-100 text-teal-700',
+}
+---
+
+<BaseLayout
+  title="Health Blog"
+  description="Daily evidence-based articles on child health, nutrition, development, and parenting. Written by pediatricians and child health experts."
+  ogType="website"
+>
+  <Navbar />
+
+  <main class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <section class="bg-white border-b border-gray-100">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+        <div class="max-w-2xl">
+          <span class="text-sm font-semibold text-green-600 uppercase tracking-wider">Health Blog</span>
+          <h1 class="mt-3 text-3xl sm:text-4xl font-display font-bold text-gray-900">
+            Today's parenting wisdom
+          </h1>
+          <p class="mt-4 text-lg text-gray-500">
+            Daily insights from pediatricians, nutritionists, and child development experts. Evidence-based, empathy-driven.
+          </p>
+        </div>
+
+        <!-- Category Filters -->
+        {categories.length > 0 && (
+          <div class="mt-8 flex flex-wrap gap-2" id="category-filters">
+            <button
+              data-category="all"
+              class="category-btn px-4 py-2 rounded-full text-sm font-medium bg-gray-900 text-white transition-colors"
+            >
+              All
+            </button>
+            {categories.map((cat) => (
+              <button
+                data-category={cat}
+                class="category-btn px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+
+    <!-- Blog Grid -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      {blogs.length === 0 ? (
+        <div class="text-center py-20">
+          <div class="text-4xl mb-4">📝</div>
+          <h2 class="text-xl font-display font-bold text-gray-900">Articles loading...</h2>
+          <p class="mt-2 text-gray-500">Check back soon for the latest health insights.</p>
+        </div>
+      ) : (
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6" id="blog-grid">
+          {blogs.map((blog: any) => {
+            const blogCategories = Array.isArray(blog.categories) ? blog.categories : blog.categories ? [blog.categories] : []
+            return (
+              <article
+                class="blog-card card-hover group block rounded-2xl overflow-hidden bg-white border border-gray-100 shadow-sm"
+                data-categories={JSON.stringify(blogCategories)}
+              >
+                <a href={blog.link || `/blog/${blog.slug || blog.id}`} target={blog.link ? '_blank' : undefined} rel={blog.link ? 'noopener' : undefined}>
+                  {blog.image && (
+                    <div class="aspect-[16/9] overflow-hidden bg-gray-100">
+                      <img
+                        src={blog.image}
+                        alt={blog.title}
+                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    </div>
+                  )}
+                  <div class="p-5">
+                    <!-- Categories -->
+                    {blogCategories.length > 0 && (
+                      <div class="flex flex-wrap gap-1.5 mb-3">
+                        {blogCategories.map((cat: string) => (
+                          <span class={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${categoryColors[cat] || 'bg-gray-100 text-gray-600'}`}>
+                            {cat}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    <h2 class="text-base font-display font-bold text-gray-900 group-hover:text-green-600 transition-colors line-clamp-2">
+                      {blog.title}
+                    </h2>
+
+                    {blog.description && (
+                      <p class="mt-2 text-sm text-gray-500 line-clamp-2">{blog.description}</p>
+                    )}
+
+                    <div class="mt-4 flex items-center justify-between text-xs text-gray-400">
+                      {blog.author && <span>{blog.author}</span>}
+                      {blog.pubDate && <time>{new Date(blog.pubDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</time>}
+                    </div>
+                  </div>
+                </a>
+              </article>
+            )
+          })}
+        </div>
+      )}
+    </section>
+  </main>
+
+  <Footer />
+</BaseLayout>
+
+<script>
+  // Client-side category filtering
+  const buttons = document.querySelectorAll('.category-btn')
+  const cards = document.querySelectorAll('.blog-card')
+
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const category = (btn as HTMLElement).dataset.category
+
+      // Update active button
+      buttons.forEach((b) => {
+        b.classList.remove('bg-gray-900', 'text-white')
+        b.classList.add('bg-gray-100', 'text-gray-600')
+      })
+      btn.classList.remove('bg-gray-100', 'text-gray-600')
+      btn.classList.add('bg-gray-900', 'text-white')
+
+      // Filter cards
+      cards.forEach((card) => {
+        const cardCategories = JSON.parse((card as HTMLElement).dataset.categories || '[]')
+        if (category === 'all' || cardCategories.includes(category)) {
+          ;(card as HTMLElement).style.display = ''
+        } else {
+          ;(card as HTMLElement).style.display = 'none'
+        }
+      })
+    })
+  })
+</script>
