@@ -408,6 +408,15 @@ const metaPrompts = {
 </BaseLayout>
 
 <script>
+  // Capture referral code from URL
+  const urlParams = new URLSearchParams(window.location.search)
+  const ref = urlParams.get('ref')
+  if (ref) {
+    localStorage.setItem('skids-referral', ref)
+    // Clean URL without reload
+    window.history.replaceState({}, '', window.location.pathname)
+  }
+
   // Wire the "Start Conversation" button to open ChatWidget
   document.getElementById('open-chat-btn')?.addEventListener('click', () => {
     window.dispatchEvent(new CustomEvent('open-dr-skids'))

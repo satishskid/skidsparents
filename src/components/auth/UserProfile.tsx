@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/lib/hooks/useAuth'
 import ChildRegistration from './ChildRegistration'
+import ReferralBanner from './ReferralBanner'
 
 interface Child {
   id: string
@@ -190,6 +191,9 @@ export default function UserProfile() {
         )}
       </div>
 
+      {/* Referral Banner */}
+      <ReferralBanner />
+
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-white rounded-xl p-4 border border-gray-100 text-center">
@@ -233,7 +237,7 @@ function MenuItems() {
   const items = [
     { href: '/timeline', icon: 'chat', color: 'green', label: 'Health Timeline', desc: 'Chat with Dr. SKIDS & view records' },
     { href: '/discover', icon: 'book', color: 'blue', label: 'Discover', desc: 'Explore organs, habits & guides' },
-    { href: '/services', icon: 'store', color: 'purple', label: 'Services', desc: 'Telemedicine, consultations & more' },
+    { href: '/interventions', icon: 'store', color: 'purple', label: 'Interventions', desc: 'Vision, nutrition, therapy & more' },
     { href: '/about', icon: 'info', color: 'amber', label: 'About SKIDS', desc: 'Our mission & approach' },
   ]
 

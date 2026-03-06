@@ -6,6 +6,7 @@ import GrowthTracker from './GrowthTracker'
 import ObservationJournal from './ObservationJournal'
 import RecordsTimeline from './RecordsTimeline'
 import VaccinationTracker from './VaccinationTracker'
+import SmartRecommendations from './SmartRecommendations'
 
 interface Child {
   id: string
@@ -118,6 +119,9 @@ export default function ChildDashboard({ childId }: { childId: string }) {
           </div>
         </div>
       </div>
+
+      {/* Smart Recommendations */}
+      <SmartRecommendations child={child} />
 
       {/* Tabs */}
       <div className="flex gap-1 bg-white rounded-xl p-1 border border-gray-100 shadow-sm">

@@ -7,6 +7,17 @@ import ChatWidget from '@/components/chat/ChatWidget'
 import { SERVICES, SERVICE_CATEGORIES, type Service } from '@/lib/content/services'
 
 export const prerender = true
+
+// Map service slugs to intervention pages
+const serviceToIntervention: Record<string, string> = {
+  'vision-check': 'vision',
+  'specs-myopia': 'vision',
+  'nutreeai': 'nutrition',
+  'behavioral-assessment': 'chatter',
+  'speech-therapy': 'chatter',
+  'occupational-therapy': 'chatter',
+  'pediatric-consult': 'teleconsult',
+}
 ---
 
 <BaseLayout
@@ -87,9 +98,15 @@ export const prerender = true
                   <span class="text-lg font-bold text-gray-900">{svc.priceLabel}</span>
                   <span class="ml-1.5 text-xs text-gray-400">{svc.deliveryLabel}</span>
                 </div>
-                <button class="px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm">
-                  Book
-                </button>
+                {serviceToIntervention[svc.slug] ? (
+                  <a href={`/interventions/${serviceToIntervention[svc.slug]}`} class="px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm">
+                    Learn More
+                  </a>
+                ) : (
+                  <button class="px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm">
+                    Book
+                  </button>
+                )}
               </div>
             </div>
           ))}

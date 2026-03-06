@@ -1,0 +1,125 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import Navbar from '@/components/common/Navbar.astro'
+import Footer from '@/components/common/Footer.astro'
+import MobileTabBar from '@/components/common/MobileTabBar.astro'
+import ChatWidget from '@/components/chat/ChatWidget'
+import { INTERVENTIONS } from '@/lib/content/interventions'
+
+export const prerender = true
+---
+
+<BaseLayout
+  title="SKIDS Interventions"
+  description="Evidence-based pediatric health interventions — vision screening, developmental therapy, AI nutrition, hearing screening, teleconsultation. From screening to treatment, delivered digitally."
+>
+  <Navbar />
+
+  <main class="min-h-screen">
+    <!-- Hero -->
+    <section class="bg-gradient-to-br from-green-600 to-emerald-700 py-16 lg:py-20 relative overflow-hidden">
+      <div class="absolute inset-0 bg-black/10" />
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 relative z-10 text-center">
+        <span class="text-xs font-semibold text-green-200 uppercase tracking-wider">From Screening to Care</span>
+        <h1 class="mt-3 text-3xl sm:text-4xl lg:text-5xl font-display font-extrabold text-white tracking-tight">
+          SKIDS Interventions
+        </h1>
+        <p class="mt-4 text-lg text-white/90 max-w-2xl mx-auto">
+          Evidence-based care, delivered to you. Each intervention starts with screening data and ends with measurable outcomes — all tracked in your child's health record.
+        </p>
+      </div>
+    </section>
+
+    <!-- Intervention Cards -->
+    <section class="px-4 sm:px-6 lg:px-8 py-12">
+      <div class="max-w-5xl mx-auto">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {INTERVENTIONS.map((intervention) => (
+            <a
+              href={`/interventions/${intervention.slug}`}
+              class="group block rounded-2xl overflow-hidden border border-gray-100 bg-white shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+            >
+              <!-- Gradient Header -->
+              <div class={`bg-gradient-to-br ${intervention.gradient} p-6 relative`}>
+                <div class="absolute inset-0 bg-black/10" />
+                <div class="relative z-10">
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="text-4xl">{intervention.emoji}</span>
+                    <span class:list={[
+                      'text-[10px] font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider',
+                      intervention.status === 'available'
+                        ? 'bg-green-400/20 text-green-100 border border-green-400/30'
+                        : 'bg-white/20 text-white/80 border border-white/30',
+                    ]}>
+                      {intervention.status === 'available' ? 'Available' : 'Building'}
+                    </span>
+                  </div>
+                  <h3 class="text-lg font-display font-bold text-white">{intervention.brand}</h3>
+                  <p class="mt-1 text-sm text-white/80 line-clamp-2">{intervention.tagline}</p>
+                </div>
+              </div>
+
+              <!-- Body -->
+              <div class="p-5">
+                <p class="text-sm text-gray-600 line-clamp-3">{intervention.description}</p>
+                <div class="mt-4 flex items-center justify-between">
+                  <span class="text-xs text-gray-400">{intervention.ageRange}</span>
+                  <span class="text-sm font-semibold text-green-600 group-hover:text-green-700 flex items-center gap-1">
+                    Explore
+                    <svg class="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- Trust Strip -->
+    <section class="py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
+      <div class="max-w-5xl mx-auto">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
+          <div>
+            <div class="text-2xl font-display font-bold text-gray-900">5</div>
+            <div class="mt-1 text-xs text-gray-500">Intervention Products</div>
+          </div>
+          <div>
+            <div class="text-2xl font-display font-bold text-gray-900">FDA</div>
+            <div class="mt-1 text-xs text-gray-500">Approved Devices</div>
+          </div>
+          <div>
+            <div class="text-2xl font-display font-bold text-gray-900">AI</div>
+            <div class="mt-1 text-xs text-gray-500">Powered Analysis</div>
+          </div>
+          <div>
+            <div class="text-2xl font-display font-bold text-gray-900">PHR</div>
+            <div class="mt-1 text-xs text-gray-500">Integrated Records</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="py-16 px-4 sm:px-6 lg:px-8 bg-gray-900">
+      <div class="max-w-2xl mx-auto text-center">
+        <h2 class="text-2xl font-display font-bold text-white">Start with a Screening</h2>
+        <p class="mt-3 text-gray-400 text-sm">
+          Every SKIDS intervention begins with data. Book a screening at your school or center, and your child's health journey starts.
+        </p>
+        <a
+          href="/interventions/vision"
+          class="mt-6 inline-block px-8 py-3 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition-colors"
+        >
+          Explore SKIDS Vision
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+  <ChatWidget client:idle />
+  <MobileTabBar />
+</BaseLayout>

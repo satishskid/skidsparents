@@ -1,0 +1,345 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import Navbar from '@/components/common/Navbar.astro'
+import Footer from '@/components/common/Footer.astro'
+import MobileTabBar from '@/components/common/MobileTabBar.astro'
+import ChatWidget from '@/components/chat/ChatWidget'
+import ServiceInterestForm from '@/components/services/ServiceInterestForm'
+import VisionDashboard from '@/components/interventions/VisionDashboard'
+import ChatterAssessment from '@/components/interventions/ChatterAssessment'
+import NutritionAssessment from '@/components/interventions/NutritionAssessment'
+import HearingTracker from '@/components/interventions/HearingTracker'
+import SymptomChecker from '@/components/interventions/SymptomChecker'
+import { INTERVENTIONS, type Intervention } from '@/lib/content/interventions'
+import { SERVICES } from '@/lib/content/services'
+
+export const prerender = true
+
+export function getStaticPaths() {
+  return INTERVENTIONS.map((intervention) => ({
+    params: { slug: intervention.slug },
+    props: { intervention },
+  }))
+}
+
+interface Props {
+  intervention: Intervention
+}
+
+const { intervention } = Astro.props
+
+// Get included services
+const includedServices = intervention.servicesSlugs
+  .map((slug) => SERVICES.find((s) => s.slug === slug))
+  .filter(Boolean)
+
+// Prev/next navigation
+const idx = INTERVENTIONS.findIndex((i) => i.slug === intervention.slug)
+const prevIntervention = INTERVENTIONS[(idx - 1 + INTERVENTIONS.length) % INTERVENTIONS.length]
+const nextIntervention = INTERVENTIONS[(idx + 1) % INTERVENTIONS.length]
+
+// Related blogs
+let relatedBlogs: any[] = []
+try {
+  const res = await fetch('https://9vhd0onw23.execute-api.ap-south-1.amazonaws.com/published-blogs')
+  if (res.ok) {
+    const allBlogs: any[] = await res.json()
+    relatedBlogs = allBlogs
+      .filter((b: any) =>
+        intervention.relatedCategories.some(
+          (cat) =>
+            (b.category || '').toLowerCase().includes(cat.toLowerCase()) ||
+            cat.toLowerCase().includes((b.category || '').toLowerCase())
+        )
+      )
+      .slice(0, 3)
+  }
+} catch {}
+
+// Dr. SKIDS prompt
+const drSkidsPrompt = `Tell me about ${intervention.brand} for children`
+
+// Component map for dynamic rendering
+const componentMap: Record<string, string> = {
+  VisionDashboard: 'vision',
+  ChatterAssessment: 'chatter',
+  NutritionAssessment: 'nutrition',
+  HearingTracker: 'symphony',
+  SymptomChecker: 'teleconsult',
+}
+---
+
+<BaseLayout
+  title={intervention.brand}
+  description={intervention.description}
+  ogType="article"
+>
+  <Navbar />
+
+  <main class="min-h-screen">
+    <!-- Hero -->
+    <section class={`bg-gradient-to-br ${intervention.gradient} py-16 lg:py-24 relative overflow-hidden`}>
+      <div class="absolute inset-0 bg-black/10" />
+      <div class="max-w-3xl mx-auto px-4 sm:px-6 relative z-10 text-center">
+        <a href="/interventions" class="inline-flex items-center gap-1 text-white/70 text-sm font-medium hover:text-white transition-colors mb-6">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+          </svg>
+          All Interventions
+        </a>
+        <div class="text-6xl mb-4">{intervention.emoji}</div>
+        <div class="flex items-center justify-center gap-2 mb-3">
+          <h1 class="text-3xl sm:text-5xl font-display font-extrabold text-white tracking-tight">
+            {intervention.brand}
+          </h1>
+          <span class:list={[
+            'text-[10px] font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider',
+            intervention.status === 'available'
+              ? 'bg-green-400/20 text-green-100 border border-green-400/30'
+              : 'bg-white/20 text-white/80 border border-white/30',
+          ]}>
+            {intervention.status === 'available' ? 'Available' : 'Building'}
+          </span>
+        </div>
+        <p class="mt-4 text-lg text-white/90 max-w-xl mx-auto">
+          {intervention.tagline}
+        </p>
+        <div class="mt-4 inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-1.5 text-sm text-white">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0" />
+          </svg>
+          {intervention.ageRange}
+        </div>
+      </div>
+    </section>
+
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 py-10 space-y-8">
+      <!-- Wonder Fact -->
+      <div class="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-2xl p-6 border border-amber-100">
+        <div class="flex items-start gap-3">
+          <div class="text-2xl">💡</div>
+          <div>
+            <h2 class="text-sm font-semibold text-amber-800 uppercase tracking-wider">Did You Know?</h2>
+            <p class="mt-2 text-gray-800 font-medium">{intervention.wonderFact}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Why It Matters -->
+      <div class="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Why It Matters</h2>
+        <div class="prose prose-sm prose-gray max-w-none">
+          {intervention.whyItMatters.split('\n\n').map((para) => (
+            <p class="text-gray-600 leading-relaxed mb-3">{para}</p>
+          ))}
+        </div>
+      </div>
+
+      <!-- How It Works -->
+      <div>
+        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 px-1">How It Works</h2>
+        <div class="grid sm:grid-cols-2 gap-3">
+          {intervention.howItWorks.map((step) => (
+            <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+              <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center text-green-600 font-bold text-sm flex-shrink-0">
+                  {step.step}
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-lg">{step.emoji}</span>
+                    <h3 class="font-display font-bold text-gray-900 text-sm">{step.title}</h3>
+                  </div>
+                  <p class="mt-1 text-sm text-gray-500">{step.description}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <!-- What You Get -->
+      <div class="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">What You Get</h2>
+        <ul class="space-y-2.5">
+          {intervention.whatYouGet.map((item) => (
+            <li class="flex items-start gap-3 text-sm text-gray-700">
+              <svg class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {item}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <!-- Interactive Product Component -->
+      <div>
+        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 px-1">Try It Now</h2>
+        {intervention.slug === 'vision' && <VisionDashboard client:load />}
+        {intervention.slug === 'chatter' && <ChatterAssessment client:load />}
+        {intervention.slug === 'nutrition' && <NutritionAssessment client:load />}
+        {intervention.slug === 'symphony' && <HearingTracker client:load />}
+        {intervention.slug === 'teleconsult' && <SymptomChecker client:load />}
+      </div>
+
+      <!-- Included Services -->
+      {includedServices.length > 0 && (
+        <div>
+          <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 px-1">Included Services</h2>
+          <div class="space-y-3">
+            {includedServices.map((svc: any) => (
+              <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <span class="text-2xl">{svc.emoji}</span>
+                    <div>
+                      <h3 class="text-sm font-bold text-gray-900">{svc.name}</h3>
+                      <p class="text-xs text-gray-500">{svc.deliveryLabel}</p>
+                    </div>
+                  </div>
+                  <span class="text-sm font-bold text-gray-900">{svc.priceLabel}</span>
+                </div>
+                <p class="mt-2 text-sm text-gray-500">{svc.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <!-- Stats Strip -->
+      <div class="bg-gray-50 rounded-2xl p-6">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+          {intervention.stats.map((stat) => (
+            <div>
+              <div class="text-xl font-display font-bold text-gray-900">{stat.value}</div>
+              <div class="mt-0.5 text-xs text-gray-500">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <!-- FAQs -->
+      <div>
+        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 px-1">Frequently Asked Questions</h2>
+        <div class="space-y-3">
+          {intervention.faqs.map((faq, i) => (
+            <details class="bg-white rounded-2xl border border-gray-100 shadow-sm group" open={i === 0}>
+              <summary class="px-5 py-4 cursor-pointer flex items-center justify-between list-none">
+                <span class="text-sm font-semibold text-gray-900 pr-4">{faq.q}</span>
+                <svg class="w-4 h-4 text-gray-400 flex-shrink-0 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                </svg>
+              </summary>
+              <div class="px-5 pb-4 text-sm text-gray-600 leading-relaxed border-t border-gray-50 pt-3">
+                {faq.a}
+              </div>
+            </details>
+          ))}
+        </div>
+      </div>
+
+      <!-- Ask Dr. SKIDS -->
+      <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-100">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold shadow-sm">
+            S
+          </div>
+          <div class="flex-1">
+            <h2 class="font-display font-bold text-gray-900">Ask Dr. SKIDS</h2>
+            <p class="mt-1 text-sm text-gray-600">Have questions about {intervention.brand}?</p>
+            <a
+              href={`/timeline?q=${encodeURIComponent(drSkidsPrompt)}`}
+              class="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors"
+            >
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+              </svg>
+              Ask about {intervention.brand}
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Related Blog Posts -->
+      {relatedBlogs.length > 0 && (
+        <div>
+          <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 px-1">Related Articles</h2>
+          <div class="grid sm:grid-cols-3 gap-4">
+            {relatedBlogs.map((blog: any) => (
+              <a
+                href={`/blog/${blog.blogId}`}
+                class="group rounded-xl overflow-hidden border border-gray-100 bg-white hover:shadow-md transition-shadow"
+              >
+                {blog.thumbnailUrl && (
+                  <div class="aspect-[16/10] overflow-hidden">
+                    <img
+                      src={blog.thumbnailUrl}
+                      alt=""
+                      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                    />
+                  </div>
+                )}
+                <div class="p-3">
+                  <span class="text-[10px] font-semibold text-green-600 uppercase">{blog.category}</span>
+                  <h3 class="text-sm font-semibold text-gray-900 mt-1 line-clamp-2 group-hover:text-green-600 transition-colors">
+                    {blog.title}
+                  </h3>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <!-- Lead Capture CTA -->
+      <ServiceInterestForm
+        client:load
+        interventionSlug={intervention.slug}
+        status={intervention.status}
+        ctaLabel={intervention.ctaLabel}
+        brand={intervention.brand}
+      />
+
+      <!-- Prev/Next Navigation -->
+      <div class="flex gap-3 pt-4">
+        <a
+          href={`/interventions/${prevIntervention.slug}`}
+          class="flex-1 flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-100 hover:bg-gray-50 transition-colors group"
+        >
+          <svg class="w-4 h-4 text-gray-400 group-hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+          </svg>
+          <div>
+            <div class="text-[10px] text-gray-400 uppercase tracking-wider">Previous</div>
+            <div class="text-sm font-semibold text-gray-900">{prevIntervention.emoji} {prevIntervention.brand}</div>
+          </div>
+        </a>
+        <a
+          href={`/interventions/${nextIntervention.slug}`}
+          class="flex-1 flex items-center justify-end gap-3 px-4 py-3 rounded-xl bg-white border border-gray-100 hover:bg-gray-50 transition-colors group text-right"
+        >
+          <div>
+            <div class="text-[10px] text-gray-400 uppercase tracking-wider">Next</div>
+            <div class="text-sm font-semibold text-gray-900">{nextIntervention.brand} {nextIntervention.emoji}</div>
+          </div>
+          <svg class="w-4 h-4 text-gray-400 group-hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg>
+        </a>
+      </div>
+
+      <!-- Back to all -->
+      <div class="text-center">
+        <a href="/interventions" class="text-sm text-green-600 hover:text-green-700 font-medium">
+          ← Explore All Interventions
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+  <ChatWidget client:idle />
+  <MobileTabBar />
+</BaseLayout>
