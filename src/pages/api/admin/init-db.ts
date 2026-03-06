@@ -192,6 +192,46 @@ CREATE TABLE IF NOT EXISTS screening_imports (
 );
 `
 
+const CREATE_PRODUCTS_TABLE = `
+CREATE TABLE IF NOT EXISTS products (
+  slug TEXT PRIMARY KEY,
+  brand TEXT NOT NULL,
+  emoji TEXT NOT NULL DEFAULT '📦',
+  tagline TEXT,
+  description TEXT,
+  status TEXT DEFAULT 'building',
+  visible INTEGER DEFAULT 1,
+  wonder_fact TEXT,
+  why_it_matters TEXT,
+  how_it_works_json TEXT,
+  what_you_get_json TEXT,
+  stats_json TEXT,
+  faqs_json TEXT,
+  age_range TEXT,
+  cta_label TEXT,
+  gradient TEXT DEFAULT 'from-gray-500 to-gray-600',
+  sort_order INTEGER DEFAULT 99,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+`
+
+const CREATE_CAMPAIGNS_TABLE = `
+CREATE TABLE IF NOT EXISTS campaigns (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(8)))),
+  product_slug TEXT NOT NULL,
+  campaign_code TEXT NOT NULL UNIQUE,
+  whatsapp_template TEXT,
+  utm_source TEXT DEFAULT 'whatsapp',
+  utm_medium TEXT DEFAULT 'campaign',
+  utm_campaign TEXT,
+  is_active INTEGER DEFAULT 1,
+  leads_count INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+`
+
 const INDEX_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_leads_brand ON leads(brand)`,
   `CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status)`,
@@ -212,6 +252,10 @@ const INDEX_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_uploaded_reports_child ON uploaded_reports(child_id)`,
   `CREATE INDEX IF NOT EXISTS idx_vaccination_child ON vaccination_records(child_id)`,
   `CREATE INDEX IF NOT EXISTS idx_screening_child ON screening_imports(child_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_products_visible ON products(visible)`,
+  `CREATE INDEX IF NOT EXISTS idx_products_status ON products(status)`,
+  `CREATE INDEX IF NOT EXISTS idx_campaigns_slug ON campaigns(product_slug)`,
+  `CREATE INDEX IF NOT EXISTS idx_campaigns_code ON campaigns(campaign_code)`,
 ]
 
 export const GET: APIRoute = async (ctx) => {
@@ -248,12 +292,14 @@ async function handleInit(request: Request, locals: any) {
     await db.prepare(CREATE_UPLOADED_REPORTS_TABLE).run()
     await db.prepare(CREATE_VACCINATION_RECORDS_TABLE).run()
     await db.prepare(CREATE_SCREENING_IMPORTS_TABLE).run()
+    await db.prepare(CREATE_PRODUCTS_TABLE).run()
+    await db.prepare(CREATE_CAMPAIGNS_TABLE).run()
     for (const stmt of INDEX_STATEMENTS) {
       await db.prepare(stmt).run()
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: 'All 12 tables ready' }),
+      JSON.stringify({ success: true, message: 'All 14 tables ready' }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
   } catch (err: any) {

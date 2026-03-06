@@ -5,8 +5,31 @@ import Footer from '@/components/common/Footer.astro'
 import MobileTabBar from '@/components/common/MobileTabBar.astro'
 import ChatWidget from '@/components/chat/ChatWidget'
 import { INTERVENTIONS } from '@/lib/content/interventions'
+import { mergeProducts, type ProductRow } from '@/lib/content/product-merge'
+import type { DisplayProduct } from '@/lib/content/product-merge'
 
-export const prerender = true
+export const prerender = false
+
+// Fetch products: DB merge with code fallback
+const runtime = (Astro.locals as any).runtime
+const env = runtime?.env || {}
+const db = env.DB
+
+let products: DisplayProduct[]
+if (db) {
+  try {
+    const { results } = await db.prepare('SELECT * FROM products ORDER BY sort_order, created_at').all()
+    products = mergeProducts(results as unknown as ProductRow[]).filter(p => p.visible)
+  } catch {
+    products = INTERVENTIONS.map((i, idx) => ({
+      ...i, visible: true, hasCodeDefaults: true, sortOrder: idx, updatedAt: null,
+    }))
+  }
+} else {
+  products = INTERVENTIONS.map((i, idx) => ({
+    ...i, visible: true, hasCodeDefaults: true, sortOrder: idx, updatedAt: null,
+  }))
+}
 ---
 
 <BaseLayout
@@ -34,7 +57,7 @@ export const prerender = true
     <section class="px-4 sm:px-6 lg:px-8 py-12">
       <div class="max-w-5xl mx-auto">
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {INTERVENTIONS.map((intervention) => (
+          {products.map((intervention) => (
             <a
               href={`/interventions/${intervention.slug}`}
               class="group block rounded-2xl overflow-hidden border border-gray-100 bg-white shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
@@ -83,7 +106,7 @@ export const prerender = true
       <div class="max-w-5xl mx-auto">
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
           <div>
-            <div class="text-2xl font-display font-bold text-gray-900">5</div>
+            <div class="text-2xl font-display font-bold text-gray-900">{products.length}</div>
             <div class="mt-1 text-xs text-gray-500">Intervention Products</div>
           </div>
           <div>

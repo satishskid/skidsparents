@@ -10,63 +10,82 @@ import ChatterAssessment from '@/components/interventions/ChatterAssessment'
 import NutritionAssessment from '@/components/interventions/NutritionAssessment'
 import HearingTracker from '@/components/interventions/HearingTracker'
 import SymptomChecker from '@/components/interventions/SymptomChecker'
-import { INTERVENTIONS, type Intervention } from '@/lib/content/interventions'
+import { INTERVENTIONS } from '@/lib/content/interventions'
 import { SERVICES } from '@/lib/content/services'
+import { mergeProducts, type ProductRow } from '@/lib/content/product-merge'
+import type { DisplayProduct } from '@/lib/content/product-merge'
 
-export const prerender = true
+export const prerender = false
 
-export function getStaticPaths() {
-  return INTERVENTIONS.map((intervention) => ({
-    params: { slug: intervention.slug },
-    props: { intervention },
+const { slug } = Astro.params
+
+// Fetch products: DB merge with code fallback
+const runtime = (Astro.locals as any).runtime
+const env = runtime?.env || {}
+const db = env.DB
+
+let products: DisplayProduct[]
+if (db) {
+  try {
+    const { results } = await db.prepare('SELECT * FROM products ORDER BY sort_order, created_at').all()
+    products = mergeProducts(results as unknown as ProductRow[])
+  } catch {
+    products = INTERVENTIONS.map((i, idx) => ({
+      ...i, visible: true, hasCodeDefaults: true, sortOrder: idx, updatedAt: null,
+    }))
+  }
+} else {
+  products = INTERVENTIONS.map((i, idx) => ({
+    ...i, visible: true, hasCodeDefaults: true, sortOrder: idx, updatedAt: null,
   }))
 }
 
-interface Props {
-  intervention: Intervention
+// Find this product
+const intervention = products.find(p => p.slug === slug && p.visible)
+if (!intervention) {
+  return Astro.redirect('/interventions')
 }
 
-const { intervention } = Astro.props
+// Get visible products for prev/next navigation
+const visibleProducts = products.filter(p => p.visible)
 
-// Get included services
+// Get included services (only for code-backed products)
 const includedServices = intervention.servicesSlugs
-  .map((slug) => SERVICES.find((s) => s.slug === slug))
-  .filter(Boolean)
+  ? intervention.servicesSlugs
+      .map((s: string) => SERVICES.find((svc) => svc.slug === s))
+      .filter(Boolean)
+  : []
 
 // Prev/next navigation
-const idx = INTERVENTIONS.findIndex((i) => i.slug === intervention.slug)
-const prevIntervention = INTERVENTIONS[(idx - 1 + INTERVENTIONS.length) % INTERVENTIONS.length]
-const nextIntervention = INTERVENTIONS[(idx + 1) % INTERVENTIONS.length]
+const idx = visibleProducts.findIndex((i) => i.slug === intervention.slug)
+const prevIntervention = visibleProducts[(idx - 1 + visibleProducts.length) % visibleProducts.length]
+const nextIntervention = visibleProducts[(idx + 1) % visibleProducts.length]
 
-// Related blogs
+// Related blogs (only for code-backed products with relatedCategories)
 let relatedBlogs: any[] = []
-try {
-  const res = await fetch('https://9vhd0onw23.execute-api.ap-south-1.amazonaws.com/published-blogs')
-  if (res.ok) {
-    const allBlogs: any[] = await res.json()
-    relatedBlogs = allBlogs
-      .filter((b: any) =>
-        intervention.relatedCategories.some(
-          (cat) =>
-            (b.category || '').toLowerCase().includes(cat.toLowerCase()) ||
-            cat.toLowerCase().includes((b.category || '').toLowerCase())
+if (intervention.relatedCategories && intervention.relatedCategories.length > 0) {
+  try {
+    const res = await fetch('https://9vhd0onw23.execute-api.ap-south-1.amazonaws.com/published-blogs')
+    if (res.ok) {
+      const allBlogs: any[] = await res.json()
+      relatedBlogs = allBlogs
+        .filter((b: any) =>
+          intervention.relatedCategories!.some(
+            (cat) =>
+              (b.category || '').toLowerCase().includes(cat.toLowerCase()) ||
+              cat.toLowerCase().includes((b.category || '').toLowerCase())
+          )
         )
-      )
-      .slice(0, 3)
-  }
-} catch {}
+        .slice(0, 3)
+    }
+  } catch {}
+}
 
 // Dr. SKIDS prompt
 const drSkidsPrompt = `Tell me about ${intervention.brand} for children`
 
-// Component map for dynamic rendering
-const componentMap: Record<string, string> = {
-  VisionDashboard: 'vision',
-  ChatterAssessment: 'chatter',
-  NutritionAssessment: 'nutrition',
-  HearingTracker: 'symphony',
-  SymptomChecker: 'teleconsult',
-}
+// Whether this product has an interactive component
+const hasComponent = intervention.hasCodeDefaults && intervention.component
 ---
 
 <BaseLayout
@@ -173,15 +192,17 @@ const componentMap: Record<string, string> = {
         </ul>
       </div>
 
-      <!-- Interactive Product Component -->
-      <div>
-        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 px-1">Try It Now</h2>
-        {intervention.slug === 'vision' && <VisionDashboard client:load />}
-        {intervention.slug === 'chatter' && <ChatterAssessment client:load />}
-        {intervention.slug === 'nutrition' && <NutritionAssessment client:load />}
-        {intervention.slug === 'symphony' && <HearingTracker client:load />}
-        {intervention.slug === 'teleconsult' && <SymptomChecker client:load />}
-      </div>
+      <!-- Interactive Product Component (only for code-backed products) -->
+      {hasComponent && (
+        <div>
+          <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 px-1">Try It Now</h2>
+          {intervention.slug === 'vision' && <VisionDashboard client:load />}
+          {intervention.slug === 'chatter' && <ChatterAssessment client:load />}
+          {intervention.slug === 'nutrition' && <NutritionAssessment client:load />}
+          {intervention.slug === 'symphony' && <HearingTracker client:load />}
+          {intervention.slug === 'teleconsult' && <SymptomChecker client:load />}
+        </div>
+      )}
 
       <!-- Included Services -->
       {includedServices.length > 0 && (
