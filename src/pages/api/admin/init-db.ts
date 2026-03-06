@@ -66,6 +66,61 @@ CREATE TABLE IF NOT EXISTS children (
 );
 `
 
+const CREATE_MILESTONES_TABLE = `
+CREATE TABLE IF NOT EXISTS milestones (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL REFERENCES children(id),
+  category TEXT NOT NULL,
+  milestone_key TEXT NOT NULL,
+  title TEXT NOT NULL,
+  status TEXT DEFAULT 'not_started',
+  observed_at TEXT,
+  parent_notes TEXT,
+  expected_age_min INTEGER,
+  expected_age_max INTEGER,
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+`
+
+const CREATE_HABITS_LOG_TABLE = `
+CREATE TABLE IF NOT EXISTS habits_log (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL REFERENCES children(id),
+  date TEXT NOT NULL,
+  habit_type TEXT NOT NULL,
+  value_json TEXT,
+  streak_days INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+`
+
+const CREATE_GROWTH_RECORDS_TABLE = `
+CREATE TABLE IF NOT EXISTS growth_records (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL REFERENCES children(id),
+  date TEXT NOT NULL,
+  height_cm REAL,
+  weight_kg REAL,
+  head_circ_cm REAL,
+  bmi REAL,
+  who_zscore_json TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+`
+
+const CREATE_PARENT_OBSERVATIONS_TABLE = `
+CREATE TABLE IF NOT EXISTS parent_observations (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL REFERENCES children(id),
+  date TEXT NOT NULL,
+  category TEXT,
+  observation_text TEXT NOT NULL,
+  concern_level TEXT DEFAULT 'none',
+  ai_response TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+`
+
 const INDEX_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_leads_brand ON leads(brand)`,
   `CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status)`,
@@ -73,6 +128,11 @@ const INDEX_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_leads_phone ON leads(phone)`,
   `CREATE INDEX IF NOT EXISTS idx_parents_firebase ON parents(firebase_uid)`,
   `CREATE INDEX IF NOT EXISTS idx_children_parent ON children(parent_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_milestones_child ON milestones(child_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_milestones_category ON milestones(category)`,
+  `CREATE INDEX IF NOT EXISTS idx_habits_child_date ON habits_log(child_id, date)`,
+  `CREATE INDEX IF NOT EXISTS idx_growth_child ON growth_records(child_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_observations_child ON parent_observations(child_id)`,
 ]
 
 export const GET: APIRoute = async (ctx) => {
@@ -100,12 +160,16 @@ async function handleInit(request: Request, locals: any) {
     await db.prepare(CREATE_LEADS_TABLE).run()
     await db.prepare(CREATE_PARENTS_TABLE).run()
     await db.prepare(CREATE_CHILDREN_TABLE).run()
+    await db.prepare(CREATE_MILESTONES_TABLE).run()
+    await db.prepare(CREATE_HABITS_LOG_TABLE).run()
+    await db.prepare(CREATE_GROWTH_RECORDS_TABLE).run()
+    await db.prepare(CREATE_PARENT_OBSERVATIONS_TABLE).run()
     for (const stmt of INDEX_STATEMENTS) {
       await db.prepare(stmt).run()
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: 'All tables ready (leads, parents, children)' }),
+      JSON.stringify({ success: true, message: 'All tables ready (leads, parents, children, milestones, habits_log, growth_records, parent_observations)' }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
   } catch (err: any) {

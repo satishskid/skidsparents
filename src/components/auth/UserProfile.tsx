@@ -16,6 +16,7 @@ export default function UserProfile() {
   const [children, setChildren] = useState<Child[]>([])
   const [loadingChildren, setLoadingChildren] = useState(false)
   const [showAddChild, setShowAddChild] = useState(false)
+  const [stats, setStats] = useState({ milestones: 0, habits: 0 })
 
   const fetchChildren = useCallback(async () => {
     if (!token) return
@@ -26,11 +27,36 @@ export default function UserProfile() {
       })
       if (res.ok) {
         const data = await res.json()
-        setChildren(data.children || [])
+        const list = data.children || []
+        setChildren(list)
+        fetchStats(list)
       }
     } catch {} finally {
       setLoadingChildren(false)
     }
+  }, [token])
+
+  const fetchStats = useCallback(async (childrenList: Child[]) => {
+    if (!token || childrenList.length === 0) return
+    let mTotal = 0
+    let hTotal = 0
+    for (const child of childrenList) {
+      try {
+        const [mRes, hRes] = await Promise.all([
+          fetch(`/api/milestones?childId=${child.id}`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`/api/habits?childId=${child.id}&days=30`, { headers: { Authorization: `Bearer ${token}` } }),
+        ])
+        if (mRes.ok) {
+          const mData = await mRes.json()
+          mTotal += (mData.milestones || []).filter((m: any) => m.status === 'achieved').length
+        }
+        if (hRes.ok) {
+          const hData = await hRes.json()
+          hTotal += (hData.habits || []).length
+        }
+      } catch {}
+    }
+    setStats({ milestones: mTotal, habits: hTotal })
   }, [token])
 
   useEffect(() => {
@@ -138,7 +164,7 @@ export default function UserProfile() {
         ) : children.length > 0 ? (
           <div className="space-y-2">
             {children.map((child) => (
-              <div key={child.id} className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-gray-100">
+              <a key={child.id} href={`/child/${child.id}`} className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-gray-100 hover:border-green-200 hover:bg-green-50/30 transition-colors group">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center text-lg">
                   {child.gender === 'male' ? '👦' : child.gender === 'female' ? '👧' : '🧒'}
                 </div>
@@ -146,10 +172,10 @@ export default function UserProfile() {
                   <div className="text-sm font-semibold text-gray-900">{child.name}</div>
                   <div className="text-xs text-gray-500">{getAge(child.dob)}</div>
                 </div>
-                <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-medium">
-                  Active
-                </span>
-              </div>
+                <svg className="w-4 h-4 text-gray-400 group-hover:text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+              </a>
             ))}
           </div>
         ) : (
@@ -171,11 +197,11 @@ export default function UserProfile() {
           <div className="text-[10px] text-gray-500 mt-1 font-medium uppercase tracking-wide">Children</div>
         </div>
         <div className="bg-white rounded-xl p-4 border border-gray-100 text-center">
-          <div className="text-2xl font-bold text-blue-600">0</div>
+          <div className="text-2xl font-bold text-blue-600">{stats.milestones}</div>
           <div className="text-[10px] text-gray-500 mt-1 font-medium uppercase tracking-wide">Milestones</div>
         </div>
         <div className="bg-white rounded-xl p-4 border border-gray-100 text-center">
-          <div className="text-2xl font-bold text-purple-600">0</div>
+          <div className="text-2xl font-bold text-purple-600">{stats.habits}</div>
           <div className="text-[10px] text-gray-500 mt-1 font-medium uppercase tracking-wide">Habits Tracked</div>
         </div>
       </div>

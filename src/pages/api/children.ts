@@ -8,13 +8,19 @@ import { verifyIdToken, extractBearerToken } from '@/lib/firebase/server'
 
 export const prerender = false
 
-async function getParentId(request: Request, env: any): Promise<string | null> {
+export async function getParentId(request: Request, env: any): Promise<string | null> {
   const token = extractBearerToken(request)
   if (!token) return null
   const decoded = await verifyIdToken(token, env.FIREBASE_PROJECT_ID || 'skidsparent', env.KV)
   if (!decoded) return null
   const row = await env.DB?.prepare('SELECT id FROM parents WHERE firebase_uid = ?').bind(decoded.uid).first()
   return row ? (row as any).id : null
+}
+
+/** Verify that a child belongs to this parent */
+export async function verifyChildOwnership(parentId: string, childId: string, db: any): Promise<boolean> {
+  const row = await db.prepare('SELECT id FROM children WHERE id = ? AND parent_id = ?').bind(childId, parentId).first()
+  return !!row
 }
 
 export const GET: APIRoute = async ({ request, locals }) => {
