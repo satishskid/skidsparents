@@ -4,6 +4,8 @@ import MilestoneTracker from './MilestoneTracker'
 import HabitsTracker from './HabitsTracker'
 import GrowthTracker from './GrowthTracker'
 import ObservationJournal from './ObservationJournal'
+import RecordsTimeline from './RecordsTimeline'
+import VaccinationTracker from './VaccinationTracker'
 
 interface Child {
   id: string
@@ -17,6 +19,7 @@ const TABS = [
   { key: 'habits', label: 'Habits', emoji: '✅' },
   { key: 'growth', label: 'Growth', emoji: '📏' },
   { key: 'notes', label: 'Notes', emoji: '📝' },
+  { key: 'records', label: 'Records', emoji: '📋' },
 ] as const
 
 type TabKey = typeof TABS[number]['key']
@@ -146,6 +149,12 @@ export default function ChildDashboard({ childId }: { childId: string }) {
       )}
       {activeTab === 'notes' && token && (
         <ObservationJournal childId={childId} token={token} />
+      )}
+      {activeTab === 'records' && token && (
+        <>
+          <VaccinationTracker childId={childId} token={token} />
+          <RecordsTimeline childId={childId} token={token} />
+        </>
       )}
     </div>
   )

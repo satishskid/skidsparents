@@ -132,6 +132,66 @@ CREATE TABLE IF NOT EXISTS chatbot_conversations (
 );
 `
 
+const CREATE_HEALTH_RECORDS_TABLE = `
+CREATE TABLE IF NOT EXISTS health_records (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL,
+  record_type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  record_date TEXT NOT NULL,
+  provider_name TEXT,
+  summary TEXT,
+  data_json TEXT,
+  source TEXT DEFAULT 'parent_manual',
+  source_ref_id TEXT,
+  file_url TEXT,
+  concern_level TEXT DEFAULT 'none',
+  ai_confidence REAL,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+`
+
+const CREATE_UPLOADED_REPORTS_TABLE = `
+CREATE TABLE IF NOT EXISTS uploaded_reports (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL,
+  file_key TEXT NOT NULL,
+  file_type TEXT,
+  file_name TEXT,
+  upload_date TEXT DEFAULT (datetime('now')),
+  ai_extracted_json TEXT,
+  provider_name TEXT,
+  report_type TEXT
+);
+`
+
+const CREATE_VACCINATION_RECORDS_TABLE = `
+CREATE TABLE IF NOT EXISTS vaccination_records (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL,
+  vaccine_name TEXT NOT NULL,
+  dose TEXT,
+  administered_date TEXT,
+  provider TEXT,
+  next_due TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+`
+
+const CREATE_SCREENING_IMPORTS_TABLE = `
+CREATE TABLE IF NOT EXISTS screening_imports (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL,
+  source TEXT DEFAULT 'skids',
+  campaign_code TEXT,
+  imported_at TEXT DEFAULT (datetime('now')),
+  screening_date TEXT,
+  data_json TEXT,
+  four_d_json TEXT,
+  summary_text TEXT
+);
+`
+
 const INDEX_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_leads_brand ON leads(brand)`,
   `CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status)`,
@@ -146,6 +206,12 @@ const INDEX_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_observations_child ON parent_observations(child_id)`,
   `CREATE INDEX IF NOT EXISTS idx_chatbot_parent ON chatbot_conversations(parent_id)`,
   `CREATE INDEX IF NOT EXISTS idx_chatbot_child ON chatbot_conversations(child_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_health_records_child ON health_records(child_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_health_records_date ON health_records(record_date)`,
+  `CREATE INDEX IF NOT EXISTS idx_health_records_type ON health_records(record_type)`,
+  `CREATE INDEX IF NOT EXISTS idx_uploaded_reports_child ON uploaded_reports(child_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_vaccination_child ON vaccination_records(child_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_screening_child ON screening_imports(child_id)`,
 ]
 
 export const GET: APIRoute = async (ctx) => {
@@ -178,12 +244,16 @@ async function handleInit(request: Request, locals: any) {
     await db.prepare(CREATE_GROWTH_RECORDS_TABLE).run()
     await db.prepare(CREATE_PARENT_OBSERVATIONS_TABLE).run()
     await db.prepare(CREATE_CHATBOT_CONVERSATIONS_TABLE).run()
+    await db.prepare(CREATE_HEALTH_RECORDS_TABLE).run()
+    await db.prepare(CREATE_UPLOADED_REPORTS_TABLE).run()
+    await db.prepare(CREATE_VACCINATION_RECORDS_TABLE).run()
+    await db.prepare(CREATE_SCREENING_IMPORTS_TABLE).run()
     for (const stmt of INDEX_STATEMENTS) {
       await db.prepare(stmt).run()
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: 'All tables ready (leads, parents, children, milestones, habits_log, growth_records, parent_observations, chatbot_conversations)' }),
+      JSON.stringify({ success: true, message: 'All 12 tables ready' }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
   } catch (err: any) {
