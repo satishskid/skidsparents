@@ -121,6 +121,17 @@ CREATE TABLE IF NOT EXISTS parent_observations (
 );
 `
 
+const CREATE_CHATBOT_CONVERSATIONS_TABLE = `
+CREATE TABLE IF NOT EXISTS chatbot_conversations (
+  id TEXT PRIMARY KEY,
+  parent_id TEXT NOT NULL,
+  child_id TEXT,
+  messages_json TEXT DEFAULT '[]',
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+`
+
 const INDEX_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_leads_brand ON leads(brand)`,
   `CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status)`,
@@ -133,6 +144,8 @@ const INDEX_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_habits_child_date ON habits_log(child_id, date)`,
   `CREATE INDEX IF NOT EXISTS idx_growth_child ON growth_records(child_id)`,
   `CREATE INDEX IF NOT EXISTS idx_observations_child ON parent_observations(child_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_chatbot_parent ON chatbot_conversations(parent_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_chatbot_child ON chatbot_conversations(child_id)`,
 ]
 
 export const GET: APIRoute = async (ctx) => {
@@ -164,12 +177,13 @@ async function handleInit(request: Request, locals: any) {
     await db.prepare(CREATE_HABITS_LOG_TABLE).run()
     await db.prepare(CREATE_GROWTH_RECORDS_TABLE).run()
     await db.prepare(CREATE_PARENT_OBSERVATIONS_TABLE).run()
+    await db.prepare(CREATE_CHATBOT_CONVERSATIONS_TABLE).run()
     for (const stmt of INDEX_STATEMENTS) {
       await db.prepare(stmt).run()
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: 'All tables ready (leads, parents, children, milestones, habits_log, growth_records, parent_observations)' }),
+      JSON.stringify({ success: true, message: 'All tables ready (leads, parents, children, milestones, habits_log, growth_records, parent_observations, chatbot_conversations)' }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
   } catch (err: any) {
