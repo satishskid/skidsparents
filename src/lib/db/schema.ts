@@ -230,3 +230,92 @@ export const notifications = sqliteTable('notifications', {
   read: integer('read', { mode: 'boolean' }).default(false),
   createdAt: text('created_at').default(sql`(datetime('now'))`),
 })
+
+// ─── Community: Forum ──────────────────────────────────
+
+export const forumGroups = sqliteTable('forum_groups', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  name: text('name').notNull(),
+  type: text('type', { enum: ['age-based', 'topic-based'] }).notNull(),
+  description: text('description'),
+  emoji: text('emoji'), // e.g. "👶", "🍎"
+  memberCount: integer('member_count').default(0),
+  postCount: integer('post_count').default(0),
+  createdAt: text('created_at').default(sql`(datetime('now'))`),
+})
+
+export const forumPosts = sqliteTable('forum_posts', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  groupId: text('group_id').notNull().references(() => forumGroups.id),
+  parentId: text('parent_id').notNull().references(() => parents.id),
+  authorName: text('author_name').notNull(),
+  isAnonymous: integer('is_anonymous', { mode: 'boolean' }).default(false),
+  title: text('title').notNull(),
+  content: text('content').notNull(),
+  likes: integer('likes').default(0),
+  commentCount: integer('comment_count').default(0),
+  isHidden: integer('is_hidden', { mode: 'boolean' }).default(false),
+  createdAt: text('created_at').default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at').default(sql`(datetime('now'))`),
+})
+
+export const forumComments = sqliteTable('forum_comments', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  postId: text('post_id').notNull().references(() => forumPosts.id),
+  parentId: text('parent_id').notNull().references(() => parents.id),
+  authorName: text('author_name').notNull(),
+  isAnonymous: integer('is_anonymous', { mode: 'boolean' }).default(false),
+  content: text('content').notNull(),
+  likes: integer('likes').default(0),
+  isHidden: integer('is_hidden', { mode: 'boolean' }).default(false),
+  createdAt: text('created_at').default(sql`(datetime('now'))`),
+})
+
+export const forumLikes = sqliteTable('forum_likes', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  parentId: text('parent_id').notNull().references(() => parents.id),
+  targetType: text('target_type', { enum: ['post', 'comment'] }).notNull(),
+  targetId: text('target_id').notNull(),
+  createdAt: text('created_at').default(sql`(datetime('now'))`),
+})
+
+export const forumReports = sqliteTable('forum_reports', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  parentId: text('parent_id').notNull().references(() => parents.id),
+  targetType: text('target_type', { enum: ['post', 'comment'] }).notNull(),
+  targetId: text('target_id').notNull(),
+  reason: text('reason'),
+  status: text('status', { enum: ['pending', 'reviewed', 'dismissed'] }).default('pending'),
+  createdAt: text('created_at').default(sql`(datetime('now'))`),
+})
+
+// ─── Social Sharing ────────────────────────────────────
+
+export const socialShares = sqliteTable('social_shares', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  parentId: text('parent_id').references(() => parents.id),
+  platform: text('platform', {
+    enum: ['whatsapp', 'instagram', 'facebook', 'twitter', 'linkedin', 'medium', 'copy'],
+  }).notNull(),
+  contentType: text('content_type', {
+    enum: ['blog', 'organ', 'habit', 'milestone', 'growth', 'intervention'],
+  }).notNull(),
+  contentId: text('content_id').notNull(),
+  shareUrl: text('share_url').notNull(),
+  utmCampaign: text('utm_campaign'),
+  createdAt: text('created_at').default(sql`(datetime('now'))`),
+})
+
+// ─── WhatsApp Subscriptions ────────────────────────────
+
+export const whatsappSubscriptions = sqliteTable('whatsapp_subscriptions', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  parentId: text('parent_id').notNull().references(() => parents.id),
+  phone: text('phone').notNull(), // 10-digit, no +91
+  isSubscribed: integer('is_subscribed', { mode: 'boolean' }).default(true),
+  subscriptionType: text('subscription_type', {
+    enum: ['daily_tip', 'weekly_digest', 'personalized'],
+  }).notNull().default('daily_tip'),
+  createdAt: text('created_at').default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at').default(sql`(datetime('now'))`),
+})

@@ -201,6 +201,12 @@ const drSkidsPrompt = `Tell me about ${organ.name.toLowerCase()} development in 
         </a>
       </div>
 
+      <!-- Share -->
+      <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm font-semibold text-gray-500 mb-3">Share this with other parents</p>
+        <div id="share-buttons-root"></div>
+      </div>
+
       <!-- Back to all -->
       <div class="text-center">
         <a href="/discover" class="text-sm text-green-600 hover:text-green-700 font-medium">
@@ -213,3 +219,53 @@ const drSkidsPrompt = `Tell me about ${organ.name.toLowerCase()} development in 
   <Footer />
   <MobileTabBar />
 </BaseLayout>
+
+<script define:vars={{ organSlug: organ.slug, organName: organ.name }}>
+  // Track organ view
+  if (typeof window !== 'undefined' && window.skidsTrack) {
+    window.skidsTrack('content_view', {
+      funnel_stage: 'interest',
+      content_type: 'organ',
+      content_id: organSlug,
+      content_title: organName,
+    })
+  }
+
+  // Render share buttons
+  const root = document.getElementById('share-buttons-root')
+  if (root) {
+    const platforms = [
+      { id: 'whatsapp', label: 'WhatsApp', color: 'bg-green-500', icon: '💬' },
+      { id: 'facebook', label: 'Facebook', color: 'bg-blue-600', icon: '📘' },
+      { id: 'twitter', label: 'Twitter', color: 'bg-black', icon: '🐦' },
+      { id: 'copy', label: 'Copy', color: 'bg-gray-100 text-gray-700', icon: '🔗' },
+    ]
+
+    const pageUrl = window.location.href
+    const text = `Learn about ${organName} — ${pageUrl}`
+
+    root.innerHTML = `<div class="flex flex-wrap gap-2">
+      <a href="https://api.whatsapp.com/send?text=${encodeURIComponent(text + '?utm_source=whatsapp&utm_medium=social&utm_campaign=skids_share_organ')}"
+        target="_blank" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500 text-white text-sm font-medium">
+        💬 WhatsApp
+      </a>
+      <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl + '?utm_source=facebook&utm_medium=social&utm_campaign=skids_share_organ')}"
+        target="_blank" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm font-medium">
+        📘 Facebook
+      </a>
+      <a href="https://x.com/intent/tweet?text=${encodeURIComponent('Learn about ' + organName + ' — ')}&url=${encodeURIComponent(pageUrl + '?utm_source=twitter&utm_medium=social&utm_campaign=skids_share_organ')}&via=SKIDS58283752"
+        target="_blank" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm font-medium">
+        🐦 Twitter
+      </a>
+      <button id="copy-organ-link" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-sm font-medium">
+        🔗 Copy Link
+      </button>
+    </div>`
+
+    document.getElementById('copy-organ-link')?.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(pageUrl)
+      const btn = document.getElementById('copy-organ-link')
+      if (btn) { btn.textContent = '✅ Copied!'; setTimeout(() => { btn.textContent = '🔗 Copy Link' }, 2000) }
+    })
+  }
+</script>

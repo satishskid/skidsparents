@@ -1,0 +1,136 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro'
+export const prerender = false
+const { groupId, postId } = Astro.params
+---
+
+<BaseLayout title="Community Post" description="Parent discussion on SKIDS Parent">
+  <div class="min-h-screen bg-gray-50">
+    <div class="max-w-3xl mx-auto px-4 py-8">
+      <a href={`/community/${groupId}`} class="text-sm text-green-600 hover:underline mb-4 inline-block">← Back to Group</a>
+      <div id="post-root" data-post-id={postId} data-group-id={groupId}></div>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  const postId = document.getElementById('post-root')?.dataset.postId
+  const groupId = document.getElementById('post-root')?.dataset.groupId
+
+  async function loadPost() {
+    const root = document.getElementById('post-root')
+    if (!root || !postId) return
+
+    const [postsRes, commentsRes] = await Promise.all([
+      fetch(`/api/forum/posts?groupId=${groupId}`),
+      fetch(`/api/forum/${postId}/comments`),
+    ])
+
+    const { posts } = await postsRes.json()
+    const { comments } = await commentsRes.json()
+    const post = posts.find((p: any) => p.id === postId)
+
+    if (!post) {
+      root.innerHTML = '<p class="text-gray-500">Post not found.</p>'
+      return
+    }
+
+    root.innerHTML = `
+      <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-2">${escapeHtml(post.title)}</h1>
+        <div class="flex items-center gap-3 text-sm text-gray-400 mb-4">
+          <span>by ${escapeHtml(post.authorName)}</span>
+          <span>${new Date(post.createdAt).toLocaleDateString('en-IN')}</span>
+        </div>
+        <p class="text-gray-700 whitespace-pre-wrap">${escapeHtml(post.content)}</p>
+        <div class="mt-4 flex items-center gap-4">
+          <button id="like-post-btn" class="flex items-center gap-1 text-sm text-gray-500 hover:text-red-500 transition-colors">
+            ❤️ <span id="like-count">${post.likes || 0}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Comments -->
+      <div class="mb-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">Comments (${comments.length})</h2>
+        <div id="comments-list" class="space-y-3">
+          ${comments.length === 0
+            ? '<p class="text-gray-400 text-sm">No comments yet. Be the first to reply!</p>'
+            : comments.map((c: any) => commentCard(c)).join('')
+          }
+        </div>
+      </div>
+
+      <!-- Add Comment -->
+      <div class="bg-white rounded-xl border border-gray-200 p-5">
+        <h3 class="font-semibold text-gray-900 mb-3">Add a Comment</h3>
+        <textarea id="comment-content" placeholder="Share your thoughts..." rows="3" maxlength="2000"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 mb-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"></textarea>
+        <div class="flex items-center justify-between">
+          <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            <input type="checkbox" id="comment-anon" class="rounded" />
+            Post anonymously
+          </label>
+          <button id="submit-comment" class="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700">
+            Reply
+          </button>
+        </div>
+      </div>
+    `
+
+    // Like post
+    document.getElementById('like-post-btn')?.addEventListener('click', async () => {
+      const res = await fetch(`/api/forum/${postId}/like`, { method: 'POST' })
+      if (res.status === 401) { window.location.href = '/login'; return }
+      const data = await res.json()
+      if (data.likes !== undefined) {
+        document.getElementById('like-count')!.textContent = data.likes
+      }
+    })
+
+    // Submit comment
+    document.getElementById('submit-comment')?.addEventListener('click', async () => {
+      const content = (document.getElementById('comment-content') as HTMLTextAreaElement)?.value.trim()
+      const isAnonymous = (document.getElementById('comment-anon') as HTMLInputElement)?.checked
+
+      if (!content) return
+
+      const btn = document.getElementById('submit-comment') as HTMLButtonElement
+      btn.disabled = true
+      btn.textContent = 'Posting...'
+
+      const res = await fetch(`/api/forum/${postId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, isAnonymous }),
+      })
+
+      if (res.status === 401) { window.location.href = '/login'; return }
+
+      if (res.ok) {
+        await loadPost()
+      } else {
+        btn.disabled = false
+        btn.textContent = 'Reply'
+      }
+    })
+  }
+
+  function commentCard(c: any) {
+    return `
+      <div class="bg-gray-50 rounded-lg p-4">
+        <div class="flex items-center gap-2 text-xs text-gray-400 mb-2">
+          <span class="font-medium text-gray-600">${escapeHtml(c.authorName)}</span>
+          <span>${new Date(c.createdAt).toLocaleDateString('en-IN')}</span>
+        </div>
+        <p class="text-sm text-gray-700 whitespace-pre-wrap">${escapeHtml(c.content)}</p>
+      </div>
+    `
+  }
+
+  function escapeHtml(str: string) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  }
+
+  loadPost()
+</script>

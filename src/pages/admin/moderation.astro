@@ -1,0 +1,114 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import Navbar from '@/components/common/Navbar.astro'
+
+export const prerender = false
+
+const adminKey = Astro.request.headers.get('x-admin-key') || Astro.url.searchParams.get('key')
+const env = (Astro.locals as any).runtime?.env
+if (adminKey !== env?.ADMIN_KEY) {
+  return new Response('Unauthorized', { status: 401 })
+}
+
+// Handle hide/dismiss actions
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData()
+  const action = form.get('action') as string
+  const targetType = form.get('targetType') as string
+  const targetId = form.get('targetId') as string
+  const reportId = form.get('reportId') as string
+
+  if (env?.DB && targetId && reportId) {
+    if (action === 'hide') {
+      const table = targetType === 'post' ? 'forum_posts' : 'forum_comments'
+      await env.DB.prepare(`UPDATE ${table} SET is_hidden=1 WHERE id=?`).bind(targetId).run()
+      await env.DB.prepare(`UPDATE forum_reports SET status='reviewed' WHERE id=?`).bind(reportId).run()
+    } else if (action === 'dismiss') {
+      await env.DB.prepare(`UPDATE forum_reports SET status='dismissed' WHERE id=?`).bind(reportId).run()
+    }
+  }
+  return Astro.redirect(`/admin/moderation?key=${adminKey}`)
+}
+
+let reports: any[] = []
+if (env?.DB) {
+  try {
+    const result = await env.DB.prepare(`
+      SELECT r.id as report_id, r.target_type, r.target_id, r.reason, r.status, r.created_at,
+             CASE WHEN r.target_type='post' THEN p.title ELSE c.content END as content_preview,
+             CASE WHEN r.target_type='post' THEN p.parent_id ELSE c.parent_id END as author_id
+      FROM forum_reports r
+      LEFT JOIN forum_posts p ON r.target_type='post' AND r.target_id=p.id
+      LEFT JOIN forum_comments c ON r.target_type='comment' AND r.target_id=c.id
+      WHERE r.status='pending'
+      ORDER BY r.created_at DESC
+      LIMIT 50
+    `).all()
+    reports = result.results || []
+  } catch (e) {
+    console.error('Moderation query error:', e)
+  }
+}
+---
+
+<BaseLayout title="Content Moderation | SKIDS Admin">
+  <Navbar />
+
+  <main class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-4xl mx-auto px-4">
+      <div class="mb-6 flex items-center justify-between">
+        <div>
+          <h1 class="text-2xl font-display font-bold text-gray-900">Content Moderation</h1>
+          <p class="text-sm text-gray-500 mt-1">{reports.length} pending reports</p>
+        </div>
+        <a href={`/admin/analytics?key=${adminKey}`} class="text-sm text-green-600 hover:text-green-700">Analytics →</a>
+      </div>
+
+      {reports.length === 0 ? (
+        <div class="bg-white rounded-2xl border border-gray-100 p-10 text-center">
+          <div class="text-4xl mb-3">✅</div>
+          <p class="text-gray-500">No pending reports. Community is clean.</p>
+        </div>
+      ) : (
+        <div class="space-y-4">
+          {reports.map((r: any) => (
+            <div class="bg-white rounded-2xl border border-gray-100 p-5">
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class={`text-xs px-2 py-0.5 rounded-full font-medium ${r.target_type === 'post' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
+                      {r.target_type}
+                    </span>
+                    <span class="text-xs text-gray-400">{new Date(r.created_at).toLocaleDateString('en-IN')}</span>
+                  </div>
+                  <p class="text-sm text-gray-800 line-clamp-3">{r.content_preview || '(content unavailable)'}</p>
+                  {r.reason && (
+                    <p class="text-xs text-red-600 mt-2">Reason: {r.reason}</p>
+                  )}
+                </div>
+                <form method="POST" class="flex gap-2 flex-shrink-0">
+                  <input type="hidden" name="reportId" value={r.report_id} />
+                  <input type="hidden" name="targetType" value={r.target_type} />
+                  <input type="hidden" name="targetId" value={r.target_id} />
+                  <input type="hidden" name="key" value={adminKey} />
+                  <button name="action" value="hide"
+                    class="px-3 py-1.5 text-xs font-semibold bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors">
+                    Hide
+                  </button>
+                  <button name="action" value="dismiss"
+                    class="px-3 py-1.5 text-xs font-semibold bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors">
+                    Dismiss
+                  </button>
+                </form>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div class="mt-6">
+        <a href="/admin" class="text-sm text-gray-500 hover:text-gray-700">← Back to Admin</a>
+      </div>
+    </div>
+  </main>
+</BaseLayout>

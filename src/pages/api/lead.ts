@@ -139,6 +139,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
+    // ─── 4. Track lead_captured conversion event ───
+    try {
+      const analyticsPayload = {
+        event: 'lead_captured',
+        properties: {
+          funnel_stage: body.funnel_stage,
+          source: body.source,
+          asset_code: body.asset_code || 'direct',
+          utm_campaign: body.utm_campaign || '',
+          brand: 'skids',
+        },
+      }
+      // Fire-and-forget to analytics (GA4 Measurement Protocol could go here)
+      console.log('[SKIDS Analytics] lead_captured:', analyticsPayload)
+    } catch {}
+
     return new Response(
       JSON.stringify({ success: true, brand: 'skids', id: Date.now().toString(36) }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }

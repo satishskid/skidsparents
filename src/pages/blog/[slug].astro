@@ -240,6 +240,46 @@ const catColor = categoryColors[blog.category] || 'bg-gray-100 text-gray-600'
   <MobileTabBar />
 </BaseLayout>
 
+<script define:vars={{ blogId: blog.blogId, blogTitle: blog.title, blogCategory: blog.category }}>
+  // Analytics: track content_view with duration
+  const _viewStart = Date.now()
+
+  function _trackBlogView(durationSeconds) {
+    if (typeof window !== 'undefined' && (window as any).skidsTrack) {
+      ;(window as any).skidsTrack('content_view', {
+        type: 'blog',
+        slug: blogId,
+        title: blogTitle,
+        category: blogCategory,
+        duration_seconds: durationSeconds,
+      })
+    }
+    // Also POST to engagement API (fire-and-forget, best effort)
+    fetch('/api/engagement/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contentType: 'blog',
+        contentId: blogId,
+        action: 'view',
+        durationSeconds,
+      }),
+    }).catch(() => {})
+  }
+
+  // Track on page hide / unload
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      const duration = Math.round((Date.now() - _viewStart) / 1000)
+      _trackBlogView(duration)
+    }
+  })
+  window.addEventListener('pagehide', () => {
+    const duration = Math.round((Date.now() - _viewStart) / 1000)
+    _trackBlogView(duration)
+  })
+</script>
+
 <script>
   // Copy link button
   document.querySelectorAll('.copy-link-btn').forEach((btn) => {

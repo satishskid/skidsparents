@@ -1,0 +1,149 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import Navbar from '@/components/common/Navbar.astro'
+
+export const prerender = false
+
+// Admin key check
+const adminKey = Astro.request.headers.get('x-admin-key') || Astro.url.searchParams.get('key')
+const env = (Astro.locals as any).runtime?.env
+if (adminKey !== env?.ADMIN_KEY) {
+  return new Response('Unauthorized', { status: 401 })
+}
+
+// Fetch analytics data from D1
+let stats = {
+  totalEngagement: 0,
+  blogViews: 0,
+  organViews: 0,
+  habitViews: 0,
+  totalShares: 0,
+  totalBookmarks: 0,
+  forumPosts: 0,
+  forumComments: 0,
+  whatsappSubscribers: 0,
+  leadsTotal: 0,
+  popularContent: [] as any[],
+}
+
+if (env?.DB) {
+  try {
+    const [eng, shares, bookmarks, forum, wa, leads, popular] = await Promise.all([
+      env.DB.prepare(`SELECT content_type, COUNT(*) as cnt FROM content_engagement GROUP BY content_type`).all(),
+      env.DB.prepare(`SELECT COUNT(*) as cnt FROM social_shares`).first(),
+      env.DB.prepare(`SELECT COUNT(*) as cnt FROM blog_bookmarks`).first(),
+      env.DB.prepare(`SELECT (SELECT COUNT(*) FROM forum_posts WHERE is_hidden=0) as posts, (SELECT COUNT(*) FROM forum_comments WHERE is_hidden=0) as comments`).first(),
+      env.DB.prepare(`SELECT COUNT(*) as cnt FROM whatsapp_subscriptions WHERE is_subscribed=1`).first(),
+      env.DB.prepare(`SELECT COUNT(*) as cnt FROM leads WHERE brand='skids'`).first().catch(() => ({ cnt: 0 })),
+      env.DB.prepare(`
+        SELECT content_type, content_id, COUNT(*) as views
+        FROM content_engagement
+        WHERE created_at >= datetime('now', '-7 days')
+        GROUP BY content_type, content_id
+        ORDER BY views DESC
+        LIMIT 10
+      `).all(),
+    ])
+
+    for (const row of (eng.results || [])) {
+      const r = row as any
+      stats.totalEngagement += r.cnt
+      if (r.content_type === 'blog') stats.blogViews = r.cnt
+      if (r.content_type === 'organ') stats.organViews = r.cnt
+      if (r.content_type === 'habit') stats.habitViews = r.cnt
+    }
+    stats.totalShares = (shares as any)?.cnt || 0
+    stats.totalBookmarks = (bookmarks as any)?.cnt || 0
+    stats.forumPosts = (forum as any)?.posts || 0
+    stats.forumComments = (forum as any)?.comments || 0
+    stats.whatsappSubscribers = (wa as any)?.cnt || 0
+    stats.leadsTotal = (leads as any)?.cnt || 0
+    stats.popularContent = popular.results || []
+  } catch (e) {
+    console.error('Analytics dashboard error:', e)
+  }
+}
+---
+
+<BaseLayout title="Analytics Dashboard | SKIDS Admin">
+  <Navbar />
+
+  <main class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-5xl mx-auto px-4">
+      <div class="mb-6">
+        <h1 class="text-2xl font-display font-bold text-gray-900">Analytics Dashboard</h1>
+        <p class="text-sm text-gray-500 mt-1">SKIDS Parent — Brand Awareness & Engagement Metrics</p>
+      </div>
+
+      <!-- KPI Grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+        {[
+          { label: 'Total Engagement', value: stats.totalEngagement, icon: '📊', color: 'bg-blue-50 border-blue-100' },
+          { label: 'Blog Views', value: stats.blogViews, icon: '📝', color: 'bg-purple-50 border-purple-100' },
+          { label: 'Organ Views', value: stats.organViews, icon: '🫀', color: 'bg-red-50 border-red-100' },
+          { label: 'Habit Views', value: stats.habitViews, icon: '💪', color: 'bg-green-50 border-green-100' },
+          { label: 'Social Shares', value: stats.totalShares, icon: '🔗', color: 'bg-yellow-50 border-yellow-100' },
+          { label: 'Blog Bookmarks', value: stats.totalBookmarks, icon: '🔖', color: 'bg-orange-50 border-orange-100' },
+          { label: 'Forum Posts', value: stats.forumPosts, icon: '💬', color: 'bg-indigo-50 border-indigo-100' },
+          { label: 'WA Subscribers', value: stats.whatsappSubscribers, icon: '📱', color: 'bg-emerald-50 border-emerald-100' },
+        ].map(kpi => (
+          <div class={`rounded-2xl border p-4 ${kpi.color}`}>
+            <div class="text-2xl mb-1">{kpi.icon}</div>
+            <div class="text-2xl font-bold text-gray-900">{kpi.value.toLocaleString()}</div>
+            <div class="text-xs text-gray-500 mt-0.5">{kpi.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <!-- Conversion -->
+      <div class="bg-white rounded-2xl border border-gray-100 p-5 mb-6">
+        <h2 class="font-semibold text-gray-900 mb-4">Conversion Funnel</h2>
+        <div class="flex items-center gap-4">
+          <div class="text-center">
+            <div class="text-3xl font-bold text-gray-900">{stats.totalEngagement.toLocaleString()}</div>
+            <div class="text-xs text-gray-500">Content Views</div>
+          </div>
+          <div class="text-gray-300 text-2xl">→</div>
+          <div class="text-center">
+            <div class="text-3xl font-bold text-gray-900">{stats.totalShares.toLocaleString()}</div>
+            <div class="text-xs text-gray-500">Shares</div>
+          </div>
+          <div class="text-gray-300 text-2xl">→</div>
+          <div class="text-center">
+            <div class="text-3xl font-bold text-green-600">{stats.leadsTotal.toLocaleString()}</div>
+            <div class="text-xs text-gray-500">Leads Captured</div>
+          </div>
+        </div>
+        {stats.totalEngagement > 0 && (
+          <p class="text-xs text-gray-400 mt-3">
+            Lead conversion rate: {((stats.leadsTotal / stats.totalEngagement) * 100).toFixed(2)}%
+          </p>
+        )}
+      </div>
+
+      <!-- Popular Content (7 days) -->
+      <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <h2 class="font-semibold text-gray-900 mb-4">Popular Content (Last 7 Days)</h2>
+        {stats.popularContent.length === 0 ? (
+          <p class="text-sm text-gray-400">No engagement data yet.</p>
+        ) : (
+          <div class="space-y-2">
+            {stats.popularContent.map((item: any, i: number) => (
+              <div class="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
+                <span class="text-sm font-bold text-gray-400 w-5">{i + 1}</span>
+                <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{item.content_type}</span>
+                <span class="flex-1 text-sm text-gray-800 truncate">{item.content_id}</span>
+                <span class="text-sm font-semibold text-gray-900">{item.views} views</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div class="mt-6 flex gap-3">
+        <a href="/admin" class="text-sm text-gray-500 hover:text-gray-700">← Back to Admin</a>
+        <a href="/admin/moderation" class="text-sm text-green-600 hover:text-green-700">Content Moderation →</a>
+      </div>
+    </div>
+  </main>
+</BaseLayout>

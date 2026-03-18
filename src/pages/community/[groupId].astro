@@ -1,0 +1,155 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro'
+export const prerender = false
+const { groupId } = Astro.params
+---
+
+<BaseLayout title="Community" description="Parent discussions on SKIDS Parent">
+  <div class="min-h-screen bg-gray-50">
+    <div class="max-w-3xl mx-auto px-4 py-8">
+      <a href="/community" class="text-sm text-green-600 hover:underline mb-4 inline-block">← All Groups</a>
+      <div id="forum-root" data-group-id={groupId}></div>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  const groupId = document.getElementById('forum-root')?.dataset.groupId
+
+  async function loadPosts() {
+    const root = document.getElementById('forum-root')
+    if (!root || !groupId) return
+
+    // Load group info
+    const groupsRes = await fetch('/api/forum/groups')
+    const { groups } = await groupsRes.json()
+    const group = groups.find((g: any) => g.id === groupId)
+
+    if (!group) {
+      root.innerHTML = '<p class="text-gray-500">Group not found.</p>'
+      return
+    }
+
+    // Load posts
+    const postsRes = await fetch(`/api/forum/posts?groupId=${groupId}`)
+    const { posts } = await postsRes.json()
+
+    root.innerHTML = `
+      <div>
+        <div class="flex items-center gap-3 mb-6">
+          <span class="text-4xl">${group.emoji || '💬'}</span>
+          <div>
+            <h1 class="text-2xl font-bold text-gray-900">${group.name}</h1>
+            <p class="text-gray-500 text-sm">${group.description}</p>
+          </div>
+        </div>
+
+        <!-- New Post Button -->
+        <button id="new-post-btn" class="mb-6 w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-xl transition-colors">
+          + Start a Discussion
+        </button>
+
+        <!-- New Post Form (hidden by default) -->
+        <div id="new-post-form" class="hidden mb-6 bg-white rounded-xl border border-gray-200 p-5">
+          <h3 class="font-semibold text-gray-900 mb-4">New Post</h3>
+          <input id="post-title" type="text" placeholder="Title (max 200 chars)" maxlength="200"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 mb-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+          <textarea id="post-content" placeholder="Share your experience or question..." rows="4" maxlength="5000"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 mb-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"></textarea>
+          <div class="flex items-center justify-between">
+            <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+              <input type="checkbox" id="post-anon" class="rounded" />
+              Post anonymously
+            </label>
+            <div class="flex gap-2">
+              <button id="cancel-post" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Cancel</button>
+              <button id="submit-post" class="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700">Post</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Posts List -->
+        <div id="posts-list" class="space-y-4">
+          ${posts.length === 0
+            ? '<p class="text-center text-gray-400 py-12">No posts yet. Be the first to start a discussion!</p>'
+            : posts.map((p: any) => postCard(p)).join('')
+          }
+        </div>
+      </div>
+    `
+
+    // Wire up new post form
+    document.getElementById('new-post-btn')?.addEventListener('click', () => {
+      document.getElementById('new-post-form')?.classList.remove('hidden')
+      document.getElementById('new-post-btn')?.classList.add('hidden')
+    })
+    document.getElementById('cancel-post')?.addEventListener('click', () => {
+      document.getElementById('new-post-form')?.classList.add('hidden')
+      document.getElementById('new-post-btn')?.classList.remove('hidden')
+    })
+    document.getElementById('submit-post')?.addEventListener('click', submitPost)
+  }
+
+  async function submitPost() {
+    const title = (document.getElementById('post-title') as HTMLInputElement)?.value.trim()
+    const content = (document.getElementById('post-content') as HTMLTextAreaElement)?.value.trim()
+    const isAnonymous = (document.getElementById('post-anon') as HTMLInputElement)?.checked
+
+    if (!title || !content) {
+      alert('Please fill in both title and content.')
+      return
+    }
+
+    const btn = document.getElementById('submit-post') as HTMLButtonElement
+    btn.disabled = true
+    btn.textContent = 'Posting...'
+
+    try {
+      const res = await fetch('/api/forum/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupId, title, content, isAnonymous }),
+      })
+
+      if (res.status === 401) {
+        window.location.href = '/login'
+        return
+      }
+
+      if (!res.ok) {
+        const err = await res.json()
+        alert(err.error || 'Failed to post. Please try again.')
+        return
+      }
+
+      // Reload posts
+      await loadPosts()
+    } catch (e) {
+      alert('Failed to post. Please try again.')
+    } finally {
+      btn.disabled = false
+      btn.textContent = 'Post'
+    }
+  }
+
+  function postCard(p: any) {
+    return `
+      <a href="/community/${groupId}/${p.id}" class="block bg-white rounded-xl border border-gray-200 p-5 hover:border-green-400 hover:shadow-sm transition-all">
+        <h3 class="font-semibold text-gray-900 mb-1">${escapeHtml(p.title)}</h3>
+        <p class="text-sm text-gray-600 line-clamp-2 mb-3">${escapeHtml(p.content)}</p>
+        <div class="flex items-center gap-4 text-xs text-gray-400">
+          <span>by ${escapeHtml(p.authorName)}</span>
+          <span>❤️ ${p.likes || 0}</span>
+          <span>💬 ${p.commentCount || 0}</span>
+          <span>${new Date(p.createdAt).toLocaleDateString('en-IN')}</span>
+        </div>
+      </a>
+    `
+  }
+
+  function escapeHtml(str: string) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  }
+
+  loadPosts()
+</script>

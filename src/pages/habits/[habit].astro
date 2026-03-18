@@ -1,0 +1,199 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import Navbar from '@/components/common/Navbar.astro'
+import Footer from '@/components/common/Footer.astro'
+import MobileTabBar from '@/components/common/MobileTabBar.astro'
+import { HABITS, type Habit } from '@/lib/content/habits'
+
+export const prerender = true
+
+export function getStaticPaths() {
+  return HABITS.map(h => ({ params: { habit: h.key }, props: { habit: h } }))
+}
+
+interface Props { habit: Habit }
+const { habit } = Astro.props
+
+const idx = HABITS.findIndex(h => h.key === habit.key)
+const prev = HABITS[(idx - 1 + HABITS.length) % HABITS.length]
+const next = HABITS[(idx + 1) % HABITS.length]
+
+// Age-specific tips per habit
+const ageTips: Record<string, { range: string; tips: string[] }[]> = {
+  healthy_eating: [
+    { range: '0–1 year', tips: ['Breast milk or formula is complete nutrition', 'Introduce single-ingredient purees at 6 months', 'Avoid honey, salt, and sugar under 1 year'] },
+    { range: '1–3 years', tips: ['Offer 3 meals + 2 snacks daily', 'Include dal, rice, vegetables at every meal', 'Expect food refusal — keep offering without pressure'] },
+    { range: '3–6 years', tips: ['Rainbow plate: aim for 5 colors daily', 'Involve them in cooking — they eat what they make', 'Limit juice to 120ml/day; water is best'] },
+    { range: '6–12 years', tips: ['Iron-rich foods for brain focus: spinach, lentils, meat', 'Breakfast is non-negotiable for school performance', 'Teach mindful eating — no screens at meals'] },
+    { range: '12–16 years', tips: ['Calcium peak: 1300mg/day for bone density', 'Protein for growth spurts: eggs, paneer, legumes', 'Teach label reading and healthy food choices'] },
+  ],
+  active_movement: [
+    { range: '0–1 year', tips: ['Tummy time 30 min/day from birth', 'Encourage reaching, rolling, crawling', 'No screen time — movement is the curriculum'] },
+    { range: '1–3 years', tips: ['3 hours of active play daily', 'Outdoor play in morning sunlight', 'Climbing, running, jumping builds neural pathways'] },
+    { range: '3–6 years', tips: ['60 min vigorous activity daily', 'Structured play: dance, swimming, gymnastics', 'Limit sitting to 30-min stretches'] },
+    { range: '6–12 years', tips: ['60 min moderate-vigorous activity daily', 'Team sports build social + physical skills', 'Walk or cycle to school when possible'] },
+    { range: '12–16 years', tips: ['Strength training safe from age 12 with guidance', 'Yoga and mindfulness for stress management', 'Limit recreational screen time to 2 hours'] },
+  ],
+  balanced_stress: [
+    { range: '0–1 year', tips: ['Respond consistently to cries — builds secure attachment', 'Skin-to-skin contact regulates stress hormones', 'Predictable routines reduce cortisol'] },
+    { range: '1–3 years', tips: ['Name emotions: "You seem frustrated"', 'Validate feelings before redirecting behavior', 'Teach simple breathing: blow out like a candle'] },
+    { range: '3–6 years', tips: ['Box breathing: 4-4-4-4 counts', 'Create a calm-down corner with sensory tools', 'Read books about emotions together'] },
+    { range: '6–12 years', tips: ['Teach problem-solving steps', 'Journaling for emotional processing', 'Limit news and adult stress exposure'] },
+    { range: '12–16 years', tips: ['Mindfulness apps: Headspace, Calm', 'Physical exercise is the best stress reliever', 'Open conversations about academic pressure'] },
+  ],
+  inner_coaching: [
+    { range: '0–1 year', tips: ['Talk constantly — narrate everything you do', 'Respond to babbling as real conversation', 'Read aloud daily from birth'] },
+    { range: '1–3 years', tips: ['Replace "Good job!" with specific praise: "You tried so hard!"', 'Let them struggle a little before helping', 'Use "yet" — "You can\'t do it yet"'] },
+    { range: '3–6 years', tips: ['Ask "What do you think?" before giving answers', 'Celebrate effort, not just results', 'Model making mistakes and recovering'] },
+    { range: '6–12 years', tips: ['Teach self-talk: "I can figure this out"', 'Discuss failures as learning opportunities', 'Encourage challenging activities'] },
+    { range: '12–16 years', tips: ['Help set goals and track progress', 'Discuss identity and values openly', 'Support autonomy in decision-making'] },
+  ],
+  timekeepers: [
+    { range: '0–1 year', tips: ['Establish day/night rhythm from week 2', 'Morning light exposure sets circadian clock', 'Consistent feeding and sleep times'] },
+    { range: '1–3 years', tips: ['Same wake time every day (±30 min)', 'Nap at consistent times', 'Bedtime routine: bath, book, bed'] },
+    { range: '3–6 years', tips: ['Visual schedule builds time awareness', 'Morning sunlight within 30 min of waking', 'No screens 1 hour before bed'] },
+    { range: '6–12 years', tips: ['Teach time management with analog clocks', 'Homework at same time daily', 'Weekend sleep-in max 1 hour later'] },
+    { range: '12–16 years', tips: ['Teens need 8–10 hours — protect this', 'Discuss social jet lag and its effects', 'Phone charging outside bedroom'] },
+  ],
+  sufficient_sleep: [
+    { range: '0–1 year', tips: ['Newborns: 14–17 hours total', 'Safe sleep: back, firm surface, no loose bedding', 'Watch for sleep cues: yawning, eye rubbing'] },
+    { range: '1–3 years', tips: ['12–14 hours including nap', 'Consistent bedtime 7–8 PM', 'White noise helps transition to sleep'] },
+    { range: '3–6 years', tips: ['10–13 hours; nap optional after 4', 'Bedtime routine: 20–30 min wind-down', 'Cool, dark room: 18–20°C optimal'] },
+    { range: '6–12 years', tips: ['9–11 hours is non-negotiable', 'No devices in bedroom', 'Magnesium-rich foods aid sleep: nuts, seeds'] },
+    { range: '12–16 years', tips: ['8–10 hours; teens are biologically night owls', 'Advocate for later school start times', 'Consistent weekend schedule prevents Monday fatigue'] },
+  ],
+}
+
+const tips = ageTips[habit.key] || []
+---
+
+<BaseLayout
+  title={`${habit.letter} — ${habit.name} | H.A.B.I.T.S.`}
+  description={habit.description}
+>
+  <Navbar />
+
+  <main class="min-h-screen bg-gray-50">
+    <!-- Hero -->
+    <section class={`${habit.bgColor} py-14 text-center text-white`}>
+      <div class="max-w-2xl mx-auto px-4">
+        <a href="/habits" class="text-white/70 text-sm hover:text-white mb-4 inline-block">← H.A.B.I.T.S.</a>
+        <div class="text-6xl mb-3">{habit.emoji}</div>
+        <div class="inline-flex items-center gap-2 bg-white/20 rounded-full px-4 py-1 text-sm font-bold mb-3">
+          {habit.letter} — H.A.B.I.T.S.
+        </div>
+        <h1 class="text-4xl font-display font-extrabold">{habit.name}</h1>
+        <p class="mt-3 text-white/90 text-lg">{habit.tagline}</p>
+      </div>
+    </section>
+
+    <div class="max-w-3xl mx-auto px-4 py-10 space-y-6">
+      <!-- Description -->
+      <div class="bg-white rounded-2xl border border-gray-100 p-6">
+        <p class="text-gray-700 leading-relaxed">{habit.description}</p>
+      </div>
+
+      <!-- Today's Tip -->
+      <div class="bg-amber-50 border border-amber-100 rounded-2xl p-5">
+        <p class="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-2">Today's Action</p>
+        <p class="text-gray-800 font-medium">💡 {habit.tip}</p>
+      </div>
+
+      <!-- Age-specific tips -->
+      {tips.length > 0 && (
+        <div>
+          <h2 class="text-lg font-display font-bold text-gray-900 mb-4">Age-Specific Guidance</h2>
+          <div class="space-y-3">
+            {tips.map(group => (
+              <details class="bg-white rounded-xl border border-gray-100 overflow-hidden group">
+                <summary class="flex items-center justify-between px-5 py-4 cursor-pointer font-semibold text-gray-800 hover:bg-gray-50">
+                  <span>👶 {group.range}</span>
+                  <svg class="w-4 h-4 text-gray-400 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </summary>
+                <ul class="px-5 pb-4 space-y-2">
+                  {group.tips.map(tip => (
+                    <li class="flex items-start gap-2 text-sm text-gray-600">
+                      <span class="text-green-500 mt-0.5">✓</span>
+                      {tip}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <!-- Track this habit -->
+      <div class="bg-green-50 border border-green-100 rounded-2xl p-5">
+        <h3 class="font-semibold text-gray-900 mb-2">Track This Habit</h3>
+        <p class="text-sm text-gray-600 mb-3">Log your child's {habit.name.toLowerCase()} in their PHR to build streaks and see progress over time.</p>
+        <a href="/me" class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-xl hover:bg-green-700 transition-colors">
+          Open PHR Dashboard →
+        </a>
+      </div>
+
+      <!-- Share -->
+      <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm font-semibold text-gray-500 mb-3">Share with other parents</p>
+        <div id="habit-share-buttons" class="flex flex-wrap gap-2"></div>
+      </div>
+
+      <!-- Prev/Next -->
+      <div class="flex gap-3">
+        <a href={`/habits/${prev.key}`} class="flex-1 flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-100 hover:bg-gray-50 transition-colors">
+          <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+          </svg>
+          <div>
+            <div class="text-[10px] text-gray-400 uppercase">Previous</div>
+            <div class="text-sm font-semibold">{prev.emoji} {prev.name}</div>
+          </div>
+        </a>
+        <a href={`/habits/${next.key}`} class="flex-1 flex items-center justify-end gap-3 px-4 py-3 rounded-xl bg-white border border-gray-100 hover:bg-gray-50 transition-colors text-right">
+          <div>
+            <div class="text-[10px] text-gray-400 uppercase">Next</div>
+            <div class="text-sm font-semibold">{next.name} {next.emoji}</div>
+          </div>
+          <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg>
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+  <MobileTabBar />
+</BaseLayout>
+
+<script define:vars={{ habitKey: habit.key, habitName: habit.name }}>
+  if (typeof window !== 'undefined' && window.skidsTrack) {
+    window.skidsTrack('content_view', {
+      funnel_stage: 'interest',
+      content_type: 'habit',
+      content_id: habitKey,
+      content_title: habitName,
+    })
+  }
+
+  const root = document.getElementById('habit-share-buttons')
+  if (root) {
+    const url = window.location.href
+    const text = `${habitName} — a daily habit for your child's health`
+    root.innerHTML = `
+      <a href="https://api.whatsapp.com/send?text=${encodeURIComponent(text + ' ' + url + '?utm_source=whatsapp&utm_medium=social&utm_campaign=skids_share_habit')}"
+        target="_blank" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500 text-white text-sm font-medium">💬 WhatsApp</a>
+      <a href="https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url + '?utm_source=twitter&utm_medium=social&utm_campaign=skids_share_habit')}&via=SKIDS58283752"
+        target="_blank" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm font-medium">🐦 Twitter</a>
+      <button id="copy-habit-link" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-sm font-medium">🔗 Copy</button>
+    `
+    document.getElementById('copy-habit-link')?.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(url)
+      const btn = document.getElementById('copy-habit-link')
+      if (btn) { btn.textContent = '✅ Copied!'; setTimeout(() => { btn.textContent = '🔗 Copy' }, 2000) }
+    })
+  }
+</script>

@@ -1,0 +1,71 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro'
+export const prerender = false
+---
+
+<BaseLayout title="Parent Community" description="Connect with Indian parents — share experiences, ask questions, and support each other on your parenting journey.">
+  <div id="community-app" class="min-h-screen bg-gray-50">
+    <div class="max-w-4xl mx-auto px-4 py-8">
+      <!-- Header -->
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Parent Community</h1>
+        <p class="mt-2 text-gray-600">Connect with parents across India. Share experiences, ask questions, and support each other.</p>
+      </div>
+
+      <!-- Groups will be loaded by React -->
+      <div id="forum-groups-root"></div>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  // Load forum groups and render
+  async function loadGroups() {
+    const root = document.getElementById('forum-groups-root')
+    if (!root) return
+
+    try {
+      const res = await fetch('/api/forum/groups')
+      const { groups } = await res.json()
+
+      const ageBased = groups.filter((g: any) => g.type === 'age-based')
+      const topicBased = groups.filter((g: any) => g.type === 'topic-based')
+
+      root.innerHTML = `
+        <div class="space-y-8">
+          <section>
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">By Age Group</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              ${ageBased.map((g: any) => groupCard(g)).join('')}
+            </div>
+          </section>
+          <section>
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">By Topic</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              ${topicBased.map((g: any) => groupCard(g)).join('')}
+            </div>
+          </section>
+        </div>
+      `
+    } catch (e) {
+      root.innerHTML = '<p class="text-gray-500">Failed to load groups. Please try again.</p>'
+    }
+  }
+
+  function groupCard(g: any) {
+    return `
+      <a href="/community/${g.id}" class="block bg-white rounded-xl border border-gray-200 p-5 hover:border-green-400 hover:shadow-md transition-all">
+        <div class="flex items-start gap-3">
+          <span class="text-3xl">${g.emoji || '💬'}</span>
+          <div class="flex-1 min-w-0">
+            <h3 class="font-semibold text-gray-900">${g.name}</h3>
+            <p class="text-sm text-gray-500 mt-1 line-clamp-2">${g.description || ''}</p>
+            <p class="text-xs text-gray-400 mt-2">${g.postCount || 0} posts</p>
+          </div>
+        </div>
+      </a>
+    `
+  }
+
+  loadGroups()
+</script>
