@@ -1,7 +1,9 @@
-// Cloudflare Cron Trigger handler — daily WhatsApp broadcast at 9 AM IST
-// Triggered by: "30 3 * * *" (3:30 AM UTC = 9:00 AM IST)
+// Daily WhatsApp broadcast endpoint
+// Called by skids-cron Cloudflare Worker on schedule: 30 3 * * * (9 AM IST)
+// Protected by CRON_SECRET bearer token
 export const prerender = false
 
+import type { APIContext } from 'astro'
 import { BHASHService, formatDailyTip } from '@/lib/distribution/whatsapp'
 
 // Daily health tips pool (rotated by day of year)
@@ -15,10 +17,18 @@ const DAILY_TIPS = [
   { title: 'Consistent Routines', body: 'Predictable morning and bedtime routines reduce cortisol (stress hormone) in children and improve behavior and sleep quality.', url: 'https://parent.skids.clinic/habits/timekeepers' },
 ]
 
-export async function scheduled(event: ScheduledEvent, env: any, ctx: ExecutionContext) {
-  if (!env.DB || !env.BHASH_USER) {
-    console.log('[Cron] Missing DB or BHASH credentials — skipping broadcast')
-    return
+export async function POST({ request, locals }: APIContext) {
+  const env = locals.runtime?.env as any
+
+  // Verify cron secret
+  const auth = request.headers.get('Authorization') || ''
+  const secret = env?.CRON_SECRET
+  if (secret && auth !== `Bearer ${secret}`) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+  }
+
+  if (!env?.DB || !env?.BHASH_USER) {
+    return new Response(JSON.stringify({ error: 'Missing credentials' }), { status: 500 })
   }
 
   const bhash = new BHASHService({
@@ -27,12 +37,12 @@ export async function scheduled(event: ScheduledEvent, env: any, ctx: ExecutionC
     BHASH_SENDER: env.BHASH_SENDER || 'BUZWAP',
   })
 
-  // Pick tip by day of year
-  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000)
+  const dayOfYear = Math.floor(
+    (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
+  )
   const tip = DAILY_TIPS[dayOfYear % DAILY_TIPS.length]
   const message = formatDailyTip(tip)
 
-  // Fetch all active daily_tip subscribers
   try {
     const result = await env.DB.prepare(
       `SELECT phone FROM whatsapp_subscriptions WHERE is_subscribed=1 AND subscription_type='daily_tip' LIMIT 500`
@@ -40,13 +50,18 @@ export async function scheduled(event: ScheduledEvent, env: any, ctx: ExecutionC
 
     const phones: string[] = (result.results || []).map((r: any) => r.phone)
     if (phones.length === 0) {
-      console.log('[Cron] No subscribers for daily broadcast')
-      return
+      return new Response(JSON.stringify({ sent: 0, failed: 0, message: 'No subscribers' }), { status: 200 })
     }
 
     const { sent, failed } = await bhash.sendDailyTip(phones, message)
-    console.log(`[Cron] Daily broadcast complete: ${sent} sent, ${failed} failed`)
+    return new Response(JSON.stringify({ sent, failed }), { status: 200 })
   } catch (err) {
-    console.error('[Cron] Daily broadcast error:', err)
+    console.error('[Cron] Error:', err)
+    return new Response(JSON.stringify({ error: 'Broadcast failed' }), { status: 500 })
   }
+}
+
+// Keep scheduled export for reference (not called by Pages, used by cron-worker)
+export async function scheduled(event: ScheduledEvent, env: any, ctx: ExecutionContext) {
+  console.log('[Cron] scheduled() called — use POST endpoint via cron-worker instead')
 }
