@@ -95,7 +95,7 @@ This implementation plan focuses on building FREE features first to establish br
   - [x] 15.3 Write unit tests for moderation features
 
 - [-] 16. Final checkpoint and deployment preparation
-  - [ ] 16.1 Run all tests and ensure they pass
+  - [x] 16.1 Run all tests and ensure they pass
     - Run: `npx vitest run`
     - Ensure all property tests and unit tests pass
     - _Requirements: Testing Coverage Goals_
@@ -107,7 +107,7 @@ This implementation plan focuses on building FREE features first to establish br
     - Verify BHASH_USER, BHASH_PASS, BHASH_SENDER already set
     - _Requirements: Deployment Considerations_
 
-  - [ ] 16.3 Deploy database migration to production D1
+  - [x] 16.3 Deploy database migration to production D1
     - Run: `wrangler d1 migrations apply skids-parent-db --remote`
     - Applies migrations 0001_core_schema.sql and 0002_community_tables.sql
     - Verify tables exist: forum_groups, forum_posts, forum_comments, forum_likes, social_shares, whatsapp_subscriptions
@@ -117,7 +117,7 @@ This implementation plan focuses on building FREE features first to establish br
     - Cron set in wrangler.jsonc: "30 3 * * *" (9 AM IST)
     - Handler: src/pages/api/cron/daily-broadcast.ts
 
-  - [ ] 16.5 Deploy to production
+  - [x] 16.5 Deploy to production
     - Build: `npm run build`
     - Deploy: `wrangler pages deploy dist --project-name skids-parent`
     - Smoke test: verify forum, analytics, WhatsApp subscription, organ/habits pages
