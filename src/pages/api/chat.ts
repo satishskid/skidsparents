@@ -8,6 +8,7 @@ import type { APIRoute } from 'astro'
 import { getParentId, verifyChildOwnership } from '@/pages/api/children'
 import { detectTopics, getRelevantContent } from '@/lib/ai/context'
 import { buildSystemPrompt, type ChildProfile, type ChatContext } from '@/lib/ai/prompt'
+import { isPremiumParent, checkRateLimit, routeToModel, type AIMessage } from '@/lib/ai/router'
 
 export const prerender = false
 
@@ -26,11 +27,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const db = env.DB
   const ai = env.AI
-  if (!ai) {
-    return new Response(JSON.stringify({ error: 'AI not available' }), { status: 500 })
+
+  // ── Determine tier + rate limit ──
+  const kv = env.KV
+  const premium = await isPremiumParent(parentId, db)
+  const tier = premium ? 'premium' : 'free'
+
+  const { allowed, remaining } = await checkRateLimit(parentId, tier, kv)
+  if (!allowed) {
+    const msg = premium
+      ? 'You\'ve reached the premium limit of 60 questions per minute. Please wait a moment.'
+      : 'You\'ve reached the free limit of 20 questions per minute. Upgrade to premium for higher limits.'
+    return new Response(
+      JSON.stringify({ error: msg, upgradeAvailable: !premium }),
+      { status: 429, headers: { 'Content-Type': 'application/json', 'X-RateLimit-Remaining': '0' } }
+    )
   }
 
-  let body: { message: string; childId?: string; conversationId?: string }
+  let body: { message: string; childId?: string; conversationId?: string; mode?: 'onboarding' | 'standard' }
   try {
     body = await request.json()
   } catch {
@@ -120,35 +134,76 @@ export const POST: APIRoute = async ({ request, locals }) => {
       } catch {}
     }
 
+    // Load vaccination history
+    let vaccinationHistory: string[] = []
+    if (body.childId && db) {
+      try {
+        const { results: vax } = await db.prepare(
+          'SELECT vaccine_name, administered_date FROM vaccination_records WHERE child_id = ? ORDER BY administered_date DESC LIMIT 5'
+        ).bind(body.childId).all()
+        vaccinationHistory = (vax || []).map((v: any) => `${v.vaccine_name}${v.administered_date ? ` on ${v.administered_date}` : ''}`)
+      } catch {}
+    }
+
+    // Load latest growth record
+    let latestGrowth: { height?: number; weight?: number; date?: string } | undefined
+    if (body.childId && db) {
+      try {
+        const growth = await db.prepare(
+          'SELECT height_cm, weight_kg, date FROM growth_records WHERE child_id = ? ORDER BY date DESC LIMIT 1'
+        ).bind(body.childId).first() as any
+        if (growth) {
+          latestGrowth = {
+            height: growth.height_cm ?? undefined,
+            weight: growth.weight_kg ?? undefined,
+            date: growth.date ?? undefined,
+          }
+        }
+      } catch {}
+    }
+
     // ── 5. Build system prompt ──
     const chatContext: ChatContext = {
       childProfile,
       relevantContent,
       achievedMilestones: achievedMilestones.length > 0 ? achievedMilestones : undefined,
       recentObservations: recentObservations.length > 0 ? recentObservations : undefined,
+      vaccinationHistory: vaccinationHistory.length > 0 ? vaccinationHistory : undefined,
+      latestGrowth,
+      mode: body.mode,
     }
     const systemPrompt = buildSystemPrompt(chatContext)
 
-    // ── 6. Build messages array for Workers AI ──
-    const aiMessages: { role: string; content: string }[] = [
+    // ── 6. Build messages array ──
+    const aiMessages: AIMessage[] = [
       { role: 'system', content: systemPrompt },
+      ...previousMessages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+      { role: 'user', content: userMessage },
     ]
 
-    // Add conversation history
-    for (const msg of previousMessages) {
-      aiMessages.push({ role: msg.role, content: msg.content })
+    // ── 7. Route to appropriate model based on tier ──
+    let aiResult: { text: string; model: string; tier: string }
+    try {
+      aiResult = await routeToModel(aiMessages, tier, env)
+    } catch (modelErr) {
+      console.error('[Chat] All models failed:', modelErr)
+      return new Response(
+        JSON.stringify({ response: "I'm having a moment — please try again in a few seconds. If this keeps happening, you can reach us on WhatsApp.", conversationId }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      )
     }
 
-    // Add current user message
-    aiMessages.push({ role: 'user', content: userMessage })
+    const responseText = aiResult.text || 'I apologize, I was unable to generate a response. Please try again.'
 
-    // ── 7. Call Workers AI ──
-    const aiResponse = await ai.run('@cf/meta/llama-3.1-8b-instruct', {
-      messages: aiMessages,
-      max_tokens: 512,
-    })
-
-    const responseText = aiResponse.response || 'I apologize, I was unable to generate a response. Please try again.'
+    // During onboarding, save each parent message as a health observation
+    if (body.mode === 'onboarding' && body.childId && db && userMessage.length > 5) {
+      try {
+        await db.prepare(
+          `INSERT INTO parent_observations (id, child_id, date, category, observation_text, concern_level, created_at)
+           VALUES (?, ?, date('now'), 'Health', ?, 'none', datetime('now'))`
+        ).bind(crypto.randomUUID(), body.childId, userMessage).run()
+      } catch {}
+    }
 
     // ── 8. Save conversation ──
     if (db) {
@@ -175,8 +230,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     return new Response(
-      JSON.stringify({ response: responseText, conversationId }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({ response: responseText, conversationId, model: aiResult.model, tier: aiResult.tier }),
+      { status: 200, headers: { 'Content-Type': 'application/json', 'X-RateLimit-Remaining': String(remaining) } }
     )
   } catch (err: any) {
     console.error('[Chat] Error:', err)

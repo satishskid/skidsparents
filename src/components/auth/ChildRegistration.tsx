@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 interface Props {
   token: string
-  onComplete: () => void
+  onComplete: (childId: string) => void
   onClose: () => void
 }
 
@@ -37,7 +37,8 @@ export default function ChildRegistration({ token, onComplete, onClose }: Props)
         }),
       })
       if (res.ok) {
-        onComplete()
+        const data = await res.json()
+        onComplete(data.id)
       } else {
         const data = await res.json()
         setError(data.error || 'Failed to save. Please try again.')

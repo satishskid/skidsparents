@@ -5,8 +5,34 @@
 
 import type { APIRoute } from 'astro'
 import { verifyIdToken, extractBearerToken } from '@/lib/firebase/server'
+import { getMilestonesForAge } from '@/lib/content/milestones'
 
 export const prerender = false
+
+async function seedMilestones(childId: string, ageMonths: number, db: any): Promise<void> {
+  try {
+    const milestones = getMilestonesForAge(ageMonths)
+    for (const m of milestones) {
+      // Check if already exists (idempotent)
+      const existing = await db
+        .prepare('SELECT id FROM milestones WHERE child_id = ? AND milestone_key = ?')
+        .bind(childId, m.key)
+        .first()
+      if (!existing) {
+        await db
+          .prepare(
+            `INSERT INTO milestones (id, child_id, milestone_key, title, category, status, expected_age_min, expected_age_max, updated_at)
+             VALUES (?, ?, ?, ?, ?, 'not_started', ?, ?, datetime('now'))`
+          )
+          .bind(crypto.randomUUID(), childId, m.key, m.title, m.category, m.expectedAgeMin, m.expectedAgeMax)
+          .run()
+      }
+    }
+  } catch (err) {
+    console.error('[Children] Milestone seeding error:', err)
+    // Never throw — seeding failure must not block child creation
+  }
+}
 
 export async function getParentId(request: Request, env: any): Promise<string | null> {
   const token = extractBearerToken(request)
@@ -80,6 +106,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       body.blood_group || null,
       body.allergies?.length ? JSON.stringify(body.allergies) : null
     ).run()
+
+    // Compute ageMonths from dob
+    const dob = new Date(body.dob)
+    const now = new Date()
+    const ageMonths = (now.getFullYear() - dob.getFullYear()) * 12 + (now.getMonth() - dob.getMonth())
+
+    // Seed age-appropriate milestones (non-blocking on failure)
+    await seedMilestones(id, ageMonths, env.DB)
 
     return new Response(JSON.stringify({ id, name: body.name, dob: body.dob }), {
       status: 201,

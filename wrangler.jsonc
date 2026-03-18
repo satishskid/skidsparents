@@ -1,5 +1,5 @@
 {
-  "name": "skids-parent",
+  "name": "skidsparent",
   "compatibility_date": "2025-03-01",
   "compatibility_flags": ["nodejs_compat"],
   "pages_build_output_dir": "./dist",
@@ -53,7 +53,7 @@
   // Firebase Admin:
   //   FIREBASE_ADMIN_KEY  = (service account JSON)
   //
-  // To set: cd skids-parent && npx wrangler pages secret put BHASH_USER
+  // To set: npx wrangler pages secret put BHASH_USER --project-name skidsparent
   // ──────────────────────────────────────────────────────
 
   // NOTE: Cloudflare Pages does not support "triggers" in wrangler.jsonc.

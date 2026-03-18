@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/lib/hooks/useAuth'
 import ChildRegistration from './ChildRegistration'
 import ReferralBanner from './ReferralBanner'
+import ChatWidget from '@/components/chat/ChatWidget'
 
 interface Child {
   id: string
@@ -17,6 +18,7 @@ export default function UserProfile() {
   const [children, setChildren] = useState<Child[]>([])
   const [loadingChildren, setLoadingChildren] = useState(false)
   const [showAddChild, setShowAddChild] = useState(false)
+  const [onboardingChildId, setOnboardingChildId] = useState<string | null>(null)
   const [stats, setStats] = useState({ milestones: 0, habits: 0 })
 
   const fetchChildren = useCallback(async () => {
@@ -222,12 +224,57 @@ export default function UserProfile() {
       {showAddChild && token && (
         <ChildRegistration
           token={token}
-          onComplete={() => {
+          onComplete={async (childId: string) => {
             setShowAddChild(false)
             fetchChildren()
+            // Check if child has any observations — if not, trigger onboarding
+            try {
+              const res = await fetch(`/api/observations?childId=${childId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+              })
+              const data = res.ok ? await res.json() : { observations: [] }
+              if (!data.observations?.length) {
+                setOnboardingChildId(childId)
+              }
+            } catch {
+              setOnboardingChildId(childId)
+            }
           }}
           onClose={() => setShowAddChild(false)}
         />
+      )}
+
+      {onboardingChildId && token && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md h-[75vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">S</div>
+                <div>
+                  <div className="text-sm font-bold">Dr. SKIDS</div>
+                  <div className="text-[10px] text-white/70">Building your child's health record</div>
+                </div>
+              </div>
+              <button
+                onClick={() => setOnboardingChildId(null)}
+                className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30"
+                aria-label="Close"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 min-h-0">
+              <ChatWidget
+                fullScreen={true}
+                token={token}
+                childId={onboardingChildId}
+                mode="onboarding"
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

@@ -72,6 +72,12 @@ export default function ObservationJournal({ childId, token }: Props) {
     }
   }
 
+  function askDrSkids(text: string) {
+    window.dispatchEvent(new CustomEvent('open-dr-skids', {
+      detail: { question: `I noticed: "${text}" — what should I do?` }
+    }))
+  }
+
   function formatDate(d: string): string {
     return new Date(d + 'T12:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
   }
@@ -187,13 +193,29 @@ export default function ObservationJournal({ childId, token }: Props) {
                 {getConcernBadge(obs.concern_level)}
               </div>
               <p className="text-sm text-gray-800">{obs.observation_text}</p>
+              {obs.concern_level !== 'none' && (
+                <button
+                  onClick={() => askDrSkids(obs.observation_text)}
+                  className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-green-700 hover:text-green-800 transition-colors"
+                >
+                  <span className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center text-[10px] font-bold">S</span>
+                  Ask Dr. SKIDS
+                </button>
+              )}
             </div>
           ))}
         </div>
       ) : !showForm && (
         <div className="bg-white rounded-xl p-6 border border-gray-100 text-center">
           <div className="text-2xl mb-2">📝</div>
-          <p className="text-sm text-gray-500">No observations yet. Start documenting your child's journey!</p>
+          <p className="text-sm text-gray-500 mb-3">No observations yet. Start documenting your child's journey!</p>
+          <button
+            onClick={() => askDrSkids("I'd like to share my child's current health status")}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors"
+          >
+            <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">S</span>
+            Ask Dr. SKIDS
+          </button>
         </div>
       )}
     </div>

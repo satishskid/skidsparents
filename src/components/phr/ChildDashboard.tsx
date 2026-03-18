@@ -16,11 +16,11 @@ interface Child {
 }
 
 const TABS = [
-  { key: 'milestones', label: 'Milestones', emoji: '🎯' },
-  { key: 'habits', label: 'Habits', emoji: '✅' },
-  { key: 'growth', label: 'Growth', emoji: '📏' },
-  { key: 'notes', label: 'Notes', emoji: '📝' },
-  { key: 'records', label: 'Records', emoji: '📋' },
+  { key: 'milestones', label: 'Milestones', short: 'Miles', emoji: '🎯' },
+  { key: 'habits',     label: 'Habits',     short: 'Habits', emoji: '✅' },
+  { key: 'growth',     label: 'Growth',     short: 'Growth', emoji: '📏' },
+  { key: 'notes',      label: 'Notes',      short: 'Notes',  emoji: '📝' },
+  { key: 'records',    label: 'Records',    short: 'Rec.',   emoji: '📋' },
 ] as const
 
 type TabKey = typeof TABS[number]['key']
@@ -136,7 +136,8 @@ export default function ChildDashboard({ childId }: { childId: string }) {
             }`}
           >
             <span className="block text-base">{tab.emoji}</span>
-            {tab.label}
+            <span className="sm:hidden">{tab.short}</span>
+            <span className="hidden sm:inline">{tab.label}</span>
           </button>
         ))}
       </div>
@@ -160,6 +161,16 @@ export default function ChildDashboard({ childId }: { childId: string }) {
           <RecordsTimeline childId={childId} token={token} />
         </>
       )}
+
+      {/* Dr. SKIDS FAB — mobile only */}
+      <button
+        onClick={() => window.dispatchEvent(new CustomEvent('open-dr-skids', { detail: { childId } }))}
+        className="fixed bottom-20 right-4 z-40 md:hidden flex items-center gap-2 px-4 py-2.5 rounded-full bg-green-600 text-white text-sm font-semibold shadow-lg shadow-green-500/30 hover:bg-green-700 transition-colors"
+        aria-label="Ask Dr. SKIDS"
+      >
+        <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">S</span>
+        Ask Dr. SKIDS
+      </button>
     </div>
   )
 }

@@ -11,6 +11,8 @@ const QUICK_QUESTIONS = [
 
 const WELCOME_MESSAGE = 'Hi! I\'m Dr. SKIDS, your child\'s health companion. Ask me anything about milestones, nutrition, sleep, habits, or development — I\'ll give you personalized guidance based on your child\'s age and profile.'
 
+const ONBOARDING_WELCOME = `Hi! I'm Dr. SKIDS. To build the best health record for your child, I'd like to ask you a few quick questions. It only takes 2 minutes! 🌟\n\nLet's start: Was the pregnancy and delivery straightforward, or were there any complications I should know about?`
+
 interface Message {
   role: 'user' | 'bot'
   text: string
@@ -22,14 +24,16 @@ interface ChatWidgetProps {
   childId?: string
   childName?: string
   children?: { id: string; name: string }[]
+  mode?: 'standard' | 'onboarding'
+  initialMessage?: string
 }
 
-export default function ChatWidget({ fullScreen = false, token: tokenProp, childId: initialChildId, childName, children: childrenListProp }: ChatWidgetProps) {
+export default function ChatWidget({ fullScreen = false, token: tokenProp, childId: initialChildId, childName, children: childrenListProp, mode, initialMessage }: ChatWidgetProps) {
   const { token: authToken } = useAuth()
   const token = tokenProp || authToken
   const [open, setOpen] = useState(fullScreen)
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'bot', text: WELCOME_MESSAGE },
+    { role: 'bot', text: mode === 'onboarding' ? (initialMessage || ONBOARDING_WELCOME) : WELCOME_MESSAGE },
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -37,6 +41,12 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
   const [selectedChildId, setSelectedChildId] = useState(initialChildId)
   const [childrenList, setChildrenList] = useState(childrenListProp)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  const clearChat = useCallback(() => {
+    setMessages([{ role: 'bot', text: mode === 'onboarding' ? (initialMessage || ONBOARDING_WELCOME) : WELCOME_MESSAGE }])
+    setConversationId(undefined)
+    setInput('')
+  }, [mode, initialMessage])
 
   // Auto-fetch children list when authenticated
   useEffect(() => {
@@ -81,11 +91,11 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
     setInput('')
     setLoading(true)
 
-    // If no token (unauthenticated), use a simple fallback
+    // If no token (unauthenticated), acknowledge the question then prompt sign-in
     if (!token) {
       setMessages((prev) => [
         ...prev,
-        { role: 'bot', text: 'Please sign in to get personalized AI-powered responses based on your child\'s profile. Tap "Sign In" at the top to get started!' },
+        { role: 'bot', text: `That's a great question — and I want to give you a proper answer based on your child's age and profile.\n\nTo do that, I need you to sign in first. It only takes a moment, and then I can give you personalised guidance.\n\nTap "Sign In" at the top to get started!` },
       ])
       setLoading(false)
       return
@@ -102,8 +112,19 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
           message: text.trim(),
           childId: selectedChildId,
           conversationId,
+          ...(mode ? { mode } : {}),
         }),
       })
+
+      if (res.status === 429) {
+        const data = await res.json()
+        const upgradeMsg = data.upgradeAvailable
+          ? `${data.error}\n\nUpgrade to SKIDS Premium for higher limits and access to Gemini & Claude AI models.`
+          : data.error
+        setMessages((prev) => [...prev, { role: 'bot', text: upgradeMsg }])
+        setLoading(false)
+        return
+      }
 
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`)
@@ -175,7 +196,7 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
                 </div>
               )}
               <div
-                className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
                   msg.role === 'user'
                     ? 'bg-green-600 text-white rounded-br-md'
                     : 'bg-gray-50 text-gray-700 rounded-bl-md border border-gray-100'
@@ -234,7 +255,7 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
     <>
       <button
         onClick={() => setOpen(!open)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30 hover:shadow-xl hover:shadow-green-500/40 transition-all items-center justify-center hidden md:flex"
+        className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30 hover:shadow-xl hover:shadow-green-500/40 transition-all items-center justify-center flex"
         aria-label="Chat with Dr. SKIDS"
       >
         {open ? (
@@ -250,7 +271,7 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
       </button>
 
       {open && (
-        <div className="fixed bottom-4 right-4 md:bottom-24 md:right-6 z-50 w-[calc(100vw-2rem)] max-w-[380px] h-[70vh] max-h-[480px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden animate-slide-up">
+        <div className="fixed bottom-20 right-4 md:bottom-24 md:right-6 z-50 w-[calc(100vw-2rem)] max-w-[380px] h-[70vh] max-h-[480px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden animate-slide-up">
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white">
             <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">S</div>
@@ -263,6 +284,16 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
               </div>
             </div>
             {childSelector}
+            <button
+              onClick={clearChat}
+              title="Clear conversation"
+              className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+              aria-label="Clear chat"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+              </svg>
+            </button>
             <button
               onClick={() => setOpen(false)}
               className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
@@ -279,7 +310,7 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
-                  className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                  className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
                     msg.role === 'user'
                       ? 'bg-green-600 text-white rounded-br-md'
                       : 'bg-gray-100 text-gray-700 rounded-bl-md'
@@ -330,6 +361,9 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
                 </svg>
               </button>
             </div>
+            <p className="mt-1.5 text-[10px] text-gray-400 text-center leading-tight">
+              For guidance only · Not a substitute for medical advice · Always consult your paediatrician
+            </p>
           </div>
         </div>
       )}
