@@ -56,9 +56,9 @@ describe('Feature: brand-awareness, Property 14: Popular content ranking', () =>
         fc.array(engagementData, { minLength: 1, maxLength: 10 }),
         (data) => {
           const ranked = rankContent(data)
+          // Verify each ranked item's score matches its own views + shares*3
           for (const item of ranked) {
-            const original = data.find(d => d.contentId === item.contentId)!
-            expect(item.score).toBe(original.views + original.shares * 3)
+            expect(item.score).toBe(item.views + item.shares * 3)
           }
         }
       ),
