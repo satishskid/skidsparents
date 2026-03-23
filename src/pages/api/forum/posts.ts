@@ -6,9 +6,10 @@ import { getParentId } from '@/pages/api/children'
 import { drizzle } from 'drizzle-orm/d1'
 import { forumPosts, forumGroups, parents } from '@/lib/db/schema'
 import { eq, and, desc } from 'drizzle-orm'
+import { getEnv } from '@/lib/runtime/env'
 
 export async function GET({ request, locals }: APIContext) {
-  const env = (locals as any).runtime?.env
+  const env = getEnv(locals)
   const db = drizzle(env.DB)
   const url = new URL(request.url)
   const groupId = url.searchParams.get('groupId')
@@ -44,11 +45,17 @@ export async function GET({ request, locals }: APIContext) {
 }
 
 export async function POST({ request, locals }: APIContext) {
-  const env = (locals as any).runtime?.env
+  const env = getEnv(locals)
   const parentId = await getParentId(request, env)
   if (!parentId) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 
-  const { groupId, title, content, isAnonymous = false } = await request.json()
+  interface CreatePostBody {
+    groupId: string
+    title: string
+    content: string
+    isAnonymous?: boolean
+  }
+  const { groupId, title, content, isAnonymous = false } = await request.json() as CreatePostBody
 
   if (!groupId || !title?.trim() || !content?.trim()) {
     return new Response(JSON.stringify({ error: 'groupId, title, and content are required' }), { status: 400 })

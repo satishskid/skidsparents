@@ -6,9 +6,10 @@ import type { APIRoute } from 'astro'
 import { drizzle } from 'drizzle-orm/d1'
 import { contentEngagement, forumPosts, socialShares, forumComments } from '@/lib/db/schema'
 import { eq, gte, and, sql, desc } from 'drizzle-orm'
+import { getEnv } from '@/lib/runtime/env'
 
 export const GET: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any).runtime?.env
+  const env = getEnv(locals)
   const adminKey = request.headers.get('x-admin-key') || new URL(request.url).searchParams.get('key')
   if (adminKey !== env?.ADMIN_KEY) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
@@ -80,8 +81,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       .slice(0, 20)
 
     return new Response(JSON.stringify({ ranked, timeframe, contentType }))
-  } catch (err) {
-    console.error('popular-content error:', err)
+  } catch (e: unknown) {
+    console.error('popular-content error:', e)
     return new Response(JSON.stringify({ error: 'Internal error' }), { status: 500 })
   }
 }

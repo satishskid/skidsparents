@@ -4,6 +4,7 @@ export const prerender = false
 import type { APIContext } from 'astro'
 import { drizzle } from 'drizzle-orm/d1'
 import { forumGroups } from '@/lib/db/schema'
+import { getEnv } from '@/lib/runtime/env'
 
 // Seed data for forum groups
 const DEFAULT_GROUPS = [
@@ -22,7 +23,7 @@ const DEFAULT_GROUPS = [
 ]
 
 export async function GET({ locals }: APIContext) {
-  const env = (locals as any).runtime?.env
+  const env = getEnv(locals)
   const db = drizzle(env.DB)
 
   try {

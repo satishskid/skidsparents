@@ -33,7 +33,7 @@ export default function MilestoneTracker({ childId, ageMonths, token }: Props) {
     try {
       const res = await fetch(`/api/milestones?childId=${childId}`, { headers: { Authorization: `Bearer ${token}` } })
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json() as { milestones?: SavedMilestone[] }
         setSaved(data.milestones || [])
       }
     } catch {} finally {

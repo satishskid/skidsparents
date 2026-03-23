@@ -33,12 +33,12 @@ async function fetchBlogs(fetchFn: typeof fetch, timeoutMs = 30000): Promise<Blo
     }
 
     return data as BlogPost[]
-  } catch (err: any) {
+  } catch (e: unknown) {
     clearTimeout(timer)
-    if (err.name === 'AbortError') {
+    if (e instanceof Error && e.name === 'AbortError') {
       throw new Error('Blog API timeout')
     }
-    throw err
+    throw e
   }
 }
 

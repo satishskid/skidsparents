@@ -1,0 +1,96 @@
+---
+export const prerender = true
+
+interface BlogPost {
+  slug: string
+  title: string
+  excerpt: string
+  category: string
+  imageUrl?: string
+  publishedAt?: string
+}
+
+import UtmPreserver from '../../components/UtmPreserver.astro'
+
+let posts: BlogPost[] = []
+try {
+  const res = await fetch('https://9vhd0onw23.execute-api.ap-south-1.amazonaws.com/published-blogs')
+  if (res.ok) {
+    const data = await res.json() as any
+    posts = (Array.isArray(data) ? data : data.blogs || data.posts || []).slice(0, 24)
+  }
+} catch {
+  // Build continues with empty posts — static fallback
+}
+
+const UTM = 'utm_source=skids_clinic&utm_campaign=skids_parent_cta'
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SKIDS Blog — Pediatric Health for Indian Parents</title>
+  <meta name="description" content="Evidence-based articles on child health, development, nutrition, and parenting for Indian families." />
+  <link rel="icon" href="https://parent.skids.clinic/favicon.svg" type="image/svg+xml" />
+  <style>
+    @import "tailwindcss";
+    body { font-family: system-ui, sans-serif; }
+  </style>
+</head>
+<body class="bg-white text-gray-900">
+  <UtmPreserver />
+
+  <nav class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+    <a href="/" class="font-bold text-blue-600 text-lg">SKIDS</a>
+    <a href={`https://parent.skids.clinic/blog?${UTM}`} class="text-sm text-gray-500 hover:text-gray-800">Read on app →</a>
+  </nav>
+
+  <section class="px-4 pt-10 pb-6 max-w-4xl mx-auto">
+    <h1 class="text-3xl font-bold mb-2">SKIDS Blog</h1>
+    <p class="text-gray-500 text-sm">Evidence-based pediatric health for Indian parents</p>
+  </section>
+
+  <section class="px-4 pb-14 max-w-4xl mx-auto">
+    {posts.length === 0 ? (
+      <div class="text-center py-16 text-gray-400">
+        <p class="text-4xl mb-3">📚</p>
+        <p>Articles loading…</p>
+        <a href={`https://parent.skids.clinic/blog?${UTM}`} class="mt-4 inline-block text-blue-600 text-sm hover:underline">
+          Read all articles on SKIDS →
+        </a>
+      </div>
+    ) : (
+      <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-5">
+        {posts.map((post: BlogPost) => (
+          <a
+            href={`https://parent.skids.clinic/blog/${post.slug}?${UTM}`}
+            class="group block bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+          >
+            {post.imageUrl && (
+              <img src={post.imageUrl} alt={post.title} class="w-full h-36 object-cover" loading="lazy" />
+            )}
+            <div class="p-4">
+              {post.category && (
+                <span class="text-xs text-blue-600 font-medium uppercase tracking-wide">{post.category}</span>
+              )}
+              <h2 class="font-semibold text-gray-900 text-sm mt-1 group-hover:text-blue-600 line-clamp-2">
+                {post.title}
+              </h2>
+              {post.excerpt && (
+                <p class="text-xs text-gray-500 mt-1 line-clamp-2">{post.excerpt}</p>
+              )}
+            </div>
+          </a>
+        ))}
+      </div>
+    )}
+  </section>
+
+  <footer class="px-4 py-6 text-center text-xs text-gray-400 border-t border-gray-100">
+    <a href="/">← Back to SKIDS</a>
+  </footer>
+
+</body>
+</html>

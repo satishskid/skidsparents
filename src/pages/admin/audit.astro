@@ -1,0 +1,35 @@
+---
+import AuditLogViewer from '@/components/admin/AuditLogViewer'
+
+export const prerender = false
+
+const adminKey = import.meta.env.ADMIN_KEY || ''
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SKIDS Admin — Audit Log</title>
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <style>
+      @import '../../styles/global.css';
+    </style>
+  </head>
+  <body class="min-h-screen bg-gray-50 font-sans antialiased">
+    <nav class="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-4 text-sm">
+      <a href="/admin" class="text-gray-500 hover:text-gray-800">← CRM</a>
+      <span class="text-gray-300">|</span>
+      <a href="/admin/providers" class="text-gray-500 hover:text-gray-800">Providers</a>
+      <a href="/admin/orders" class="text-gray-500 hover:text-gray-800">Orders</a>
+      <a href="/admin/revenue" class="text-gray-500 hover:text-gray-800">Revenue</a>
+      <a href="/admin/audit" class="font-medium text-blue-600">Audit Log</a>
+    </nav>
+    <script define:vars={{ adminKey }}>
+      window.__ADMIN_KEY = adminKey
+    </script>
+    <AuditLogViewer client:load />
+  </body>
+</html>

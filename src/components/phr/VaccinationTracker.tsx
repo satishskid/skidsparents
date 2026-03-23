@@ -64,7 +64,7 @@ export default function VaccinationTracker({ childId, token }: VaccinationTracke
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json() as { schedule?: VaccineWithStatus[]; summary?: VaccineSummary }
         setSchedule(data.schedule || [])
         setSummary(data.summary || { done: 0, due: 0, overdue: 0, total: 0 })
       }

@@ -15,6 +15,28 @@ interface HealthRecord {
   data_json: string | null
 }
 
+interface Prescription {
+  id: string
+  order_id: string
+  child_id: string
+  provider_id: string
+  provider_name: string | null
+  medications_json: string | null
+  education_json: string | null
+  nutrition_json: string | null
+  behavioural_json: string | null
+  follow_up_json: string | null
+  issued_at: string
+  whatsapp_sent: number
+}
+
+interface TimelineItem {
+  type: 'record' | 'prescription'
+  date: string
+  record?: HealthRecord
+  prescription?: Prescription
+}
+
 interface RecordsTimelineProps {
   childId: string
   token: string
@@ -39,6 +61,7 @@ const FILTER_TYPES = [
   { key: 'lab_test', label: 'Labs' },
   { key: 'vaccination', label: 'Vaccines' },
   { key: 'screening', label: 'Screening' },
+  { key: 'prescription', label: 'Rx' },
   { key: 'general', label: 'Other' },
 ]
 
@@ -54,6 +77,7 @@ const MANUAL_TYPES = [
 
 export default function RecordsTimeline({ childId, token }: RecordsTimelineProps) {
   const [records, setRecords] = useState<HealthRecord[]>([])
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
   const [showUpload, setShowUpload] = useState(false)
@@ -71,13 +95,27 @@ export default function RecordsTimeline({ childId, token }: RecordsTimelineProps
 
   const fetchRecords = useCallback(async () => {
     try {
-      const typeParam = filter !== 'all' ? `&type=${filter}` : ''
-      const res = await fetch(`/api/records?childId=${childId}${typeParam}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setRecords(data.records || [])
+      const typeParam = filter !== 'all' && filter !== 'prescription' ? `&type=${filter}` : ''
+      const [recordsRes, rxRes] = await Promise.all([
+        filter === 'prescription'
+          ? Promise.resolve({ ok: true, json: async () => ({ records: [] }) })
+          : fetch(`/api/records?childId=${childId}${typeParam}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            }),
+        filter === 'all' || filter === 'prescription'
+          ? fetch(`/api/children/${childId}/prescriptions`, {
+              headers: { Authorization: `Bearer ${token}` },
+            })
+          : Promise.resolve({ ok: true, json: async () => ({ prescriptions: [] }) }),
+      ])
+
+      if (recordsRes.ok) {
+        const data = await recordsRes.json()
+        setRecords((data as any).records || [])
+      }
+      if (rxRes.ok) {
+        const data = await rxRes.json()
+        setPrescriptions((data as any).prescriptions || [])
       }
     } catch {} finally {
       setLoading(false)
@@ -121,6 +159,12 @@ export default function RecordsTimeline({ childId, token }: RecordsTimelineProps
     } catch { return dateStr }
   }
 
+  // Merge and sort records + prescriptions by date descending
+  const timelineItems: TimelineItem[] = [
+    ...records.map(r => ({ type: 'record' as const, date: r.record_date, record: r })),
+    ...prescriptions.map(p => ({ type: 'prescription' as const, date: p.issued_at, prescription: p })),
+  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
   if (loading) {
     return (
       <div className="space-y-3">
@@ -139,7 +183,7 @@ export default function RecordsTimeline({ childId, token }: RecordsTimelineProps
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
               filter === f.key
                 ? 'bg-green-600 text-white'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -150,8 +194,8 @@ export default function RecordsTimeline({ childId, token }: RecordsTimelineProps
         ))}
       </div>
 
-      {/* Records list */}
-      {records.length === 0 ? (
+      {/* Timeline list */}
+      {timelineItems.length === 0 ? (
         <div className="bg-white rounded-xl p-8 text-center border border-gray-100">
           <p className="text-3xl mb-2">📋</p>
           <p className="text-sm font-medium text-gray-700">No records yet</p>
@@ -172,7 +216,141 @@ export default function RecordsTimeline({ childId, token }: RecordsTimelineProps
           </div>
         </div>
       ) : (
-        records.map((record) => {
+        timelineItems.map((item) => {
+          if (item.type === 'prescription' && item.prescription) {
+            const rx = item.prescription
+            const expanded = expandedId === `rx-${rx.id}`
+            const cfg = TYPE_CONFIG.prescription
+
+            let medications: any[] = []
+            let education: string[] = []
+            let nutrition: string[] = []
+            let behavioural: string[] = []
+            let followUp: any = null
+
+            try { medications = rx.medications_json ? JSON.parse(rx.medications_json) : [] } catch {}
+            try { education = rx.education_json ? JSON.parse(rx.education_json) : [] } catch {}
+            try { nutrition = rx.nutrition_json ? JSON.parse(rx.nutrition_json) : [] } catch {}
+            try { behavioural = rx.behavioural_json ? JSON.parse(rx.behavioural_json) : [] } catch {}
+            try { followUp = rx.follow_up_json ? JSON.parse(rx.follow_up_json) : null } catch {}
+
+            const referrals: string[] = followUp?.referrals || []
+
+            return (
+              <div
+                key={`rx-${rx.id}`}
+                className="bg-white rounded-xl border border-gray-100 overflow-hidden"
+                onClick={() => setExpandedId(expanded ? null : `rx-${rx.id}`)}
+              >
+                <div className="flex items-start gap-3 p-4 cursor-pointer">
+                  <div className="text-xl shrink-0 mt-0.5">{cfg.emoji}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${cfg.color}`}>
+                        {cfg.label}
+                      </span>
+                      <span className="text-[10px] text-gray-400">{formatDate(rx.issued_at)}</span>
+                    </div>
+                    <p className="text-sm font-medium text-gray-900">SKIDS Prescription</p>
+                    {rx.provider_name && (
+                      <p className="text-xs text-gray-500">Dr. {rx.provider_name}</p>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-gray-300 shrink-0">{expanded ? '▲' : '▼'}</span>
+                </div>
+
+                {expanded && (
+                  <div className="px-4 pb-4 border-t border-gray-50 space-y-3 pt-3">
+                    {medications.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Medications</p>
+                        {Array.isArray(medications) && typeof medications[0] === 'object' ? (
+                          medications.map((m: any, i: number) => (
+                            <p key={i} className="text-xs text-gray-700">
+                              {m.name} — {m.dose} {m.frequency} for {m.duration}
+                              {m.instructions ? ` (${m.instructions})` : ''}
+                            </p>
+                          ))
+                        ) : (
+                          <p className="text-xs text-gray-700 whitespace-pre-wrap">{String(medications)}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {education.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Patient Education</p>
+                        {Array.isArray(education) ? (
+                          education.map((e: string, i: number) => (
+                            <p key={i} className="text-xs text-gray-700">• {e}</p>
+                          ))
+                        ) : (
+                          <p className="text-xs text-gray-700 whitespace-pre-wrap">{String(education)}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {nutrition.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Nutrition</p>
+                        {Array.isArray(nutrition) ? (
+                          nutrition.map((n: string, i: number) => (
+                            <p key={i} className="text-xs text-gray-700">• {n}</p>
+                          ))
+                        ) : (
+                          <p className="text-xs text-gray-700 whitespace-pre-wrap">{String(nutrition)}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {behavioural.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Behavioural Guidance</p>
+                        {Array.isArray(behavioural) ? (
+                          behavioural.map((b: string, i: number) => (
+                            <p key={i} className="text-xs text-gray-700">• {b}</p>
+                          ))
+                        ) : (
+                          <p className="text-xs text-gray-700 whitespace-pre-wrap">{String(behavioural)}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {followUp && (
+                      <div>
+                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Follow-up</p>
+                        {followUp.when && <p className="text-xs text-gray-700">When: {followUp.when}</p>}
+                        {followUp.action && <p className="text-xs text-gray-700">Action: {followUp.action}</p>}
+                        {!followUp.when && !followUp.action && typeof followUp === 'string' && (
+                          <p className="text-xs text-gray-700 whitespace-pre-wrap">{followUp}</p>
+                        )}
+                        {referrals.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-1.5">
+                            {referrals.map((ref: string, i: number) => {
+                              const slug = ref.toLowerCase().replace(/skids\s*/i, '').trim().replace(/\s+/g, '-')
+                              return (
+                                <a
+                                  key={i}
+                                  href={`/interventions/${slug}`}
+                                  onClick={e => e.stopPropagation()}
+                                  className="px-2 py-0.5 bg-green-50 text-green-700 text-[10px] rounded-full hover:bg-green-100 transition-colors"
+                                >
+                                  → {ref}
+                                </a>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          }
+
+          // Regular health record
+          const record = item.record!
           const cfg = TYPE_CONFIG[record.record_type] || TYPE_CONFIG.general
           const expanded = expandedId === record.id
           let findings: any[] = []
@@ -187,7 +365,7 @@ export default function RecordsTimeline({ childId, token }: RecordsTimelineProps
               onClick={() => setExpandedId(expanded ? null : record.id)}
             >
               <div className="flex items-start gap-3 p-4 cursor-pointer">
-                <div className="text-xl flex-shrink-0 mt-0.5">{cfg.emoji}</div>
+                <div className="text-xl shrink-0 mt-0.5">{cfg.emoji}</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${cfg.color}`}>
@@ -204,7 +382,7 @@ export default function RecordsTimeline({ childId, token }: RecordsTimelineProps
                   )}
                 </div>
                 {record.file_url && (
-                  <span className="text-xs text-gray-300 flex-shrink-0">📎</span>
+                  <span className="text-xs text-gray-300 shrink-0">📎</span>
                 )}
               </div>
 

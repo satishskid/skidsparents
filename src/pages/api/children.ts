@@ -6,18 +6,20 @@
 import type { APIRoute } from 'astro'
 import { verifyIdToken, extractBearerToken } from '@/lib/firebase/server'
 import { getMilestonesForAge } from '@/lib/content/milestones'
+import { getEnv } from '@/lib/runtime/env'
 
 export const prerender = false
 
-async function seedMilestones(childId: string, ageMonths: number, db: any): Promise<void> {
+async function seedMilestones(childId: string, ageMonths: number, db: D1Database): Promise<void> {
   try {
     const milestones = getMilestonesForAge(ageMonths)
     for (const m of milestones) {
       // Check if already exists (idempotent)
+      interface MilestoneIdRow { id: string }
       const existing = await db
         .prepare('SELECT id FROM milestones WHERE child_id = ? AND milestone_key = ?')
         .bind(childId, m.key)
-        .first()
+        .first<MilestoneIdRow>()
       if (!existing) {
         await db
           .prepare(
@@ -34,23 +36,25 @@ async function seedMilestones(childId: string, ageMonths: number, db: any): Prom
   }
 }
 
-export async function getParentId(request: Request, env: any): Promise<string | null> {
+export async function getParentId(request: Request, env: Env): Promise<string | null> {
   const token = extractBearerToken(request)
   if (!token) return null
   const decoded = await verifyIdToken(token, env.FIREBASE_PROJECT_ID || 'skidsparent', env.KV)
   if (!decoded) return null
-  const row = await env.DB?.prepare('SELECT id FROM parents WHERE firebase_uid = ?').bind(decoded.uid).first()
-  return row ? (row as any).id : null
+  interface ParentRow { id: string }
+  const row = await env.DB?.prepare('SELECT id FROM parents WHERE firebase_uid = ?').bind(decoded.uid).first<ParentRow>()
+  return row ? row.id : null
 }
 
 /** Verify that a child belongs to this parent */
-export async function verifyChildOwnership(parentId: string, childId: string, db: any): Promise<boolean> {
-  const row = await db.prepare('SELECT id FROM children WHERE id = ? AND parent_id = ?').bind(childId, parentId).first()
+export async function verifyChildOwnership(parentId: string, childId: string, db: D1Database): Promise<boolean> {
+  interface IdRow { id: string }
+  const row = await db.prepare('SELECT id FROM children WHERE id = ? AND parent_id = ?').bind(childId, parentId).first<IdRow>()
   return !!row
 }
 
 export const GET: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any).runtime?.env || {}
+  const env = getEnv(locals)
   const parentId = await getParentId(request, env)
   if (!parentId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
@@ -65,16 +69,17 @@ export const GET: APIRoute = async ({ request, locals }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     })
-  } catch (err: any) {
-    if (err.message?.includes('no such table')) {
+  } catch (e: unknown) {
+    if (e instanceof Error && e.message.includes('no such table')) {
       return new Response(JSON.stringify({ children: [] }), { status: 200 })
     }
+    console.error('[Children] GET error:', e)
     return new Response(JSON.stringify({ error: 'Failed to fetch children' }), { status: 500 })
   }
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any).runtime?.env || {}
+  const env = getEnv(locals)
   const parentId = await getParentId(request, env)
   if (!parentId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
@@ -119,14 +124,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     })
-  } catch (err: any) {
-    if (err.message?.includes('no such table')) {
+  } catch (e: unknown) {
+    if (e instanceof Error && e.message.includes('no such table')) {
       return new Response(
         JSON.stringify({ error: 'children table not created yet. Click Init DB in /admin.' }),
         { status: 500 }
       )
     }
-    console.error('[Children] Create error:', err)
+    console.error('[Children] Create error:', e)
     return new Response(JSON.stringify({ error: 'Failed to create child' }), { status: 500 })
   }
 }

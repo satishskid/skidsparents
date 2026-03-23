@@ -5,11 +5,12 @@
 
 import type { APIRoute } from 'astro'
 import { getParentId, verifyChildOwnership } from './children'
+import { getEnv } from '@/lib/runtime/env'
 
 export const prerender = false
 
 export const GET: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any).runtime?.env || {}
+  const env = getEnv(locals)
   const parentId = await getParentId(request, env)
   if (!parentId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
@@ -39,16 +40,17 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({ habits: results || [] }), {
       headers: { 'Content-Type': 'application/json' },
     })
-  } catch (err: any) {
-    if (err.message?.includes('no such table')) {
+  } catch (e: unknown) {
+    if (e instanceof Error && e.message.includes('no such table')) {
       return new Response(JSON.stringify({ habits: [] }), { status: 200 })
     }
+    console.error('[Habits] GET error:', e)
     return new Response(JSON.stringify({ error: 'Failed to fetch habits' }), { status: 500 })
   }
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any).runtime?.env || {}
+  const env = getEnv(locals)
   const parentId = await getParentId(request, env)
   if (!parentId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
@@ -74,13 +76,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     // Check if already logged today for this habit
+    interface HabitIdRow { id: string }
     const existing = await env.DB.prepare(
       'SELECT id FROM habits_log WHERE child_id = ? AND date = ? AND habit_type = ?'
-    ).bind(body.childId, date, body.habitType).first()
+    ).bind(body.childId, date, body.habitType).first<HabitIdRow>()
 
     if (existing) {
       // Toggle off — delete the log
-      await env.DB.prepare('DELETE FROM habits_log WHERE id = ?').bind((existing as any).id).run()
+      await env.DB.prepare('DELETE FROM habits_log WHERE id = ?').bind(existing.id).run()
       return new Response(JSON.stringify({ removed: true }), {
         headers: { 'Content-Type': 'application/json' },
       })
@@ -90,12 +93,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let streak = 1
     const yesterday = new Date(date)
     yesterday.setDate(yesterday.getDate() - 1)
+    interface HabitStreakRow { streak_days: number }
     const prevLog = await env.DB.prepare(
       'SELECT streak_days FROM habits_log WHERE child_id = ? AND date = ? AND habit_type = ?'
-    ).bind(body.childId, yesterday.toISOString().split('T')[0], body.habitType).first()
+    ).bind(body.childId, yesterday.toISOString().split('T')[0], body.habitType).first<HabitStreakRow>()
 
     if (prevLog) {
-      streak = ((prevLog as any).streak_days || 0) + 1
+      streak = (prevLog.streak_days || 0) + 1
     }
 
     const id = crypto.randomUUID()
@@ -115,11 +119,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     })
-  } catch (err: any) {
-    if (err.message?.includes('no such table')) {
+  } catch (e: unknown) {
+    if (e instanceof Error && e.message.includes('no such table')) {
       return new Response(JSON.stringify({ error: 'Tables not created. Visit /admin and click Init DB.' }), { status: 500 })
     }
-    console.error('[Habits] Error:', err)
+    console.error('[Habits] POST error:', e)
     return new Response(JSON.stringify({ error: 'Failed to log habit' }), { status: 500 })
   }
 }

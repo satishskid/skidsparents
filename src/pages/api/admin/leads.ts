@@ -7,10 +7,11 @@
  */
 
 import type { APIRoute } from 'astro'
+import { getEnv } from '@/lib/runtime/env'
 
 export const prerender = false
 
-function checkAuth(request: Request, env: any): boolean {
+function checkAuth(request: Request, env: Env): boolean {
   const adminKey = env.ADMIN_KEY
   if (!adminKey) return true // No key set = open (dev mode)
   const auth = request.headers.get('Authorization')
@@ -19,8 +20,7 @@ function checkAuth(request: Request, env: any): boolean {
 }
 
 export const GET: APIRoute = async ({ request, locals, url }) => {
-  const runtime = (locals as any).runtime
-  const env = runtime?.env || {}
+  const env = getEnv(locals)
 
   if (!checkAuth(request, env)) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
@@ -80,33 +80,33 @@ export const GET: APIRoute = async ({ request, locals, url }) => {
       const s = `%${search}%`
       countParams.push(s, s, s)
     }
-    const countResult = await db.prepare(countQuery).bind(...countParams).first()
+    interface CountRow { total: number }
+    const countResult = await db.prepare(countQuery).bind(...countParams).first<CountRow>()
 
     return new Response(
       JSON.stringify({
         leads: results || [],
-        total: (countResult as any)?.total || 0,
+        total: countResult?.total || 0,
         limit,
         offset,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
-  } catch (err: any) {
+  } catch (e: unknown) {
     // Table might not exist yet
-    if (err.message?.includes('no such table')) {
+    if (e instanceof Error && e.message.includes('no such table')) {
       return new Response(
         JSON.stringify({ leads: [], total: 0, limit: 100, offset: 0, _note: 'leads table not created yet' }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       )
     }
-    console.error('[Admin] Leads fetch error:', err)
+    console.error('[Admin] Leads fetch error:', e)
     return new Response(JSON.stringify({ error: 'Failed to fetch leads' }), { status: 500 })
   }
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const runtime = (locals as any).runtime
-  const env = runtime?.env || {}
+  const env = getEnv(locals)
 
   if (!checkAuth(request, env)) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
@@ -155,8 +155,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     })
-  } catch (err) {
-    console.error('[Admin] Lead update error:', err)
+  } catch (e: unknown) {
+    console.error('[Admin] Lead update error:', e)
     return new Response(JSON.stringify({ error: 'Failed to update lead' }), { status: 500 })
   }
 }

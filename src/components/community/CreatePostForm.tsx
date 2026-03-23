@@ -41,8 +41,8 @@ export default function CreatePostForm({ groupId, onSuccess }: Props) {
       setContent('')
       setIsAnonymous(false)
       onSuccess?.(data.post)
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong')
+    } catch (e: unknown) {
+      setError(e instanceof Error ? (e.message || 'Something went wrong') : 'Something went wrong')
     } finally {
       setLoading(false)
     }

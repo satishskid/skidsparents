@@ -29,7 +29,8 @@ export default function UserProfile() {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
-        const data = await res.json()
+        // API returns full Child rows; cast to Child[] to satisfy the state type
+        const data = await res.json() as { children?: Child[] }
         const list = data.children || []
         setChildren(list)
         fetchStats(list)
@@ -50,11 +51,11 @@ export default function UserProfile() {
           fetch(`/api/habits?childId=${child.id}&days=30`, { headers: { Authorization: `Bearer ${token}` } }),
         ])
         if (mRes.ok) {
-          const mData = await mRes.json()
-          mTotal += (mData.milestones || []).filter((m: any) => m.status === 'achieved').length
+          const mData = await mRes.json() as { milestones?: { status: string }[] }
+          mTotal += (mData.milestones || []).filter((m) => m.status === 'achieved').length
         }
         if (hRes.ok) {
-          const hData = await hRes.json()
+          const hData = await hRes.json() as { habits?: unknown[] }
           hTotal += (hData.habits || []).length
         }
       } catch {}
@@ -232,7 +233,7 @@ export default function UserProfile() {
               const res = await fetch(`/api/observations?childId=${childId}`, {
                 headers: { Authorization: `Bearer ${token}` }
               })
-              const data = res.ok ? await res.json() : { observations: [] }
+              const data = res.ok ? await res.json() as { observations?: unknown[] } : { observations: [] }
               if (!data.observations?.length) {
                 setOnboardingChildId(childId)
               }

@@ -1,0 +1,105 @@
+---
+export const prerender = true
+import LeadCaptureForm from '../components/LeadCaptureForm'
+import UtmPreserver from '../components/UtmPreserver.astro'
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SKIDS for Parents — Free PHR + AI Health Companion</title>
+  <meta name="description" content="Track your child's growth, milestones, vaccinations and get AI-powered health guidance. Free for Indian parents." />
+  <link rel="icon" href="https://parent.skids.clinic/favicon.svg" type="image/svg+xml" />
+  <style>
+    @import "tailwindcss";
+    body { font-family: system-ui, sans-serif; }
+  </style>
+</head>
+<body class="bg-white text-gray-900">
+  <UtmPreserver />
+
+  <nav class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+    <a href="/" class="font-bold text-blue-600 text-lg">SKIDS</a>
+    <a href="/for-doctors" class="text-sm text-gray-500 hover:text-gray-800">For Doctors →</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="px-4 pt-14 pb-10 max-w-4xl mx-auto">
+    <div class="grid md:grid-cols-2 gap-10 items-center">
+      <div>
+        <h1 class="text-3xl md:text-4xl font-bold leading-tight mb-4">
+          Your child's health record,<br />
+          <span class="text-blue-600">in your pocket.</span>
+        </h1>
+        <p class="text-gray-500 mb-6">
+          From birth to 16 years — track growth, milestones, vaccinations, and observations. Get AI guidance from Dr. SKIDS, powered by your child's actual data.
+        </p>
+        <ul class="space-y-2 text-sm text-gray-600 mb-6">
+          {[
+            '📈 WHO growth charts with z-scores',
+            '🎯 Developmental milestone tracking',
+            '💉 IAP vaccination schedule reminders',
+            '🤖 Dr. SKIDS AI — knows your child\'s history',
+            '📁 Upload and store medical reports',
+            '🏥 Book specialist consultations',
+          ].map(item => (
+            <li class="flex items-start gap-2">
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div class="bg-gray-50 rounded-2xl p-6 shadow-sm">
+        <LeadCaptureForm variant="parent" client:load />
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="bg-gray-50 px-4 py-12">
+    <div class="max-w-4xl mx-auto">
+      <h2 class="text-2xl font-bold text-center mb-8">Everything in one place</h2>
+      <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+        {[
+          { emoji: '📊', title: 'Growth Tracker', body: 'Height, weight, head circumference plotted against WHO standards.' },
+          { emoji: '🧩', title: 'Milestone Tracker', body: 'Motor, cognitive, social, language — age-appropriate milestones.' },
+          { emoji: '💉', title: 'Vaccination Log', body: 'IAP schedule with due-date reminders via WhatsApp.' },
+          { emoji: '📝', title: 'Observation Journal', body: 'Log concerns, symptoms, and notes. AI flags patterns.' },
+          { emoji: '📄', title: 'Report Storage', body: 'Upload lab reports, prescriptions, and screening results.' },
+          { emoji: '🤖', title: 'Dr. SKIDS AI', body: 'Ask anything. Gets context from your child\'s full PHR.' },
+        ].map(f => (
+          <div class="bg-white rounded-xl p-4 shadow-sm">
+            <div class="text-2xl mb-2">{f.emoji}</div>
+            <div class="font-medium text-sm text-gray-800 mb-1">{f.title}</div>
+            <div class="text-xs text-gray-500">{f.body}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Social proof -->
+  <section class="px-4 py-12 max-w-3xl mx-auto text-center">
+    <p class="text-gray-400 text-sm mb-6">Trusted by parents across Bengaluru, Mumbai, Delhi, Hyderabad</p>
+    <div class="grid sm:grid-cols-3 gap-4 text-center">
+      {[
+        { stat: '0–16', label: 'Years covered' },
+        { stat: '16', label: 'Organ discovery modules' },
+        { stat: 'Free', label: 'Always free PHR' },
+      ].map(s => (
+        <div class="bg-blue-50 rounded-xl p-4">
+          <div class="text-2xl font-bold text-blue-700">{s.stat}</div>
+          <div class="text-xs text-gray-500 mt-1">{s.label}</div>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <footer class="px-4 py-6 text-center text-xs text-gray-400 border-t border-gray-100">
+    <a href="/">← Back to SKIDS</a>
+  </footer>
+
+</body>
+</html>

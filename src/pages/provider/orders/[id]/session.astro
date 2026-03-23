@@ -1,0 +1,17 @@
+---
+export const prerender = false
+import SessionRoom from '@/components/teleconsult/SessionRoom'
+const { id } = Astro.params
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Session — SKIDS Provider</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body class="min-h-screen bg-gray-900 overflow-hidden">
+  <SessionRoom client:load orderId={id} />
+</body>
+</html>

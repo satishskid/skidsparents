@@ -4,10 +4,11 @@
  */
 
 import type { APIRoute } from 'astro'
+import { getEnv } from '@/lib/runtime/env'
 
 export const prerender = false
 
-function checkAuth(request: Request, env: any): boolean {
+function checkAuth(request: Request, env: Env): boolean {
   const adminKey = env.ADMIN_KEY
   if (!adminKey) return true
   const auth = request.headers.get('Authorization')
@@ -16,8 +17,7 @@ function checkAuth(request: Request, env: any): boolean {
 }
 
 export const GET: APIRoute = async ({ request, locals }) => {
-  const runtime = (locals as any).runtime
-  const env = runtime?.env || {}
+  const env = getEnv(locals)
 
   if (!checkAuth(request, env)) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
@@ -47,6 +47,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString()
     const monthAgo = new Date(now.getTime() - 30 * 86400000).toISOString()
 
+    interface CountRow { c: number }
     // Run all queries in parallel
     const [
       totalResult,
@@ -58,10 +59,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
       funnelResult,
       recentResult,
     ] = await Promise.all([
-      db.prepare('SELECT COUNT(*) as c FROM leads WHERE brand = ?').bind('skids').first(),
-      db.prepare("SELECT COUNT(*) as c FROM leads WHERE brand = ? AND created_at >= ?").bind('skids', today).first(),
-      db.prepare("SELECT COUNT(*) as c FROM leads WHERE brand = ? AND created_at >= ?").bind('skids', weekAgo).first(),
-      db.prepare("SELECT COUNT(*) as c FROM leads WHERE brand = ? AND created_at >= ?").bind('skids', monthAgo).first(),
+      db.prepare('SELECT COUNT(*) as c FROM leads WHERE brand = ?').bind('skids').first<CountRow>(),
+      db.prepare("SELECT COUNT(*) as c FROM leads WHERE brand = ? AND created_at >= ?").bind('skids', today).first<CountRow>(),
+      db.prepare("SELECT COUNT(*) as c FROM leads WHERE brand = ? AND created_at >= ?").bind('skids', weekAgo).first<CountRow>(),
+      db.prepare("SELECT COUNT(*) as c FROM leads WHERE brand = ? AND created_at >= ?").bind('skids', monthAgo).first<CountRow>(),
       db.prepare("SELECT COALESCE(status, 'new') as status, COUNT(*) as c FROM leads WHERE brand = ? GROUP BY status").bind('skids').all(),
       db.prepare("SELECT source, COUNT(*) as c FROM leads WHERE brand = ? GROUP BY source ORDER BY c DESC LIMIT 10").bind('skids').all(),
       db.prepare("SELECT funnel_stage, COUNT(*) as c FROM leads WHERE brand = ? GROUP BY funnel_stage").bind('skids').all(),
@@ -85,10 +86,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     return new Response(
       JSON.stringify({
-        totalLeads: (totalResult as any)?.c || 0,
-        todayLeads: (todayResult as any)?.c || 0,
-        weekLeads: (weekResult as any)?.c || 0,
-        monthLeads: (monthResult as any)?.c || 0,
+        totalLeads: totalResult?.c || 0,
+        todayLeads: todayResult?.c || 0,
+        weekLeads: weekResult?.c || 0,
+        monthLeads: monthResult?.c || 0,
         byStatus,
         bySource,
         byFunnel,
@@ -96,8 +97,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
-  } catch (err: any) {
-    if (err.message?.includes('no such table')) {
+  } catch (e: unknown) {
+    if (e instanceof Error && e.message.includes('no such table')) {
       return new Response(
         JSON.stringify({
           totalLeads: 0,
@@ -113,7 +114,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       )
     }
-    console.error('[Admin] Stats error:', err)
+    console.error('[Admin] Stats error:', e)
     return new Response(JSON.stringify({ error: 'Failed to fetch stats' }), { status: 500 })
   }
 }

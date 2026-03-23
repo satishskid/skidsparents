@@ -1,0 +1,75 @@
+---
+export const prerender = true
+import { HABITS } from '@content/habits'
+import UtmPreserver from '../components/UtmPreserver.astro'
+
+const UTM = 'utm_source=skids_clinic&utm_campaign=skids_parent_cta'
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>H.A.B.I.T.S. Framework — SKIDS</title>
+  <meta name="description" content="The 6 science-backed habits that shape your child's health and development. Healthy Eating, Active Movement, Balanced Stress, Inner Coaching, Timekeepers, Sufficient Sleep." />
+  <link rel="icon" href="https://parent.skids.clinic/favicon.svg" type="image/svg+xml" />
+  <style>
+    @import "tailwindcss";
+    body { font-family: system-ui, sans-serif; }
+  </style>
+</head>
+<body class="bg-white text-gray-900">
+  <UtmPreserver />
+
+  <nav class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+    <a href="/" class="font-bold text-blue-600 text-lg">SKIDS</a>
+    <a href={`https://parent.skids.clinic/habits?${UTM}`} class="text-sm text-gray-500 hover:text-gray-800">Track on app →</a>
+  </nav>
+
+  <section class="px-4 pt-10 pb-6 max-w-3xl mx-auto text-center">
+    <div class="inline-block px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium mb-4">
+      Science-backed framework
+    </div>
+    <h1 class="text-3xl font-bold mb-2">The H.A.B.I.T.S. Framework</h1>
+    <p class="text-gray-500 text-sm max-w-xl mx-auto">
+      Six daily habits that compound into lifelong health. Not rules — rhythms. Built for Indian families.
+    </p>
+  </section>
+
+  <!-- Acronym breakdown -->
+  <section class="px-4 pb-14 max-w-3xl mx-auto space-y-4">
+    {HABITS.map(habit => (
+      <div class="flex gap-4 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+        <div class={`w-12 h-12 rounded-xl ${habit.bgColor} flex items-center justify-center text-white text-xl font-bold flex-shrink-0`}>
+          {habit.letter}
+        </div>
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-xl">{habit.emoji}</span>
+            <h2 class="font-semibold text-gray-900">{habit.name}</h2>
+          </div>
+          <p class="text-xs text-gray-500 mb-2">{habit.description}</p>
+          <div class="bg-gray-50 rounded-lg px-3 py-2 text-xs text-gray-600">
+            <span class="font-medium">Today's tip:</span> {habit.tip}
+          </div>
+        </div>
+      </div>
+    ))}
+
+    <div class="pt-6 text-center">
+      <a
+        href={`https://parent.skids.clinic/habits?${UTM}`}
+        class="inline-block px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 transition-colors"
+      >
+        Track H.A.B.I.T.S. for your child →
+      </a>
+    </div>
+  </section>
+
+  <footer class="px-4 py-6 text-center text-xs text-gray-400 border-t border-gray-100">
+    <a href="/">← Back to SKIDS</a>
+  </footer>
+
+</body>
+</html>

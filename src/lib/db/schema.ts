@@ -12,6 +12,7 @@ export const parents = sqliteTable('parents', {
   avatarUrl: text('avatar_url'),
   city: text('city'),
   createdAt: text('created_at').default(sql`(datetime('now'))`),
+  onboardingCompleted: integer('onboarding_completed', { mode: 'boolean' }).default(false),
 })
 
 export const children = sqliteTable('children', {
@@ -152,6 +153,15 @@ export const serviceOrders = sqliteTable('service_orders', {
   outcomeNotes: text('outcome_notes'),
   providerId: text('provider_id'),
   createdAt: text('created_at').default(sql`(datetime('now'))`),
+  // Phase 1 additions
+  slotId: text('slot_id'),
+  commissionPctSnapshot: real('commission_pct_snapshot'),
+  razorpayOrderId: text('razorpay_order_id'),
+  whatsappStatus: text('whatsapp_status', { enum: ['pending', 'sent', 'delivered', 'failed'] }).default('pending'),
+  brand: text('brand').default('skids'),
+  sessionUrl: text('session_url'),
+  sessionStartedAt: text('session_started_at'),
+  sessionEndedAt: text('session_ended_at'),
 })
 
 export const providers = sqliteTable('providers', {
@@ -167,6 +177,11 @@ export const providers = sqliteTable('providers', {
   contactEmail: text('contact_email'),
   contactPhone: text('contact_phone'),
   createdAt: text('created_at').default(sql`(datetime('now'))`),
+  // Phase 1 additions
+  firebaseUid: text('firebase_uid').unique(),
+  status: text('status', { enum: ['pending_review', 'active', 'suspended'] }).default('pending_review'),
+  feeStructureJson: text('fee_structure_json'),
+  medicalRegNumber: text('medical_reg_number'),
 })
 
 export const carePlans = sqliteTable('care_plans', {
@@ -319,3 +334,77 @@ export const whatsappSubscriptions = sqliteTable('whatsapp_subscriptions', {
   createdAt: text('created_at').default(sql`(datetime('now'))`),
   updatedAt: text('updated_at').default(sql`(datetime('now'))`),
 })
+
+// ─── Phase 1: Platform Roadmap Tables ─────────────────
+
+export const providerSlots = sqliteTable('provider_slots', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  providerId: text('provider_id').notNull().references(() => providers.id),
+  slotType: text('slot_type', { enum: ['recurring', 'one_off', 'blocked'] }).notNull(),
+  dayOfWeek: integer('day_of_week'), // 0=Sun, 6=Sat; null for one_off/blocked
+  date: text('date'), // ISO date for one_off slots
+  startTime: text('start_time').notNull(), // e.g. "09:00"
+  endTime: text('end_time').notNull(),     // e.g. "09:30"
+  serviceId: text('service_id').references(() => services.id),
+  isBooked: integer('is_booked', { mode: 'boolean' }).default(false),
+  orderId: text('order_id'),
+  createdAt: text('created_at').default(sql`(datetime('now'))`),
+})
+
+export const providerCredentials = sqliteTable('provider_credentials', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  providerId: text('provider_id').notNull().references(() => providers.id),
+  fileUrl: text('file_url').notNull(),
+  fileType: text('file_type', { enum: ['pdf', 'image'] }).notNull(),
+  docType: text('doc_type').notNull(), // e.g. "medical_degree", "registration_cert"
+  uploadedAt: text('uploaded_at').default(sql`(datetime('now'))`),
+})
+
+export const sessionNotes = sqliteTable('session_notes', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  orderId: text('order_id').notNull().references(() => serviceOrders.id),
+  providerId: text('provider_id').notNull().references(() => providers.id),
+  noteText: text('note_text').notNull(),
+  createdAt: text('created_at').default(sql`(datetime('now'))`),
+})
+
+export const prescriptions = sqliteTable('prescriptions', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  orderId: text('order_id').notNull().references(() => serviceOrders.id),
+  childId: text('child_id').notNull().references(() => children.id),
+  providerId: text('provider_id').notNull().references(() => providers.id),
+  medicationsJson: text('medications_json'),
+  educationJson: text('education_json'),
+  nutritionJson: text('nutrition_json'),
+  behaviouralJson: text('behavioural_json'),
+  followUpJson: text('follow_up_json'),
+  issuedAt: text('issued_at').default(sql`(datetime('now'))`),
+  whatsappSent: integer('whatsapp_sent', { mode: 'boolean' }).default(false),
+})
+
+export const auditLog = sqliteTable('audit_log', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  actorId: text('actor_id').notNull(),
+  actionType: text('action_type', {
+    enum: [
+      'provider_approved',
+      'provider_suspended',
+      'commission_updated',
+      'order_reassigned',
+      'order_status_updated',
+      'order_cancelled',
+      'refund_issued',
+      'phr_access_denied',
+    ],
+  }).notNull(),
+  targetType: text('target_type', { enum: ['provider', 'order', 'phr'] }).notNull(),
+  targetId: text('target_id').notNull(),
+  previousValueJson: text('previous_value_json'),
+  newValueJson: text('new_value_json'),
+  reason: text('reason'),
+  createdAt: text('created_at').default(sql`(datetime('now'))`),
+})
+
+// ─── Derived Types ─────────────────────────────────────
+
+export type NotificationType = typeof notifications.type.enumValues[number]

@@ -85,7 +85,7 @@ export default function CRMDashboard() {
     try {
       const res = await fetch('/api/admin/stats')
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json() as Stats
         setStats(data)
       }
     } catch {}
@@ -102,7 +102,7 @@ export default function CRMDashboard() {
 
       const res = await fetch(`/api/admin/leads?${params}`)
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json() as { leads: Lead[]; total: number }
         setLeads(data.leads || [])
         setTotal(data.total || 0)
       }
@@ -829,7 +829,8 @@ function ProductsTab() {
     try {
       const res = await fetch('/api/admin/products')
       if (res.ok) {
-        const data = await res.json()
+        // Cast to expected shape — res.json() returns unknown in strict mode
+        const data = await res.json() as { products?: Product[] }
         setProducts(data.products || [])
       }
     } catch {} finally { setLoading(false) }
@@ -841,7 +842,8 @@ function ProductsTab() {
     try {
       const res = await fetch(`/api/admin/campaigns?product_slug=${slug}`)
       if (res.ok) {
-        const data = await res.json()
+        // Cast to expected shape — res.json() returns unknown in strict mode
+        const data = await res.json() as { campaigns?: Campaign[] }
         setCampaigns(data.campaigns || [])
       }
     } catch {}

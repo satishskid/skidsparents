@@ -4,9 +4,10 @@ export const prerender = false
 import type { APIContext } from 'astro'
 import { getParentId } from '@/pages/api/children'
 import { EngagementService } from '@/lib/engagement/tracking'
+import { getEnv } from '@/lib/runtime/env'
 
 export async function POST({ request, locals }: APIContext) {
-  const env = (locals as any).runtime?.env
+  const env = getEnv(locals)
   const parentId = await getParentId(request, env)
   if (!parentId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })

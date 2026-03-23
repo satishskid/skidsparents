@@ -4,10 +4,11 @@
  */
 
 import type { APIRoute } from 'astro'
+import { getEnv } from '@/lib/runtime/env'
 
 export const prerender = false
 
-function checkAuth(request: Request, env: any): boolean {
+function checkAuth(request: Request, env: Env): boolean {
   const adminKey = env.ADMIN_KEY
   if (!adminKey) return true
   const auth = request.headers.get('Authorization')
@@ -266,9 +267,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   return handleInit(request, locals)
 }
 
-async function handleInit(request: Request, locals: any) {
-  const runtime = (locals as any).runtime
-  const env = runtime?.env || {}
+async function handleInit(request: Request, locals: App.Locals) {
+  const env = getEnv(locals)
 
   if (!checkAuth(request, env)) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
@@ -302,10 +302,11 @@ async function handleInit(request: Request, locals: any) {
       JSON.stringify({ success: true, message: 'All 14 tables ready' }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
-  } catch (err: any) {
-    console.error('[Admin] Init DB error:', err)
+  } catch (e: unknown) {
+    console.error('[Admin] Init DB error:', e)
+    const message = e instanceof Error ? e.message : String(e)
     return new Response(
-      JSON.stringify({ error: 'Failed to init DB', detail: err?.message || String(err) }),
+      JSON.stringify({ error: 'Failed to init DB', detail: message }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
   }

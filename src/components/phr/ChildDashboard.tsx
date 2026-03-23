@@ -38,8 +38,8 @@ export default function ChildDashboard({ childId }: { childId: string }) {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
-        const data = await res.json()
-        const found = (data.children || []).find((c: Child) => c.id === childId)
+        const data = await res.json() as { children?: { id: string; name: string; dob: string; gender?: string }[] }
+        const found = (data.children || []).find((c) => c.id === childId)
         setChild(found || null)
       }
     } catch {} finally {

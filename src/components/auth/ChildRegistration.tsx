@@ -37,10 +37,10 @@ export default function ChildRegistration({ token, onComplete, onClose }: Props)
         }),
       })
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json() as { id: string }
         onComplete(data.id)
       } else {
-        const data = await res.json()
+        const data = await res.json() as { error?: string }
         setError(data.error || 'Failed to save. Please try again.')
       }
     } catch {

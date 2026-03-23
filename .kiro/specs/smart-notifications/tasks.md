@@ -6,7 +6,7 @@ Replace the hardcoded `MOCK_NOTIFICATIONS` in `NotificationBell.tsx` with a live
 
 ## Tasks
 
-- [ ] 1. Create NotificationService core (`src/lib/notifications/service.ts`)
+- [x] 1. Create NotificationService core (`src/lib/notifications/service.ts`)
   - Define `NotificationInput` interface and re-export `NotificationType` from schema
   - Implement `isDuplicate(db, parentId, childId, type, dedupeKey, cooldownDays)` — queries `notifications` table for matching `(parentId, type, dataJson.dedupeKey)` within cooldown window
   - Implement `createNotification(db, input)` — inserts a record into `notifications` with a generated UUID, `read = false`, and `createdAt = datetime('now')`
@@ -21,8 +21,8 @@ Replace the hardcoded `MOCK_NOTIFICATIONS` in `NotificationBell.tsx` with a live
     - Test `isDuplicate` returns correct true/false given mock DB responses for various cooldown scenarios
     - _Requirements: 12.1, 12.2_
 
-- [ ] 2. Implement the 8 trigger functions (internal to `service.ts`)
-  - [ ] 2.1 `checkMilestoneWindows(db, parentId, child)` — query `milestones` for `not_started` records where child age in months is within `[expectedAgeMin, expectedAgeMax]`; call `isDuplicate` with 7-day cooldown per `milestoneKey`; call `createNotification` with type `milestone_reminder`, ActionUrl `/dashboard/milestones`
+- [x] 2. Implement the 8 trigger functions (internal to `service.ts`)
+  - [x] 2.1 `checkMilestoneWindows(db, parentId, child)` — query `milestones` for `not_started` records where child age in months is within `[expectedAgeMin, expectedAgeMax]`; call `isDuplicate` with 7-day cooldown per `milestoneKey`; call `createNotification` with type `milestone_reminder`, ActionUrl `/dashboard/milestones`
     - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
   - [ ]* 2.2 Write property test for Property 8 (milestone trigger correctness)
@@ -31,10 +31,10 @@ Replace the hardcoded `MOCK_NOTIFICATIONS` in `NotificationBell.tsx` with a live
     - Tag: `Feature: smart-notifications, Property 8`
     - **Validates: Requirements 3.1, 3.4**
 
-  - [ ] 2.3 `checkHabitStreaks(db, parentId, child)` — query latest `habits_log` per `habitType`; if `streakDays` ∈ {3, 7, 14, 30}, call `isDuplicate` with 1-day cooldown per `habitType+streak`; call `createNotification` with type `habit_streak`, ActionUrl `/dashboard/habits`
+  - [x] 2.3 `checkHabitStreaks(db, parentId, child)` — query latest `habits_log` per `habitType`; if `streakDays` ∈ {3, 7, 14, 30}, call `isDuplicate` with 1-day cooldown per `habitType+streak`; call `createNotification` with type `habit_streak`, ActionUrl `/dashboard/habits`
     - _Requirements: 4.1, 4.2, 4.3_
 
-  - [ ] 2.4 `checkHabitGaps(db, parentId, child)` — query `habits_log` per `habitType` for last 3 days; if no entry exists, check no streak celebration was created today for same child+habitType; call `isDuplicate` with 3-day cooldown; call `createNotification` with type `habit_streak`, ActionUrl `/dashboard/habits`
+  - [x] 2.4 `checkHabitGaps(db, parentId, child)` — query `habits_log` per `habitType` for last 3 days; if no entry exists, check no streak celebration was created today for same child+habitType; call `isDuplicate` with 3-day cooldown; call `createNotification` with type `habit_streak`, ActionUrl `/dashboard/habits`
     - _Requirements: 9.1, 9.2, 9.3, 9.4_
 
   - [ ]* 2.5 Write property test for Property 4 (habit gap/streak mutual exclusion)
@@ -43,22 +43,22 @@ Replace the hardcoded `MOCK_NOTIFICATIONS` in `NotificationBell.tsx` with a live
     - Tag: `Feature: smart-notifications, Property 4`
     - **Validates: Requirements 9.4**
 
-  - [ ] 2.6 `checkVaccinationsDue(db, parentId, child)` — query `vaccination_records` where `nextDue` is exactly 7 days from today; call `isDuplicate` with 3-day cooldown per `vaccineName`; call `createNotification` with type `general`, ActionUrl `/dashboard/vaccinations`
+  - [x] 2.6 `checkVaccinationsDue(db, parentId, child)` — query `vaccination_records` where `nextDue` is exactly 7 days from today; call `isDuplicate` with 3-day cooldown per `vaccineName`; call `createNotification` with type `general`, ActionUrl `/dashboard/vaccinations`
     - _Requirements: 5.1, 5.2, 5.3_
 
-  - [ ] 2.7 `checkGrowthReminder(db, parentId, child)` — query `growth_records` for last 30 days; if none found, call `isDuplicate` with 7-day cooldown per child; call `createNotification` with type `general`, ActionUrl `/dashboard/growth`
+  - [x] 2.7 `checkGrowthReminder(db, parentId, child)` — query `growth_records` for last 30 days; if none found, call `isDuplicate` with 7-day cooldown per child; call `createNotification` with type `general`, ActionUrl `/dashboard/growth`
     - _Requirements: 6.1, 6.2, 6.3_
 
-  - [ ] 2.8 `checkScreeningResults(db, parentId, child)` — query `screening_imports` for new records; for each, use `screeningId` as dedupeKey with `isDuplicate` (no cooldown — never repeat); call `createNotification` with type `screening_alert`, ActionUrl `/dashboard/reports`
+  - [x] 2.8 `checkScreeningResults(db, parentId, child)` — query `screening_imports` for new records; for each, use `screeningId` as dedupeKey with `isDuplicate` (no cooldown — never repeat); call `createNotification` with type `screening_alert`, ActionUrl `/dashboard/reports`
     - _Requirements: 7.1, 7.2, 7.3_
 
-  - [ ] 2.9 `checkBlogRecommendation(db, parentId, child)` — check if any `blog_recommendation` notification exists for this parent in last 7 days; if not, call `createNotification` with type `blog_recommendation`, body including `getAgeStage(child.ageMonths)`, ActionUrl `/blog`
+  - [x] 2.9 `checkBlogRecommendation(db, parentId, child)` — check if any `blog_recommendation` notification exists for this parent in last 7 days; if not, call `createNotification` with type `blog_recommendation`, body including `getAgeStage(child.ageMonths)`, ActionUrl `/blog`
     - _Requirements: 8.1, 8.2, 8.3_
 
-  - [ ] 2.10 `checkWelcome(db, parentId, child)` — query `milestones` count for child; if zero, call `isDuplicate` (never repeat — use very long cooldown or check for any existing welcome); call `createNotification` with type `general`, ActionUrl `/dashboard/milestones`
+  - [x] 2.10 `checkWelcome(db, parentId, child)` — query `milestones` count for child; if zero, call `isDuplicate` (never repeat — use very long cooldown or check for any existing welcome); call `createNotification` with type `general`, ActionUrl `/dashboard/milestones`
     - _Requirements: 10.1, 10.2, 10.3_
 
-- [ ] 3. Implement `runGenerationRun(db, parentId)` in `service.ts`
+- [x] 3. Implement `runGenerationRun(db, parentId)` in `service.ts`
   - Fetch all children for `parentId` from `children` table; compute `ageMonths` from `dob` for each child
   - For each child, call all 8 trigger functions in sequence inside a `try/catch` per child
   - Each trigger function is also wrapped in its own `try/catch` — log error and continue on failure
@@ -83,10 +83,10 @@ Replace the hardcoded `MOCK_NOTIFICATIONS` in `NotificationBell.tsx` with a live
     - Tag: `Feature: smart-notifications, Property 3`
     - **Validates: Requirements 7.3**
 
-- [ ] 4. Checkpoint — Ensure all NotificationService tests pass
+- [x] 4. Checkpoint — Ensure all NotificationService tests pass
   - Run `vitest --run src/lib/notifications` and confirm all unit and property tests pass. Ask the user if questions arise.
 
-- [ ] 5. Create Notifications API route (`src/pages/api/notifications.ts`)
+- [x] 5. Create Notifications API route (`src/pages/api/notifications.ts`)
   - Add `export const prerender = false`
   - `GET`: call `getParentId`; query `notifications` table for parent ordered by `createdAt DESC`; compute `unreadCount`; return `{ notifications, unreadCount }`
   - `POST mark_read`: validate `id` belongs to parent (403 if not); set `read = true` for that record; return `{ success: true }`
@@ -118,12 +118,12 @@ Replace the hardcoded `MOCK_NOTIFICATIONS` in `NotificationBell.tsx` with a live
     - Test happy-path GET returns correct shape `{ notifications, unreadCount }`
     - _Requirements: 1.5, 1.6_
 
-- [ ] 6. Create Notifications Generate API route (`src/pages/api/notifications/generate.ts`)
+- [x] 6. Create Notifications Generate API route (`src/pages/api/notifications/generate.ts`)
   - Add `export const prerender = false`
   - `POST`: call `getParentId` (401 if missing); call `runGenerationRun(env.DB, parentId)`; return `{ generated: number }`
   - _Requirements: 11.1_
 
-- [ ] 7. Create Daily Notifications Cron endpoint (`src/pages/api/cron/daily-notifications.ts`)
+- [x] 7. Create Daily Notifications Cron endpoint (`src/pages/api/cron/daily-notifications.ts`)
   - Add `export const prerender = false`
   - `POST`: validate `Authorization: Bearer <CRON_SECRET>` header (401 if missing/wrong)
   - Query all distinct `parentId` values from `children` table
@@ -131,15 +131,15 @@ Replace the hardcoded `MOCK_NOTIFICATIONS` in `NotificationBell.tsx` with a live
   - Return `{ processed: number, generated: number }`
   - _Requirements: 11.2, 11.3, 11.4_
 
-- [ ] 8. Update cron-worker to call daily-notifications endpoint (`cron-worker/index.ts`)
+- [x] 8. Update cron-worker to call daily-notifications endpoint (`cron-worker/index.ts`)
   - After the existing `POST /api/cron/daily-broadcast` call, add a second `fetch` call to `POST /api/cron/daily-notifications` with the same `Authorization: Bearer CRON_SECRET` header
   - Log the response from both calls
   - _Requirements: 11.2_
 
-- [ ] 9. Checkpoint — Ensure API routes and cron wiring are correct
+- [x] 9. Checkpoint — Ensure API routes and cron wiring are correct
   - Run `vitest --run src/pages/api` and confirm all API route tests pass. Ask the user if questions arise.
 
-- [ ] 10. Wire NotificationBell.tsx to real API (replace mock)
+- [x] 10. Wire NotificationBell.tsx to real API (replace mock)
   - Remove the `MOCK_NOTIFICATIONS` import and `src/lib/content/mock-notifications.ts` reference
   - On mount, fetch `GET /api/notifications` using the Firebase auth token from `localStorage`/`sessionStorage`; store `notifications` and `unreadCount` in component state
   - Display a loading skeleton (`animate-pulse` divs) while fetching (`isLoading` state)
@@ -150,12 +150,12 @@ Replace the hardcoded `MOCK_NOTIFICATIONS` in `NotificationBell.tsx` with a live
   - Preserve all existing visual design (dropdown layout, badge, colors)
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
 
-- [ ] 11. Trigger notification generation on login (update session endpoint)
+- [x] 11. Trigger notification generation on login (update session endpoint)
   - In `src/pages/api/auth/session.ts`, after the parent record is upserted and `parentId` is resolved, add a fire-and-forget `fetch` call to `POST /api/notifications/generate` with the parent's auth token
   - Use a non-blocking pattern (do not `await` the fetch) so generation does not delay the login response
   - _Requirements: 11.1_
 
-- [ ] 12. Final checkpoint — Full integration verification
+- [x] 12. Final checkpoint — Full integration verification
   - Run `vitest --run` to confirm all tests (unit + property) pass
   - Verify `NotificationBell.tsx` has no remaining references to `MOCK_NOTIFICATIONS`
   - Verify `cron-worker/index.ts` calls both `/api/cron/daily-broadcast` and `/api/cron/daily-notifications`

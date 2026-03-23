@@ -5,12 +5,12 @@
 
 import type { APIRoute } from 'astro'
 import { verifyIdToken, extractBearerToken } from '@/lib/firebase/server'
+import { getEnv } from '@/lib/runtime/env'
 
 export const prerender = false
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const runtime = (locals as any).runtime
-  const env = runtime?.env || {}
+  const env = getEnv(locals)
 
   const token = extractBearerToken(request)
   if (!token) {
@@ -35,16 +35,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     // Check if parent exists
+    interface ParentIdRow { id: string }
     const existing = await db
       .prepare('SELECT id FROM parents WHERE firebase_uid = ?')
       .bind(decoded.uid)
-      .first()
+      .first<ParentIdRow>()
 
     let parentId: string
     let isNew = false
 
     if (existing) {
-      parentId = (existing as any).id
+      parentId = existing.id
       // Update profile info from Google
       await db
         .prepare('UPDATE parents SET name = ?, email = ?, avatar_url = ? WHERE firebase_uid = ?')
@@ -61,18 +62,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
         .run()
     }
 
+    // Fire-and-forget: generate notifications for this parent on login
+    const origin = new URL(request.url).origin
+    fetch(`${origin}/api/notifications/generate`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => {}) // intentionally non-blocking
+
     return new Response(JSON.stringify({ parentId, isNew }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     })
-  } catch (err: any) {
-    if (err.message?.includes('no such table')) {
+  } catch (e: unknown) {
+    if (e instanceof Error && e.message.includes('no such table')) {
       return new Response(
         JSON.stringify({ error: 'parents table not created yet. Click Init DB in /admin.' }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       )
     }
-    console.error('[Auth] Session error:', err)
+    console.error('[Auth] Session error:', e)
     return new Response(JSON.stringify({ error: 'Session creation failed' }), { status: 500 })
   }
 }

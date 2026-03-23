@@ -9,12 +9,12 @@
 import type { APIRoute } from 'astro'
 import { INTERVENTIONS } from '@/lib/content/interventions'
 import { mergeProducts, type ProductRow } from '@/lib/content/product-merge'
+import { getEnv } from '@/lib/runtime/env'
 
 export const prerender = false
 
 export const GET: APIRoute = async ({ locals, url }) => {
-  const runtime = (locals as any).runtime
-  const env = runtime?.env || {}
+  const env = getEnv(locals)
   const db = env.DB
   const slug = url.searchParams.get('slug')
 

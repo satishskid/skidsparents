@@ -5,11 +5,12 @@
 
 import type { APIRoute } from 'astro'
 import { getParentId, verifyChildOwnership } from '@/pages/api/children'
+import { getEnv } from '@/lib/runtime/env'
 
 export const prerender = false
 
 export const GET: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any).runtime?.env || {}
+  const env = getEnv(locals)
   const parentId = await getParentId(request, env)
   if (!parentId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
@@ -48,16 +49,17 @@ export const GET: APIRoute = async ({ request, locals }) => {
       JSON.stringify({ records: results || [] }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
-  } catch (err: any) {
-    if (err.message?.includes('no such table')) {
+  } catch (e: unknown) {
+    if (e instanceof Error && e.message.includes('no such table')) {
       return new Response(JSON.stringify({ records: [] }), { status: 200 })
     }
+    console.error('[Records] GET error:', e)
     return new Response(JSON.stringify({ error: 'Failed to fetch records' }), { status: 500 })
   }
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any).runtime?.env || {}
+  const env = getEnv(locals)
   const parentId = await getParentId(request, env)
   if (!parentId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
@@ -104,8 +106,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       JSON.stringify({ id, message: 'Record added' }),
       { status: 201, headers: { 'Content-Type': 'application/json' } }
     )
-  } catch (err: any) {
-    console.error('[Records] Create error:', err)
+  } catch (e: unknown) {
+    console.error('[Records] Create error:', e)
     return new Response(JSON.stringify({ error: 'Failed to create record' }), { status: 500 })
   }
 }

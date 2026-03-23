@@ -7,11 +7,12 @@
 import type { APIRoute } from 'astro'
 import { getParentId, verifyChildOwnership } from '@/pages/api/children'
 import { extractFromImage } from '@/lib/ai/extract'
+import { getEnv } from '@/lib/runtime/env'
 
 export const prerender = false
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any).runtime?.env || {}
+  const env = getEnv(locals)
   const parentId = await getParentId(request, env)
   if (!parentId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
@@ -51,7 +52,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Get child age for AI context
     let childAgeMonths: number | undefined
-    const child = await db.prepare('SELECT dob FROM children WHERE id = ?').bind(childId).first() as any
+    interface ChildDobRow { dob: string }
+    const child = await db.prepare('SELECT dob FROM children WHERE id = ?').bind(childId).first<ChildDobRow>()
     if (child?.dob) {
       const dob = new Date(child.dob)
       const now = new Date()
@@ -140,10 +142,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }),
       { status: 201, headers: { 'Content-Type': 'application/json' } }
     )
-  } catch (err: any) {
-    console.error('[Upload] Error:', err)
+  } catch (e: unknown) {
+    console.error('[Upload] Error:', e)
+    const message = e instanceof Error ? e.message : String(e)
     return new Response(
-      JSON.stringify({ error: 'Upload failed', detail: err?.message || String(err) }),
+      JSON.stringify({ error: 'Upload failed', detail: message }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
   }

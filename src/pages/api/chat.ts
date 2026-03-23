@@ -9,6 +9,7 @@ import { getParentId, verifyChildOwnership } from '@/pages/api/children'
 import { detectTopics, getRelevantContent } from '@/lib/ai/context'
 import { buildSystemPrompt, type ChildProfile, type ChatContext } from '@/lib/ai/prompt'
 import { isPremiumParent, checkRateLimit, routeToModel, type AIMessage } from '@/lib/ai/router'
+import { getEnv } from '@/lib/runtime/env'
 
 export const prerender = false
 
@@ -19,7 +20,7 @@ interface ConversationMessage {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any).runtime?.env || {}
+  const env = getEnv(locals)
   const parentId = await getParentId(request, env)
   if (!parentId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
@@ -69,9 +70,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return new Response(JSON.stringify({ error: 'Child not found' }), { status: 404 })
       }
 
+      interface ChildRow { name: string; dob: string; gender: string | null }
       const child = await db.prepare(
         'SELECT name, dob, gender FROM children WHERE id = ?'
-      ).bind(body.childId).first() as any
+      ).bind(body.childId).first<ChildRow>()
 
       if (child) {
         const dob = new Date(child.dob)
@@ -90,9 +92,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let previousMessages: ConversationMessage[] = []
 
     if (conversationId && db) {
+      interface ConvRow { messages_json: string }
       const conv = await db.prepare(
         'SELECT messages_json FROM chatbot_conversations WHERE id = ? AND parent_id = ?'
-      ).bind(conversationId, parentId).first() as any
+      ).bind(conversationId, parentId).first<ConvRow>()
 
       if (conv?.messages_json) {
         try {
@@ -149,9 +152,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let latestGrowth: { height?: number; weight?: number; date?: string } | undefined
     if (body.childId && db) {
       try {
+        interface GrowthRow { height_cm: number | null; weight_kg: number | null; date: string | null }
         const growth = await db.prepare(
           'SELECT height_cm, weight_kg, date FROM growth_records WHERE child_id = ? ORDER BY date DESC LIMIT 1'
-        ).bind(body.childId).first() as any
+        ).bind(body.childId).first<GrowthRow>()
         if (growth) {
           latestGrowth = {
             height: growth.height_cm ?? undefined,
@@ -233,10 +237,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       JSON.stringify({ response: responseText, conversationId, model: aiResult.model, tier: aiResult.tier }),
       { status: 200, headers: { 'Content-Type': 'application/json', 'X-RateLimit-Remaining': String(remaining) } }
     )
-  } catch (err: any) {
-    console.error('[Chat] Error:', err)
+  } catch (e: unknown) {
+    console.error('[Chat] Error:', e)
+    const message = e instanceof Error ? e.message : String(e)
     return new Response(
-      JSON.stringify({ error: 'Failed to generate response', detail: err?.message || String(err) }),
+      JSON.stringify({ error: 'Failed to generate response', detail: message }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
   }

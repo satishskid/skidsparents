@@ -27,7 +27,7 @@ export default function GrowthTracker({ childId, token }: Props) {
     try {
       const res = await fetch(`/api/growth?childId=${childId}`, { headers: { Authorization: `Bearer ${token}` } })
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json() as { records?: GrowthRecord[] }
         setRecords(data.records || [])
       }
     } catch {} finally {

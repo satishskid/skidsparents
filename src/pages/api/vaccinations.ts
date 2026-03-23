@@ -6,11 +6,12 @@
 import type { APIRoute } from 'astro'
 import { getParentId, verifyChildOwnership } from '@/pages/api/children'
 import { getVaccinationStatus, getVaccineSummary } from '@/lib/content/vaccinations'
+import { getEnv } from '@/lib/runtime/env'
 
 export const prerender = false
 
 export const GET: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any).runtime?.env || {}
+  const env = getEnv(locals)
   const parentId = await getParentId(request, env)
   if (!parentId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
@@ -29,7 +30,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   try {
     // Get child age
-    const child = await env.DB.prepare('SELECT dob FROM children WHERE id = ?').bind(childId).first() as any
+    interface ChildDobRow { dob: string }
+    const child = await env.DB.prepare('SELECT dob FROM children WHERE id = ?').bind(childId).first<ChildDobRow>()
     if (!child?.dob) {
       return new Response(JSON.stringify({ error: 'Child DOB not found' }), { status: 404 })
     }
@@ -55,16 +57,17 @@ export const GET: APIRoute = async ({ request, locals }) => {
       JSON.stringify({ schedule, summary, ageMonths }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
-  } catch (err: any) {
-    if (err.message?.includes('no such table')) {
+  } catch (e: unknown) {
+    if (e instanceof Error && e.message.includes('no such table')) {
       return new Response(JSON.stringify({ schedule: [], summary: { done: 0, due: 0, overdue: 0, total: 0 }, ageMonths: 0 }), { status: 200 })
     }
+    console.error('[Vaccinations] GET error:', e)
     return new Response(JSON.stringify({ error: 'Failed to fetch vaccinations' }), { status: 500 })
   }
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any).runtime?.env || {}
+  const env = getEnv(locals)
   const parentId = await getParentId(request, env)
   if (!parentId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
@@ -120,8 +123,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       JSON.stringify({ id, recordId, message: 'Vaccination recorded' }),
       { status: 201, headers: { 'Content-Type': 'application/json' } }
     )
-  } catch (err: any) {
-    console.error('[Vaccinations] Create error:', err)
+  } catch (e: unknown) {
+    console.error('[Vaccinations] Create error:', e)
     return new Response(JSON.stringify({ error: 'Failed to add vaccination' }), { status: 500 })
   }
 }

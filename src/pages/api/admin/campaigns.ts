@@ -4,10 +4,11 @@
  */
 
 import type { APIRoute } from 'astro'
+import { getEnv } from '@/lib/runtime/env'
 
 export const prerender = false
 
-function checkAuth(request: Request, env: any): boolean {
+function checkAuth(request: Request, env: Env): boolean {
   const adminKey = env.ADMIN_KEY
   if (!adminKey) return true
   const auth = request.headers.get('Authorization')
@@ -16,8 +17,7 @@ function checkAuth(request: Request, env: any): boolean {
 }
 
 export const GET: APIRoute = async ({ request, locals, url }) => {
-  const runtime = (locals as any).runtime
-  const env = runtime?.env || {}
+  const env = getEnv(locals)
 
   if (!checkAuth(request, env)) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
@@ -50,10 +50,11 @@ export const GET: APIRoute = async ({ request, locals, url }) => {
     const enriched = await Promise.all(campaigns.map(async (c: any) => {
       let leadCount = 0
       try {
+        interface CountRow { cnt: number }
         const countResult = await db.prepare(
           "SELECT COUNT(*) as cnt FROM leads WHERE campaign = ? OR utm_campaign = ?"
-        ).bind(c.utm_campaign || '', c.utm_campaign || '').first()
-        leadCount = (countResult as any)?.cnt || 0
+        ).bind(c.utm_campaign || '', c.utm_campaign || '').first<CountRow>()
+        leadCount = countResult?.cnt || 0
       } catch {}
 
       return {
@@ -66,17 +67,17 @@ export const GET: APIRoute = async ({ request, locals, url }) => {
     return new Response(JSON.stringify({ campaigns: enriched }), {
       headers: { 'Content-Type': 'application/json' },
     })
-  } catch (err: any) {
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e)
     return new Response(
-      JSON.stringify({ error: 'Failed to fetch campaigns', detail: err?.message }),
+      JSON.stringify({ error: 'Failed to fetch campaigns', detail: message }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
   }
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const runtime = (locals as any).runtime
-  const env = runtime?.env || {}
+  const env = getEnv(locals)
 
   if (!checkAuth(request, env)) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
@@ -88,7 +89,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const body = await request.json()
+    interface CampaignBody {
+      product_slug: string
+      campaign_code: string
+      whatsapp_template?: string
+      action?: string
+      id?: string
+      is_active?: boolean
+      utm_source?: string
+      utm_medium?: string
+    }
+    const body = await request.json() as CampaignBody
     const { product_slug, campaign_code, whatsapp_template } = body
 
     if (!product_slug || !campaign_code) {
@@ -143,10 +154,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({ success: true, utm_campaign: utmCampaign }), {
       headers: { 'Content-Type': 'application/json' },
     })
-  } catch (err: any) {
-    console.error('[Admin] Campaign error:', err)
+  } catch (e: unknown) {
+    console.error('[Admin] Campaign error:', e)
+    const message = e instanceof Error ? e.message : String(e)
     return new Response(
-      JSON.stringify({ error: 'Failed to save campaign', detail: err?.message }),
+      JSON.stringify({ error: 'Failed to save campaign', detail: message }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
   }

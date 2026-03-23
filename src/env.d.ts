@@ -16,6 +16,21 @@ interface Env {
   VECTORIZE: VectorizeIndex
   FIREBASE_PROJECT_ID: string
   SITE_URL: string
+  // Secrets (set via wrangler pages secret put)
+  ADMIN_KEY?: string
+  BHASH_USER?: string
+  BHASH_PASS?: string
+  BHASH_SENDER?: string
+  NEODOVE_CUSTOM_INTEGRATION_URL?: string
+  NEODOVE_WEBHOOK_SECRET?: string
+  RAZORPAY_KEY_ID?: string
+  RAZORPAY_KEY_SECRET?: string
+  FIREBASE_ADMIN_KEY?: string
+  CRON_SECRET?: string
+  LIVEKIT_API_KEY?: string
+  LIVEKIT_API_SECRET?: string
+  LIVEKIT_URL?: string
+  ADMIN_PHONE?: string
 }
 
 declare namespace App {
@@ -27,4 +42,9 @@ declare namespace App {
       picture?: string
     }
   }
+}
+
+// CAT-5: extend Window with __ADMIN_KEY; top-level interface merges into global Window in script files
+interface Window {
+  __ADMIN_KEY?: string
 }

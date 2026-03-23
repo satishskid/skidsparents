@@ -1,0 +1,67 @@
+---
+export const prerender = true
+import { ORGANS } from '@content/organs'
+import UtmPreserver from '../../components/UtmPreserver.astro'
+
+const UTM = 'utm_source=skids_clinic&utm_campaign=skids_parent_cta'
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Organ Discovery — SKIDS</title>
+  <meta name="description" content="16 interactive modules helping Indian parents understand their child's body — brain, heart, vision, hearing and more." />
+  <link rel="icon" href="https://parent.skids.clinic/favicon.svg" type="image/svg+xml" />
+  <style>
+    @import "tailwindcss";
+    body { font-family: system-ui, sans-serif; }
+  </style>
+</head>
+<body class="bg-white text-gray-900">
+  <UtmPreserver />
+
+  <nav class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+    <a href="/" class="font-bold text-blue-600 text-lg">SKIDS</a>
+    <a href={`https://parent.skids.clinic/discover?${UTM}`} class="text-sm text-gray-500 hover:text-gray-800">Explore on app →</a>
+  </nav>
+
+  <section class="px-4 pt-10 pb-6 max-w-4xl mx-auto text-center">
+    <h1 class="text-3xl font-bold mb-2">Organ Discovery</h1>
+    <p class="text-gray-500 text-sm max-w-xl mx-auto">
+      16 modules helping you understand your child's body — from brain development to gut health. Each module takes 5 minutes.
+    </p>
+  </section>
+
+  <section class="px-4 pb-14 max-w-4xl mx-auto">
+    <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+      {ORGANS.map(organ => (
+        <a
+          href={`https://parent.skids.clinic/discover/${organ.slug}?${UTM}`}
+          class={`group block rounded-2xl bg-gradient-to-br ${organ.gradient} p-5 text-white hover:scale-[1.02] transition-transform`}
+        >
+          <div class="text-3xl mb-2">{organ.emoji}</div>
+          <h2 class="font-semibold text-base mb-1">{organ.name}</h2>
+          <p class="text-xs text-white/80 line-clamp-2">{organ.description}</p>
+          <div class="mt-3 text-xs text-white/60">{organ.duration} read</div>
+        </a>
+      ))}
+    </div>
+
+    <div class="mt-10 text-center">
+      <a
+        href={`https://parent.skids.clinic/discover?${UTM}`}
+        class="inline-block px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 transition-colors"
+      >
+        Explore all modules on SKIDS →
+      </a>
+    </div>
+  </section>
+
+  <footer class="px-4 py-6 text-center text-xs text-gray-400 border-t border-gray-100">
+    <a href="/">← Back to SKIDS</a>
+  </footer>
+
+</body>
+</html>

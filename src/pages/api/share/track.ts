@@ -4,9 +4,10 @@ export const prerender = false
 import type { APIRoute } from 'astro'
 import { getParentId } from '@/pages/api/children'
 import { SocialShareService } from '@/lib/social/sharing'
+import { getEnv } from '@/lib/runtime/env'
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = locals.runtime?.env as any
+  const env = getEnv(locals)
   if (!env?.DB) return new Response(JSON.stringify({ error: 'DB unavailable' }), { status: 503 })
 
   const parentId = await getParentId(request, env).catch(() => null)
@@ -36,8 +37,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     )
 
     return new Response(JSON.stringify({ ok: true }), { status: 200 })
-  } catch (err) {
-    console.error('share/track error:', err)
+  } catch (e: unknown) {
+    console.error('share/track error:', e)
     return new Response(JSON.stringify({ error: 'Internal error' }), { status: 500 })
   }
 }

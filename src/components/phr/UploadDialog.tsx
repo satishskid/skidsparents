@@ -72,12 +72,12 @@ export default function UploadDialog({ childId, token, onClose, onUploaded }: Up
       })
 
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
+        const err = await res.json().catch(() => ({})) as { error?: string }
         throw new Error(err.error || `Upload failed (${res.status})`)
       }
 
-      const data = await res.json()
-      const ext = data.extracted as ExtractedData | null
+      const data = await res.json() as { extracted?: ExtractedData | null }
+      const ext = data.extracted ?? null
 
       if (ext) {
         setExtracted(ext)
@@ -94,8 +94,8 @@ export default function UploadDialog({ childId, token, onClose, onUploaded }: Up
           onClose()
         }, 1500)
       }
-    } catch (err: any) {
-      setError(err.message || 'Upload failed')
+    } catch (e: unknown) {
+      setError(e instanceof Error ? (e.message || 'Upload failed') : 'Upload failed')
       setStep('capture')
     }
   }

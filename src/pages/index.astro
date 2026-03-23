@@ -6,6 +6,7 @@ import MobileTabBar from '@/components/common/MobileTabBar.astro'
 import ContentRow from '@/components/blog/ContentRow'
 import BlogCard from '@/components/blog/BlogCard'
 import ChatWidget from '@/components/chat/ChatWidget'
+import OnboardingGateWrapper from '@/components/auth/OnboardingGateWrapper'
 import { getOrganForCategory, getTodaysOrgan } from '@/lib/content/organs'
 import { HABITS } from '@/lib/content/habits'
 export const prerender = false
@@ -31,6 +32,7 @@ const heroDate = heroBlog?.createdAt
 <BaseLayout title="SKIDS Parent" description="Track your child's milestones, vaccinations, growth, and health. Ask Dr. SKIDS, India's AI paediatrician, anytime.">
   <Navbar />
   <main>
+    <OnboardingGateWrapper client:load />
 
     <!-- HERO A: Daily content — hidden by default, shown to logged-in users via JS -->
     <div id="hero-returning" class="hidden">

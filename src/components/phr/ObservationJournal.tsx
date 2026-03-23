@@ -39,7 +39,7 @@ export default function ObservationJournal({ childId, token }: Props) {
     try {
       const res = await fetch(`/api/observations?childId=${childId}`, { headers: { Authorization: `Bearer ${token}` } })
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json() as { observations?: Observation[] }
         setObservations(data.observations || [])
       }
     } catch {} finally {

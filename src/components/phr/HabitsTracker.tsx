@@ -25,7 +25,7 @@ export default function HabitsTracker({ childId, token }: Props) {
     try {
       const res = await fetch(`/api/habits?childId=${childId}&days=7`, { headers: { Authorization: `Bearer ${token}` } })
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json() as { habits?: HabitLog[] }
         setLogs(data.habits || [])
       }
     } catch {} finally {

@@ -29,7 +29,8 @@ export default function LoginForm() {
         method: 'POST',
         headers: { Authorization: `Bearer ${idToken}` },
       })
-      const data = await res.json()
+      const data = await res.json() as { isNew?: boolean }
+      if (data.isNew) sessionStorage.setItem('skids_is_new', 'true')
       const params = new URLSearchParams(window.location.search)
       const redirect = params.get('redirect') || '/me'
       window.location.href = data.isNew ? '/me' : redirect
@@ -46,8 +47,8 @@ export default function LoginForm() {
       const u = await signInWithGoogle()
       const t = await u.getIdToken()
       await syncAndRedirect(t)
-    } catch (err: any) {
-      if (err.code !== 'auth/popup-closed-by-user') {
+    } catch (e: unknown) {
+      if (e instanceof Error && (e as any).code !== 'auth/popup-closed-by-user') {
         setError('Google sign-in failed. Please try again.')
       }
       setGoogleLoading(false)
@@ -66,8 +67,8 @@ export default function LoginForm() {
       const result = await sendPhoneOTP(cleaned, 'recaptcha-container')
       setConfirmation(result)
       setStep('otp')
-    } catch (err: any) {
-      setError(err.message || 'Failed to send OTP.')
+    } catch (e: unknown) {
+      setError(e instanceof Error ? (e.message || 'Failed to send OTP.') : 'Failed to send OTP.')
       setStep('idle')
     }
   }

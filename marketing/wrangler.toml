@@ -1,0 +1,9 @@
+name = "skids-marketing"
+compatibility_date = "2025-03-01"
+
+# Deploy: wrangler pages deploy dist --project-name skids-marketing
+# Build:  npm run build (outputs to dist/)
+# Domain: skids.clinic (set in Cloudflare Pages dashboard)
+
+[env.production]
+# No secrets needed — static site, all API calls go to parent.skids.clinic

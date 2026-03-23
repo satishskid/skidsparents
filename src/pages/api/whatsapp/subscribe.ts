@@ -6,13 +6,19 @@ import { getParentId } from '@/pages/api/children'
 import { drizzle } from 'drizzle-orm/d1'
 import { whatsappSubscriptions, parents } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
+import { getEnv } from '@/lib/runtime/env'
 
 export async function POST({ request, locals }: APIContext) {
-  const env = (locals as any).runtime?.env
+  const env = getEnv(locals)
   const parentId = await getParentId(request, env)
   if (!parentId) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 
-  const { phone, subscriptionType = 'daily_tip', action = 'subscribe' } = await request.json()
+  interface SubscribeBody {
+    phone: string
+    subscriptionType?: 'daily_tip' | 'weekly_digest' | 'personalized'
+    action?: string
+  }
+  const { phone, subscriptionType = 'daily_tip', action = 'subscribe' } = await request.json() as SubscribeBody
 
   if (!phone) {
     return new Response(JSON.stringify({ error: 'Phone number required' }), { status: 400 })
@@ -63,7 +69,7 @@ export async function POST({ request, locals }: APIContext) {
 }
 
 export async function GET({ request, locals }: APIContext) {
-  const env = (locals as any).runtime?.env
+  const env = getEnv(locals)
   const parentId = await getParentId(request, env)
   if (!parentId) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 

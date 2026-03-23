@@ -1,0 +1,29 @@
+---
+// Drop this component in any page <head> to auto-append UTM params
+// to all outbound parent.skids.clinic links at runtime.
+---
+<script>
+  (function () {
+    const utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']
+    const search = new URLSearchParams(window.location.search)
+    const utms: Record<string, string> = {}
+    for (const k of utmKeys) {
+      const v = search.get(k)
+      if (v) utms[k] = v
+    }
+    // Default brand UTMs if none present
+    if (!utms.utm_source) utms.utm_source = 'skids_clinic'
+    if (!utms.utm_campaign) utms.utm_campaign = 'skids_parent_cta'
+
+    // Append to all links pointing at parent.skids.clinic
+    document.querySelectorAll<HTMLAnchorElement>('a[href*="parent.skids.clinic"]').forEach(a => {
+      try {
+        const url = new URL(a.href)
+        for (const [k, v] of Object.entries(utms)) {
+          if (!url.searchParams.has(k)) url.searchParams.set(k, v)
+        }
+        a.href = url.toString()
+      } catch {}
+    })
+  })()
+</script>

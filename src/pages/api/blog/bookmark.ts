@@ -9,9 +9,10 @@ import { getParentId } from '@/pages/api/children'
 import { drizzle } from 'drizzle-orm/d1'
 import { blogBookmarks } from '@/lib/db/schema'
 import { eq, and, desc } from 'drizzle-orm'
+import { getEnv } from '@/lib/runtime/env'
 
 export async function POST({ request, locals }: APIContext) {
-  const env = (locals as any).runtime?.env
+  const env = getEnv(locals)
   const parentId = await getParentId(request, env)
   if (!parentId) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 
@@ -53,7 +54,7 @@ export async function POST({ request, locals }: APIContext) {
 }
 
 export async function GET({ request, locals }: APIContext) {
-  const env = (locals as any).runtime?.env
+  const env = getEnv(locals)
   const parentId = await getParentId(request, env)
   if (!parentId) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 
@@ -79,7 +80,7 @@ export async function GET({ request, locals }: APIContext) {
 }
 
 export async function DELETE({ request, locals }: APIContext) {
-  const env = (locals as any).runtime?.env
+  const env = getEnv(locals)
   const parentId = await getParentId(request, env)
   if (!parentId) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 

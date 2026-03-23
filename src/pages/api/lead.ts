@@ -12,8 +12,19 @@
  */
 
 import type { APIRoute } from 'astro'
+import { getEnv } from '@/lib/runtime/env'
 
 export const prerender = false
+
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': 'https://skids.clinic',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+}
+
+// Preflight for cross-origin requests from skids.clinic
+export const OPTIONS: APIRoute = () =>
+  new Response(null, { status: 204, headers: CORS_HEADERS })
 
 interface LeadPayload {
   brand: string
@@ -33,7 +44,7 @@ interface LeadPayload {
   created_at?: string
 }
 
-const REQUIRED_FIELDS = ['brand', 'name', 'phone', 'source', 'funnel_stage'] as const
+const REQUIRED_FIELDS = ['brand', 'name', 'phone', 'source'] as const
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
@@ -44,7 +55,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (missing.length > 0) {
       return new Response(
         JSON.stringify({ error: `Missing required fields: ${missing.join(', ')}` }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } }
       )
     }
 
@@ -52,7 +63,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (body.brand !== 'skids') {
       return new Response(
         JSON.stringify({ error: 'brand must be "skids". No record accepted without brand namespace.' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } }
       )
     }
 
@@ -62,8 +73,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Flag but don't reject — log the non-compliance
     }
 
-    const runtime = (locals as any).runtime
-    const env = runtime?.env || {}
+    const env = getEnv(locals)
 
     // ─── 1. Push to Neodove CRM ───
     const neodoveUrl = env.NEODOVE_CUSTOM_INTEGRATION_URL
@@ -83,8 +93,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(neodovePayload),
         })
-      } catch (err) {
-        console.error('[SKIDS Lead] Neodove push failed:', err)
+      } catch (e: unknown) {
+        console.error('[SKIDS Lead] Neodove push failed:', e)
       }
     }
 
@@ -106,8 +116,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
         // TODO: Replace with actual BHASH API endpoint when available
         console.log('[SKIDS Lead] BHASH WhatsApp queued:', bhashPayload.to)
-      } catch (err) {
-        console.error('[SKIDS Lead] BHASH send failed:', err)
+      } catch (e: unknown) {
+        console.error('[SKIDS Lead] BHASH send failed:', e)
       }
     }
 
@@ -133,8 +143,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           body.notes || null,
           body.created_at || new Date().toISOString()
         ).run()
-      } catch (err) {
-        console.error('[SKIDS Lead] D1 insert failed:', err)
+      } catch (e: unknown) {
+        console.error('[SKIDS Lead] D1 insert failed:', e)
         // Don't fail the request — CRM push already happened
       }
     }
@@ -157,13 +167,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     return new Response(
       JSON.stringify({ success: true, brand: 'skids', id: Date.now().toString(36) }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      { status: 200, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } }
     )
-  } catch (err) {
-    console.error('[SKIDS Lead] Unexpected error:', err)
+  } catch (e: unknown) {
+    console.error('[SKIDS Lead] Unexpected error:', e)
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } }
     )
   }
 }

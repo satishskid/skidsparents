@@ -3,9 +3,10 @@ export const prerender = false
 
 import type { APIContext } from 'astro'
 import { EngagementService } from '@/lib/engagement/tracking'
+import { getEnv } from '@/lib/runtime/env'
 
 export async function GET({ request, locals }: APIContext) {
-  const env = (locals as any).runtime?.env
+  const env = getEnv(locals)
   const url = new URL(request.url)
 
   const contentType = url.searchParams.get('contentType') || 'blog'

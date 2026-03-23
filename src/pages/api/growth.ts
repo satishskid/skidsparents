@@ -5,11 +5,12 @@
 
 import type { APIRoute } from 'astro'
 import { getParentId, verifyChildOwnership } from './children'
+import { getEnv } from '@/lib/runtime/env'
 
 export const prerender = false
 
 export const GET: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any).runtime?.env || {}
+  const env = getEnv(locals)
   const parentId = await getParentId(request, env)
   if (!parentId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
@@ -34,8 +35,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({ records: results || [] }), {
       headers: { 'Content-Type': 'application/json' },
     })
-  } catch (err: any) {
-    if (err.message?.includes('no such table')) {
+  } catch (e: unknown) {
+    if (e instanceof Error && e.message?.includes('no such table')) {
       return new Response(JSON.stringify({ records: [] }), { status: 200 })
     }
     return new Response(JSON.stringify({ error: 'Failed to fetch growth records' }), { status: 500 })
@@ -43,7 +44,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any).runtime?.env || {}
+  const env = getEnv(locals)
   const parentId = await getParentId(request, env)
   if (!parentId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
@@ -98,11 +99,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     })
-  } catch (err: any) {
-    if (err.message?.includes('no such table')) {
+  } catch (e: unknown) {
+    if (e instanceof Error && e.message?.includes('no such table')) {
       return new Response(JSON.stringify({ error: 'Tables not created. Visit /admin and click Init DB.' }), { status: 500 })
     }
-    console.error('[Growth] Error:', err)
+    console.error('[Growth] Error:', e)
     return new Response(JSON.stringify({ error: 'Failed to save growth record' }), { status: 500 })
   }
 }

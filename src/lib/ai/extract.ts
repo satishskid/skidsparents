@@ -88,8 +88,8 @@ export async function extractFromImage(
       summary: text.slice(0, 200) || 'Document uploaded. AI could not extract structured data.',
       confidence: 0.2,
     }
-  } catch (err: any) {
-    console.error('[Extract] AI error:', err)
+  } catch (e: unknown) {
+    console.error('[Extract] AI error:', e)
     return {
       recordType: 'general',
       title: parentHint || 'Uploaded Document',

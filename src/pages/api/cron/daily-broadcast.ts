@@ -5,6 +5,7 @@ export const prerender = false
 
 import type { APIContext } from 'astro'
 import { BHASHService, formatDailyTip } from '@/lib/distribution/whatsapp'
+import { getEnv } from '@/lib/runtime/env'
 
 // Daily health tips pool (rotated by day of year)
 const DAILY_TIPS = [
@@ -18,22 +19,22 @@ const DAILY_TIPS = [
 ]
 
 export async function POST({ request, locals }: APIContext) {
-  const env = locals.runtime?.env as any
+  const env = getEnv(locals)
 
   // Verify cron secret
   const auth = request.headers.get('Authorization') || ''
-  const secret = env?.CRON_SECRET
+  const secret = env.CRON_SECRET
   if (secret && auth !== `Bearer ${secret}`) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
   }
 
-  if (!env?.DB || !env?.BHASH_USER) {
+  if (!env.DB || !env.BHASH_USER) {
     return new Response(JSON.stringify({ error: 'Missing credentials' }), { status: 500 })
   }
 
   const bhash = new BHASHService({
     BHASH_USER: env.BHASH_USER,
-    BHASH_PASS: env.BHASH_PASS,
+    BHASH_PASS: env.BHASH_PASS ?? '',     // optional secret; BHASHService constructor requires string
     BHASH_SENDER: env.BHASH_SENDER || 'BUZWAP',
   })
 
@@ -55,8 +56,8 @@ export async function POST({ request, locals }: APIContext) {
 
     const { sent, failed } = await bhash.sendDailyTip(phones, message)
     return new Response(JSON.stringify({ sent, failed }), { status: 200 })
-  } catch (err) {
-    console.error('[Cron] Error:', err)
+  } catch (e: unknown) {
+    console.error('[Cron] Error:', e)
     return new Response(JSON.stringify({ error: 'Broadcast failed' }), { status: 500 })
   }
 }

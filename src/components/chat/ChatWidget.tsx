@@ -52,10 +52,10 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
   useEffect(() => {
     if (!token || childrenListProp) return
     fetch('/api/children', { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.ok ? r.json() : null)
+      .then((r) => r.ok ? r.json() as Promise<{ children?: { id: string; name: string }[] }> : null)
       .then((data) => {
         if (data?.children?.length) {
-          setChildrenList(data.children.map((c: any) => ({ id: c.id, name: c.name })))
+          setChildrenList(data.children.map((c) => ({ id: c.id, name: c.name })))
           if (!selectedChildId && data.children.length === 1) {
             setSelectedChildId(data.children[0].id)
           }
@@ -117,7 +117,7 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
       })
 
       if (res.status === 429) {
-        const data = await res.json()
+        const data = await res.json() as { error: string; upgradeAvailable?: boolean }
         const upgradeMsg = data.upgradeAvailable
           ? `${data.error}\n\nUpgrade to SKIDS Premium for higher limits and access to Gemini & Claude AI models.`
           : data.error
@@ -130,7 +130,7 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
         throw new Error(`HTTP ${res.status}`)
       }
 
-      const data = await res.json()
+      const data = await res.json() as { response?: string; conversationId?: string }
       setMessages((prev) => [
         ...prev,
         { role: 'bot', text: data.response || 'I wasn\'t able to respond. Please try again.' },

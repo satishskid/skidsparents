@@ -5,10 +5,11 @@
 
 import type { APIRoute } from 'astro'
 import { mergeProducts, type ProductRow } from '@/lib/content/product-merge'
+import { getEnv } from '@/lib/runtime/env'
 
 export const prerender = false
 
-function checkAuth(request: Request, env: any): boolean {
+function checkAuth(request: Request, env: Env): boolean {
   const adminKey = env.ADMIN_KEY
   if (!adminKey) return true
   const auth = request.headers.get('Authorization')
@@ -26,8 +27,7 @@ function slugify(text: string): string {
 }
 
 export const GET: APIRoute = async ({ request, locals }) => {
-  const runtime = (locals as any).runtime
-  const env = runtime?.env || {}
+  const env = getEnv(locals)
 
   if (!checkAuth(request, env)) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
@@ -50,8 +50,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const runtime = (locals as any).runtime
-  const env = runtime?.env || {}
+  const env = getEnv(locals)
 
   if (!checkAuth(request, env)) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
@@ -63,7 +62,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const body = await request.json()
+    interface ProductBody {
+      action?: string
+      visible?: boolean
+      slug?: string
+      brand?: string
+      emoji?: string
+      tagline?: string
+      description?: string
+      status?: string
+      wonder_fact?: string
+      why_it_matters?: string
+      how_it_works_json?: any
+      what_you_get_json?: any
+      stats_json?: any
+      faqs_json?: any
+      age_range?: string
+      cta_label?: string
+      gradient?: string
+      sort_order?: number
+    }
+    const body = await request.json() as ProductBody
 
     // Handle visibility toggle
     if (body.action === 'toggle_visibility') {
@@ -94,7 +113,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Check slug uniqueness for new products
     if (!body.slug) {
-      const existing = await db.prepare('SELECT slug FROM products WHERE slug = ?').bind(slug).first()
+      interface ProductSlugRow { slug: string }
+      const existing = await db.prepare('SELECT slug FROM products WHERE slug = ?').bind(slug).first<ProductSlugRow>()
       if (existing) {
         slug = `${slug}-${Date.now().toString(36).slice(-4)}`
       }
@@ -137,10 +157,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({ success: true, slug }), {
       headers: { 'Content-Type': 'application/json' },
     })
-  } catch (err: any) {
-    console.error('[Admin] Products error:', err)
+  } catch (e: unknown) {
+    console.error('[Admin] Products error:', e)
+    const message = e instanceof Error ? e.message : String(e)
     return new Response(
-      JSON.stringify({ error: 'Failed to save product', detail: err?.message }),
+      JSON.stringify({ error: 'Failed to save product', detail: message }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
   }

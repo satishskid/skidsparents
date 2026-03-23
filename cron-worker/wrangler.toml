@@ -3,7 +3,7 @@ main = "index.ts"
 compatibility_date = "2025-03-01"
 
 [triggers]
-crons = ["30 3 * * *"]
+crons = ["30 3 * * *", "*/15 * * * *"]
 
 # Secret needed: CRON_SECRET
 # Set via: wrangler secret put CRON_SECRET --config cron-worker/wrangler.toml
