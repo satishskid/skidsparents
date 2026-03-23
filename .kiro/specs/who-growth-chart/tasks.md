@@ -6,7 +6,7 @@ Implement the WHO Growth Chart feature by building pure utility functions, embed
 
 ## Tasks
 
-- [~] 1. Create `src/lib/who/interpolate.ts` with pure utility functions
+- [x] 1. Create `src/lib/who/interpolate.ts` with pure utility functions
   - Implement `calcAgeMonths(measurementDate, dob)` using 30.4375 days/month
   - Implement `interpolateWho(ageMonths, percentile, series)` with binary search
   - Implement `interpolatePercentile(ageMonths, value, series)` inverting the percentile table
@@ -50,7 +50,7 @@ Implement the WHO Growth Chart feature by building pure utility functions, embed
     - **Property 8: For any age a ≥ 0, `calcXDomain(a)` returns `[0, a + 6]`**
     - **Validates: Requirements 5.4**
 
-- [~] 2. Create `src/lib/who/who-data.ts` with WHO percentile constants
+- [x] 2. Create `src/lib/who/who-data.ts` with WHO percentile constants
   - Export `WHO_WEIGHT_MALE` and `WHO_WEIGHT_FEMALE` as `WhoSeries` covering months 0–228
   - Export `WHO_HEIGHT_MALE` and `WHO_HEIGHT_FEMALE` as `WhoSeries` covering months 0–228
   - Export `WHO_HEAD_MALE` and `WHO_HEAD_FEMALE` as `WhoSeries` covering months 0–36 only
@@ -68,11 +68,11 @@ Implement the WHO Growth Chart feature by building pure utility functions, embed
     - **Property 4: For ages 0–60 the series first entry is month 0 and last ≥ 60; for ages 61–228 the series extends to month 228**
     - **Validates: Requirements 5.1, 5.2**
 
-- [~] 3. Checkpoint — Ensure all tests pass
+- [x] 3. Checkpoint — Ensure all tests pass
   - Run `npx vitest --run src/lib/who` and confirm zero failures before proceeding to UI work.
   - Ensure all tests pass, ask the user if questions arise.
 
-- [~] 4. Create `src/components/phr/GrowthChart.tsx` with core component structure
+- [x] 4. Create `src/components/phr/GrowthChart.tsx` with core component structure
   - Define and export `GrowthChartProps` interface (`childId`, `childName`, `dob`, `sex`, `token`)
   - Define internal types: `Metric`, `GrowthRecord`, `ChartPoint`, `WhoRow`, `WhoSeries`
   - Implement `GrowthChart` component with `useState` for `activeMetric`, `records`, `loading`, `error`, `inlineFormOpen`, `tooltipPoint`
@@ -83,13 +83,13 @@ Implement the WHO Growth Chart feature by building pure utility functions, embed
   - Handle `children.gender === 'other' | null` notice per Req 6.3
   - _Requirements: 2.7, 4.1, 4.2, 6.1, 6.2, 6.3, 6.4, 10.2_
 
-- [~] 5. Create `MetricTabs` sub-component
+- [x] 5. Create `MetricTabs` sub-component
   - Render four pill buttons: Weight | Height | Head | BMI
   - Highlight active tab; fire `onChange` callback on tap
   - Touch target ≥ 44×44px per Req 7.2
   - _Requirements: 4.1, 7.2_
 
-- [~] 6. Create `ChartCanvas`, `PercentileBands`, and `MeasurementLine` sub-components
+- [x] 6. Create `ChartCanvas`, `PercentileBands`, and `MeasurementLine` sub-components
   - `ChartCanvas` wraps a Recharts `<ResponsiveContainer><ComposedChart>` with the WHO bands and child line
   - `PercentileBands` renders three `<Area>` fills (p3–p15 secondary, p15–p85 primary, p85–p97 secondary) and five `<ReferenceLine>` labels at the right edge
   - `MeasurementLine` renders a `<Line>` with `<Dot>` markers; tap/click on a dot fires `onPointTap`
@@ -100,13 +100,13 @@ Implement the WHO Growth Chart feature by building pure utility functions, embed
   - Support pinch-to-zoom and horizontal swipe pan per Req 7.3, 7.4
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 3.1, 3.2, 3.4, 3.5, 4.3, 4.4, 5.3, 7.1, 7.3, 7.4, 7.5, 10.1, 10.3_
 
-- [~] 7. Create `InterpretationMessage` sub-component
+- [x] 7. Create `InterpretationMessage` sub-component
   - Pure display component receiving `childName`, `metric`, `percentileRank`, `recordCount`
   - When `recordCount < 2`, render encouragement message per Req 8.5
   - Otherwise call `getInterpretationMessage` and render the result in a `<p>`
   - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6_
 
-- [~] 8. Create `InlineForm` bottom sheet sub-component
+- [x] 8. Create `InlineForm` bottom sheet sub-component
   - Fixed-position bottom sheet (`position: fixed; bottom: 0; left: 0; right: 0`)
   - Inputs: date (auto-populated with today's ISO date), height (cm), weight (kg), head circumference (cm)
   - Client-side BMI calculation when both height and weight are provided per Req 9.7
@@ -116,18 +116,18 @@ Implement the WHO Growth Chart feature by building pure utility functions, embed
   - "Add Measurement" button in `GrowthChart` opens this sheet per Req 9.1, 9.2
   - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7_
 
-- [~] 9. Implement downsampling and performance optimisations
+- [x] 9. Implement downsampling and performance optimisations
   - In `GrowthChart`, after fetching records, downsample to ≤ 100 points when count > 100, preserving the most recent point and all outliers outside p3–p97 per Req 10.5
   - Ensure `who-data.ts` is only imported dynamically (never in the static import graph of `GrowthChart`) per Req 10.2, 10.4
   - _Requirements: 10.2, 10.4, 10.5_
 
-- [~] 10. Replace `GrowthTracker` with `GrowthChart` in `ChildDashboard.tsx`
+- [x] 10. Replace `GrowthTracker` with `GrowthChart` in `ChildDashboard.tsx`
   - In `src/components/phr/ChildDashboard.tsx`, replace the `<GrowthTracker …>` usage with `<GrowthChart childId={…} childName={…} dob={…} sex={…} token={…} />`
   - Keep `GrowthTracker.tsx` in place as a fallback (referenced in the Recharts dynamic-import error boundary per design error-handling table)
   - Pass all required props from the existing child data already available in `ChildDashboard`
   - _Requirements: 2.7, 6.1, 6.2, 10.2_
 
-- [~] 11. Final checkpoint — Ensure all tests pass
+- [x] 11. Final checkpoint — Ensure all tests pass
   - Run `npx vitest --run` and confirm zero failures across the full test suite.
   - Ensure all tests pass, ask the user if questions arise.
 

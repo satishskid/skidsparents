@@ -3,6 +3,7 @@ import { useAuth } from '@/lib/hooks/useAuth'
 import MilestoneTracker from './MilestoneTracker'
 import HabitsTracker from './HabitsTracker'
 import GrowthTracker from './GrowthTracker'
+import GrowthChart from './GrowthChart'
 import ObservationJournal from './ObservationJournal'
 import RecordsTimeline from './RecordsTimeline'
 import VaccinationTracker from './VaccinationTracker'
@@ -149,8 +150,14 @@ export default function ChildDashboard({ childId }: { childId: string }) {
       {activeTab === 'habits' && token && (
         <HabitsTracker childId={childId} token={token} />
       )}
-      {activeTab === 'growth' && token && (
-        <GrowthTracker childId={childId} token={token} />
+      {activeTab === 'growth' && token && child && (
+        <GrowthChart
+          childId={childId}
+          childName={child.name}
+          dob={child.dob}
+          sex={child.gender === 'male' || child.gender === 'female' ? child.gender : null}
+          token={token}
+        />
       )}
       {activeTab === 'notes' && token && (
         <ObservationJournal childId={childId} token={token} />
