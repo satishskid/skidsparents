@@ -280,6 +280,8 @@ describe('Property 3: Age calculation determinism', () => {
       fc.integer({ min: 0, max: 228 * 30 }),
       (dob, offsetDays) => {
         const measurement = new Date(dob.getTime() + offsetDays * 86400000)
+        // Guard against invalid dates produced by large offsets
+        if (isNaN(measurement.getTime())) return true
         const iso = (d: Date) => d.toISOString().split('T')[0]
         const r1 = calcAgeMonths(iso(measurement), iso(dob))
         const r2 = calcAgeMonths(iso(measurement), iso(dob))

@@ -1,0 +1,37 @@
+---
+export const prerender = false
+
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import Navbar from '@/components/common/Navbar.astro'
+import MobileTabBar from '@/components/common/MobileTabBar.astro'
+import ScreeningResultsView from '@/components/phr/ScreeningResultsView'
+
+const url = new URL(Astro.request.url)
+const initialChildId = url.searchParams.get('childId') ?? undefined
+const initialScreeningId = url.searchParams.get('screeningId') ?? undefined
+---
+
+<BaseLayout
+  title="Screening Reports"
+  description="View your child's SKIDS screening results — vision, developmental, nutrition, and hearing."
+  noIndex
+>
+  <Navbar />
+
+  <main class="min-h-screen bg-gray-50/50 pb-24">
+    <div class="max-w-2xl mx-auto px-4 py-6">
+      <div class="mb-6">
+        <h1 class="text-xl font-bold text-gray-900">Screening Reports</h1>
+        <p class="text-sm text-gray-500 mt-1">Results from your SKIDS clinic visits</p>
+      </div>
+
+      <ScreeningResultsView
+        client:load
+        initialChildId={initialChildId}
+        initialScreeningId={initialScreeningId}
+      />
+    </div>
+  </main>
+
+  <MobileTabBar />
+</BaseLayout>
