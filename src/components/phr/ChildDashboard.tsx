@@ -8,6 +8,8 @@ import ObservationJournal from './ObservationJournal'
 import RecordsTimeline from './RecordsTimeline'
 import VaccinationTracker from './VaccinationTracker'
 import SmartRecommendations from './SmartRecommendations'
+import HealthScoreGauge from './HealthScoreGauge'
+import PhrPdfExport from './PhrPdfExport'
 
 interface Child {
   id: string
@@ -31,6 +33,7 @@ export default function ChildDashboard({ childId }: { childId: string }) {
   const [child, setChild] = useState<Child | null>(null)
   const [activeTab, setActiveTab] = useState<TabKey>('milestones')
   const [loadingChild, setLoadingChild] = useState(true)
+  const [features, setFeatures] = useState<string[]>([])
 
   const fetchChild = useCallback(async () => {
     if (!token) return
@@ -51,6 +54,14 @@ export default function ChildDashboard({ childId }: { childId: string }) {
   useEffect(() => {
     if (token) fetchChild()
   }, [token, fetchChild])
+
+  useEffect(() => {
+    if (!token) return
+    fetch('/api/subscriptions/me', { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d) setFeatures((d as { features: string[] }).features ?? []) })
+      .catch(() => {})
+  }, [token])
 
   function getAgeMonths(dob: string): number {
     const birth = new Date(dob)
@@ -119,6 +130,12 @@ export default function ChildDashboard({ childId }: { childId: string }) {
             <p className="text-sm text-gray-500">{getAgeLabel(child.dob)}</p>
           </div>
         </div>
+        {token && <HealthScoreGauge childId={childId} token={token} />}
+        {token && (
+          <div className="mt-3">
+            <PhrPdfExport child={child} token={token} features={features} />
+          </div>
+        )}
       </div>
 
       {/* Smart Recommendations */}
