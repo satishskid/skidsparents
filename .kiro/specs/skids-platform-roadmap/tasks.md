@@ -41,7 +41,7 @@ Incremental build-out of the three remaining pillars of the SKIDS marketplace. E
     - CREATE TABLE statements for provider_slots, provider_credentials, session_notes, prescriptions, audit_log
     - _Requirements: 1.1–1.7 above_
 
-  - [ ]* 1.9 Write property test for commission snapshot immutability (Property 4)
+  - [x]* 1.9 Write property test for commission snapshot immutability (Property 4)
     - **Property 4: Commission snapshot immutability**
     - Create order with commissionPctSnapshot, update provider commission_pct, re-query order — snapshot must be unchanged
     - **Validates: Requirements 9.2**
@@ -55,17 +55,17 @@ Incremental build-out of the three remaining pillars of the SKIDS marketplace. E
     - `isValidOrderTransition(from, to): boolean` — enforces pending→confirmed→scheduled→in_progress→completed; cancelled reachable from any non-completed state
     - _Requirements: 6.5, 8.7, 9.1, 9.4_
 
-  - [ ]* 2.2 Write property test for order lifecycle transitions (Property 1)
+  - [x]* 2.2 Write property test for order lifecycle transitions (Property 1)
     - **Property 1: Order lifecycle is strictly sequential**
     - Use `fc.constantFrom` over all status pairs; assert `isValidOrderTransition` matches the valid transition set
     - **Validates: Requirements 8.7**
 
-  - [ ]* 2.3 Write property test for commission round-trip integrity (Property 3)
+  - [x]* 2.3 Write property test for commission round-trip integrity (Property 3)
     - **Property 3: Commission round-trip financial integrity**
     - For arbitrary `amountCents` (1–10,000,000) and `commissionPct` (0–50): `payout + commission === amountCents`
     - **Validates: Requirements 9.4**
 
-  - [ ]* 2.4 Write property test for Razorpay webhook signature verification (Property 7)
+  - [x]* 2.4 Write property test for Razorpay webhook signature verification (Property 7)
     - **Property 7: Razorpay webhook HMAC verification**
     - Valid sig on original body → true; same sig on tampered body → false
     - **Validates: Requirements 6.5**
@@ -107,7 +107,7 @@ Incremental build-out of the three remaining pillars of the SKIDS marketplace. E
     - Return non-booked, non-blocked slots for that provider+service on that date
     - _Requirements: 5.4, 7.3_
 
-  - [ ]* 3.3 Write property test for slot exclusivity (Property 8)
+  - [x]* 3.3 Write property test for slot exclusivity (Property 8)
     - **Property 8: Slot exclusivity after booking**
     - Book a slot with order-1; attempt to book same slot with order-2 → must return 409
     - **Validates: Requirements 5.3**
@@ -232,7 +232,7 @@ Incremental build-out of the three remaining pillars of the SKIDS marketplace. E
     - If active: return child PHR summary (growth latest, milestones, vaccinations, flagged observations)
     - _Requirements: 4.3, 4.4_
 
-  - [ ]* 5.4 Write property test for PHR access gate (Property 5)
+  - [x]* 5.4 Write property test for PHR access gate (Property 5)
     - **Property 5: PHR access requires active order**
     - For arbitrary provider+child pairs with order status in {cancelled, completed} → 403; status in {confirmed, scheduled, in_progress} → 200
     - **Validates: Requirements 4.3, 4.4**
@@ -289,7 +289,7 @@ Incremental build-out of the three remaining pillars of the SKIDS marketplace. E
     - `GET /api/admin/supply` — for each active service type, count verified providers with non-booked slots in next 7 days; flag any service type with count < 2
     - _Requirements: 9.3, 10.4, 10.5, 13.4_
 
-  - [ ]* 6.4 Write property test for supply alert threshold (Property 10)
+  - [x]* 6.4 Write property test for supply alert threshold (Property 10)
     - **Property 10: Supply alert threshold**
     - For arbitrary sets of providers per service type: if verified providers with slots < 2, service must appear in alert list
     - **Validates: Requirements 10.5**
@@ -299,7 +299,7 @@ Incremental build-out of the three remaining pillars of the SKIDS marketplace. E
     - Return entries ordered by `created_at` desc; never expose via any public endpoint
     - _Requirements: 11.4, 11.5_
 
-  - [ ]* 6.6 Write property test for audit log append-only invariant (Property 6)
+  - [x]* 6.6 Write property test for audit log append-only invariant (Property 6)
     - **Property 6: Audit log is append-only**
     - Create audit log entry; attempt UPDATE and DELETE on that row; verify entry is unchanged and deletions are rejected
     - **Validates: Requirements 11.2**
@@ -324,7 +324,7 @@ Incremental build-out of the three remaining pillars of the SKIDS marketplace. E
     - Retry BHASH delivery up to 3 times with exponential backoff (1 min, 2 min, 4 min); update `whatsapp_status` to sent/failed
     - _Requirements: 12.3, 12.4_
 
-  - [ ]* 6.10 Write property test for payment confirmation precedes scheduling (Property 2)
+  - [x]* 6.10 Write property test for payment confirmation precedes scheduling (Property 2)
     - **Property 2: Payment confirmation precedes scheduling**
     - For arbitrary orders with status in {scheduled, in_progress, completed}: assert `payment_id !== null && amount_cents > 0`
     - **Validates: Requirements 6.8_
@@ -367,6 +367,51 @@ Incremental build-out of the three remaining pillars of the SKIDS marketplace. E
 
   - [x] 7.6 Final checkpoint — Ensure all tests pass, ask the user if questions arise.
 
+- [ ] 8. Phase 8 — Production deployment
+
+  - [ ] 8.1 Set Cloudflare secrets for parent app (`skidsparent` project)
+    - `wrangler pages secret put RAZORPAY_KEY_ID --project-name skidsparent`
+    - `wrangler pages secret put RAZORPAY_KEY_SECRET --project-name skidsparent`
+    - `wrangler pages secret put LIVEKIT_API_SECRET --project-name skidsparent`
+    - `wrangler pages secret put GA4_MEASUREMENT_ID --project-name skidsparent`
+    - `wrangler pages secret put META_PIXEL_ID --project-name skidsparent`
+    - `wrangler pages secret put POSTHOG_API_KEY --project-name skidsparent`
+    - _Requirements: 6.1, 4.1, analytics_
+
+  - [ ] 8.2 Apply DB migrations to production D1
+    - `wrangler d1 migrations apply skids-parent-db --remote`
+    - Applies: `0003_platform_roadmap.sql`, `0004_onboarding_wizard.sql`, `0005_push_subscriptions.sql`, `0006_referral_system.sql`
+    - Verify tables exist: `provider_slots`, `provider_credentials`, `session_notes`, `prescriptions`, `audit_log`, `push_subscriptions`, `referrals`
+    - _Requirements: 1.8, all schema requirements_
+
+  - [ ] 8.3 Deploy parent app to production
+    - `npm run build` (in `skidsparents/`)
+    - `wrangler pages deploy dist --project-name skidsparent`
+    - Smoke test: booking flow, provider portal `/provider/signup`, admin `/admin/providers`, teleconsult `/provider/orders/[id]/session`
+    - _Requirements: All_
+
+  - [ ] 8.4 Configure Cloudflare Cron Trigger for WhatsApp retry worker
+    - Verify `cron-worker/wrangler.toml` has cron schedule set
+    - `wrangler deploy` in `cron-worker/` directory
+    - Confirm worker appears in Cloudflare dashboard under Workers & Pages
+    - _Requirements: 12.3, 12.4_
+
+  - [ ] 8.5 Deploy marketing site to `skids.clinic`
+    - `npm run build` (in `skidsparents/marketing/`)
+    - Create new Cloudflare Pages project: `wrangler pages project create skids-clinic`
+    - `wrangler pages deploy dist --project-name skids-clinic` (from `marketing/`)
+    - Point `skids.clinic` DNS to Cloudflare Pages (add CNAME in DNS provider)
+    - Add custom domain in Cloudflare Pages dashboard → `skids.clinic`
+    - Verify CORS: `POST https://parent.skids.clinic/api/lead` accepts `Origin: https://skids.clinic`
+    - _Requirements: 1.1, 2.4, 2.5_
+
+  - [ ] 8.6 Post-deployment smoke tests
+    - Parent app: register child → onboarding wizard → milestone wall populated → Dr. SKIDS chat visible on mobile
+    - Booking: browse services → select child → pick provider/slot → Razorpay payment modal opens
+    - Provider: `/provider/signup` form submits → admin `/admin/providers` shows pending provider → approve → provider can log in
+    - Marketing: `skids.clinic` loads → lead form submits → lead appears in admin CRM → WhatsApp confirmation sent
+    - _Requirements: All_
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for a faster MVP
@@ -374,6 +419,6 @@ Incremental build-out of the three remaining pillars of the SKIDS marketplace. E
 - Checkpoints ensure incremental validation at the end of each phase
 - Property tests (Properties 1–10 from design.md) validate universal correctness guarantees
 - Unit tests validate specific examples and edge cases
-- LiveKit secrets already stored in Cloudflare Pages: `LIVEKIT_URL`, `LIVEKIT_API_KEY`
-- **Still needed before Phase 4**: `wrangler pages secret put LIVEKIT_API_SECRET --project-name skidsparent`
-- LiveKit npm packages needed: `npm install livekit-server-sdk @livekit/components-react @livekit/components-core livekit-client`
+- LiveKit secrets: `LIVEKIT_URL` and `LIVEKIT_API_KEY` already in Cloudflare; `LIVEKIT_API_SECRET` needed (task 8.1)
+- Razorpay keys: obtain from Razorpay dashboard → Settings → API Keys
+- All 7 implementation phases are complete — only Phase 8 (deployment) remains

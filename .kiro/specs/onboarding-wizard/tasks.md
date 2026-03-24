@@ -40,11 +40,11 @@ Implement the 3-step onboarding wizard as a full-screen overlay mounted inside t
   - Render `<OnboardingWizard>` overlay when trigger conditions met; render `children` prop always (behind overlay on desktop, hidden on mobile)
   - Apply `document.body.style.overflow = 'hidden'` while wizard is open; restore on unmount via `useEffect` cleanup
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 7.3, 7.4, 7.6_
-  - [ ]* 3.1 Write property test for trigger logic (Property 1)
+  - [x]* 3.1 Write property test for trigger logic (Property 1)
     - Property 1: `onboarding_completed = true` always suppresses regardless of `isNew` or `childCount`
     - Use `fc.record({ onboardingCompleted: fc.constant(true), isNew: fc.boolean(), childCount: fc.nat() })`
     - _Validates: Requirements 1.3, 7.4, 7.6_
-  - [ ]* 3.2 Write property test for trigger conditions (Property 2)
+  - [x]* 3.2 Write property test for trigger conditions (Property 2)
     - Property 2: `onboarding_completed = false` + `childCount = 0` always shows wizard; `childCount > 0` only shows if `isNew = true`
     - Use `fc.record({ onboardingCompleted: fc.constant(false), isNew: fc.boolean(), childCount: fc.nat(10) })`
     - _Validates: Requirements 1.1, 1.2_

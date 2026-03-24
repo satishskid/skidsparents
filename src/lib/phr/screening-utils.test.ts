@@ -265,7 +265,8 @@ describe('Property 5: Grouping and ordering by Screening_Type', () => {
       id: fc.uuid(),
       childId: fc.uuid(),
       screeningDate: fc.option(
-        fc.date({ min: new Date('2020-01-01'), max: new Date('2025-12-31') }).map((d) => d.toISOString().split('T')[0]),
+        fc.integer({ min: new Date('2020-01-01').getTime(), max: new Date('2025-12-31').getTime() })
+          .map((ms) => new Date(ms).toISOString().split('T')[0]),
         { nil: null }
       ),
       importedAt: fc.constant(new Date().toISOString()),

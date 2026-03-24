@@ -53,7 +53,7 @@ Six targeted changes to existing files. Ordered by impact — the mobile chat fi
       2. Query `growth_records` — `SELECT height_cm, weight_kg, recorded_date WHERE child_id = ? ORDER BY recorded_date DESC LIMIT 1`
     - Pass results into `chatContext` as `vaccinationHistory` and `latestGrowth`
     - _Requirements: 5.1, 5.2, 5.3_
-  - [ ]* 4.3 Write property test for enriched system prompt
+  - [x]* 4.3 Write property test for enriched system prompt
     - Use **fast-check** to generate arbitrary `ChatContext` objects with non-empty `vaccinationHistory` arrays and `latestGrowth` objects
     - Assert `buildSystemPrompt(context)` output string contains each vaccination entry string and the height/weight values
     - **Feature: child-health-journey, Property 7: buildSystemPrompt includes all provided context fields**
@@ -97,7 +97,7 @@ Six targeted changes to existing files. Ordered by impact — the mobile chat fi
     - Pass the `id` from the `POST /api/children` response to `onComplete(id)`
     - Update the call site in `src/pages/me.astro` (or wherever `ChildRegistration` is rendered) to receive `childId`, check if the child has existing observations via `GET /api/observations?childId=`, and if none exist, open `ChatWidget` with `mode='onboarding'` and `childId` set
     - _Requirements: 3.1, 3.5, 3.6_
-  - [ ]* 6.5 Write property test for onboarding system prompt
+  - [x]* 6.5 Write property test for onboarding system prompt
     - Use **fast-check** to generate arbitrary `ChatContext` objects with `mode: 'onboarding'`
     - Assert `buildSystemPrompt(context)` output contains the intake topic keywords ("birth", "allerg", "illness", "development") and does NOT contain the standard `BASE_PERSONA` opener text
     - **Feature: child-health-journey, Property 3: Onboarding mode uses intake system prompt**
