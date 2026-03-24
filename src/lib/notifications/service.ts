@@ -1,5 +1,6 @@
 import type { D1Database } from '@cloudflare/workers-types'
 import type { NotificationType } from '@/lib/db/schema'
+import { sendPush } from '@/lib/notifications/push'
 
 // ─── Types ─────────────────────────────────────────────
 
@@ -11,6 +12,7 @@ export interface NotificationInput {
   body: string
   actionUrl: string
   dataJson: Record<string, unknown>
+  env?: { DB: D1Database; FIREBASE_ADMIN_KEY?: string; ADMIN_KEY?: string }
 }
 
 interface ChildRow {
@@ -110,6 +112,7 @@ export async function isDuplicate(
 
 /**
  * Inserts a new notification record into the notifications table.
+ * Also fires a push notification as fire-and-forget.
  */
 export async function createNotification(db: D1Database, input: NotificationInput): Promise<void> {
   const id = crypto.randomUUID()
@@ -122,6 +125,15 @@ export async function createNotification(db: D1Database, input: NotificationInpu
     )
     .bind(id, input.parentId, input.type, input.title, input.body, dataJsonStr)
     .run()
+
+  // Fire-and-forget push delivery
+  if (input.env) {
+    sendPush(db, input.env, input.parentId, {
+      title: input.title,
+      body: input.body,
+      actionUrl: input.actionUrl,
+    }, input.type).catch(() => {})
+  }
 }
 
 // ─── Trigger Functions ─────────────────────────────────

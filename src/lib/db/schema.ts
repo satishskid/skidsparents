@@ -405,6 +405,17 @@ export const auditLog = sqliteTable('audit_log', {
   createdAt: text('created_at').default(sql`(datetime('now'))`),
 })
 
+// ─── Push Subscriptions ────────────────────────────────
+
+export const pushSubscriptions = sqliteTable('push_subscriptions', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  parentId: text('parent_id').notNull().references(() => parents.id),
+  fcmToken: text('fcm_token').notNull(),
+  userAgent: text('user_agent'),
+  registeredAt: text('registered_at').default(sql`(datetime('now'))`),
+  isActive: integer('is_active', { mode: 'boolean' }).default(true),
+})
+
 // ─── Derived Types ─────────────────────────────────────
 
 export type NotificationType = typeof notifications.type.enumValues[number]

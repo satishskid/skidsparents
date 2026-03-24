@@ -47,8 +47,7 @@ export default function NotificationBell() {
   const [error, setError] = useState<string | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
 
-  // Fetch notifications on mount
-  useEffect(() => {
+  const fetchNotifications = () => {
     const token = localStorage.getItem('firebaseToken') || sessionStorage.getItem('firebaseToken')
     if (!token) return
     setIsLoading(true)
@@ -57,12 +56,21 @@ export default function NotificationBell() {
     })
       .then((r) => r.json() as Promise<{ notifications?: Notification[]; unreadCount?: number }>)
       .then((data) => {
-        const d = data as { notifications?: Notification[]; unreadCount?: number }
-        setNotifications(d.notifications || [])
-        setUnreadCount(d.unreadCount || 0)
+        setNotifications(data.notifications || [])
+        setUnreadCount(data.unreadCount || 0)
       })
       .catch(() => setError('Could not load notifications'))
       .finally(() => setIsLoading(false))
+  }
+
+  // Fetch notifications on mount
+  useEffect(() => { fetchNotifications() }, [])
+
+  // Refresh when a push is received in the foreground
+  useEffect(() => {
+    const handler = () => fetchNotifications()
+    window.addEventListener('skids:push-received', handler)
+    return () => window.removeEventListener('skids:push-received', handler)
   }, [])
 
   // Close on outside click

@@ -6,21 +6,21 @@ Layer FCM push delivery on top of the existing smart-notifications system. Tasks
 
 ## Tasks
 
-- [ ] 1. Create D1 migration and Drizzle schema for push_subscriptions
+- [x] 1. Create D1 migration and Drizzle schema for push_subscriptions
   - Create `migrations/0005_push_subscriptions.sql` with the `push_subscriptions` table, unique index on `(parent_id, fcm_token)`, and active-token index
   - Add `pushSubscriptions` table definition to `src/lib/db/schema.ts` with columns: `id`, `parentId`, `fcmToken`, `userAgent`, `registeredAt`, `isActive`
   - _Requirements: 3.1_
 
-- [ ] 2. Implement PushService (`src/lib/notifications/push.ts`)
-  - [ ] 2.1 Implement `getAdminApp(env)` module-level singleton that parses `FIREBASE_ADMIN_KEY` and calls `initializeApp` once
+- [x] 2. Implement PushService (`src/lib/notifications/push.ts`)
+  - [x] 2.1 Implement `getAdminApp(env)` module-level singleton that parses `FIREBASE_ADMIN_KEY` and calls `initializeApp` once
     - Use `getApps()` guard to prevent re-initialisation across requests
     - _Requirements: 4.1, 4.3_
 
-  - [ ] 2.2 Implement `deactivateToken(db, fcmToken, parentId)`
+  - [x] 2.2 Implement `deactivateToken(db, fcmToken, parentId)`
     - Issue `UPDATE push_subscriptions SET is_active=0 WHERE fcm_token=? AND parent_id=?`
     - _Requirements: 3.3, 4.4_
 
-  - [ ] 2.3 Implement `sendPush(db, env, parentId, payload, notificationType)`
+  - [x] 2.3 Implement `sendPush(db, env, parentId, payload, notificationType)`
     - Query active tokens for parentId; return early if none
     - Suppress FCM call for `blog_recommendation` type unless parent inactive >3 days (check `content_engagement` table)
     - Call `messaging.sendEachForMulticast` with `notification`, `data`, and `webpush` fields
@@ -51,19 +51,19 @@ Layer FCM push delivery on top of the existing smart-notifications system. Tasks
     - `// Feature: push-notifications, Property 6: blog_recommendation push suppression`
     - Validates: Requirements 8.4
 
-- [ ] 3. Create Push API routes
-  - [ ] 3.1 Create `src/pages/api/push/register.ts` (POST)
+- [x] 3. Create Push API routes
+  - [x] 3.1 Create `src/pages/api/push/register.ts` (POST)
     - Authenticate via `getParentId`; return 401 if missing
     - Upsert `push_subscriptions` on `(parentId, fcmToken)`: insert new or update `registeredAt` + set `isActive=true`
     - Record `userAgent` from request headers
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 3.1_
 
-  - [ ] 3.2 Create `src/pages/api/push/unregister.ts` (POST)
+  - [x] 3.2 Create `src/pages/api/push/unregister.ts` (POST)
     - Authenticate via `getParentId`; return 401 if missing
     - Set `isActive=false` WHERE `parentId=?` AND `fcmToken=?`
     - _Requirements: 3.3, 3.4, 3.5_
 
-  - [ ] 3.3 Create `src/pages/api/push/cleanup.ts` (GET)
+  - [x] 3.3 Create `src/pages/api/push/cleanup.ts` (GET)
     - Check `x-admin-key` or `Authorization: Bearer` header against `env.ADMIN_KEY`; return 401 if invalid
     - `UPDATE push_subscriptions SET is_active=0 WHERE registered_at < datetime('now', '-60 days')`
     - Return `{ deactivated: number }`
@@ -98,13 +98,13 @@ Layer FCM push delivery on top of the existing smart-notifications system. Tasks
     - `// Feature: push-notifications, Property 8: Unauthenticated push API requests return 401`
     - Validates: Requirements 1.4, 3.4, 9.4
 
-- [ ] 4. Integrate PushService into NotificationService
+- [x] 4. Integrate PushService into NotificationService
   - In `src/lib/notifications/service.ts`, update `createNotification()` to call `sendPush()` after the DB insert as fire-and-forget (`.catch(() => {})`)
   - Pass `db`, `env`, `input.parentId`, `{ title, body, actionUrl }`, and `input.type`
   - Ensure the existing DB insert and return value are unaffected
   - _Requirements: 4.1, 4.6, 7.3_
 
-- [ ] 5. Create service worker for background FCM handling
+- [x] 5. Create service worker for background FCM handling
   - Create `public/firebase-messaging-sw.js` using `firebase-app-compat` and `firebase-messaging-compat` importScripts
   - Initialise Firebase app with project FCM config (public values only)
   - Implement `onBackgroundMessage` to call `self.registration.showNotification` with title, body, icon `/icons/icon-192.png`, and `data.actionUrl`
@@ -116,7 +116,7 @@ Layer FCM push delivery on top of the existing smart-notifications system. Tasks
     - `// Feature: push-notifications, Property 10: Service worker notification uses payload title`
     - Validates: Requirements 5.4, 8.3
 
-- [ ] 6. Create FCM foreground client (`src/lib/firebase/fcm-client.ts`)
+- [x] 6. Create FCM foreground client (`src/lib/firebase/fcm-client.ts`)
   - Implement `initFcmForegroundListener()` with a module-level `_listenerRegistered` boolean guard
   - On each foreground message, dispatch `new CustomEvent('skids:push-received', { detail: payload })` on `window`
   - Implement `getFcmToken()`: call `getToken(messaging, { vapidKey })`, wrap in try/catch, return `null` on failure
@@ -127,7 +127,7 @@ Layer FCM push delivery on top of the existing smart-notifications system. Tasks
     - `// Feature: push-notifications, Property 9: Foreground listener is registered at most once`
     - Validates: Requirements 6.3
 
-- [ ] 7. Create PushPermissionPrompt component (`src/components/common/PushPermissionPrompt.tsx`)
+- [x] 7. Create PushPermissionPrompt component (`src/components/common/PushPermissionPrompt.tsx`)
   - Accept props `{ onboardingCompleted: boolean, token: string }`
   - Render nothing if: `!onboardingCompleted`, `Notification.permission === 'denied'`, `localStorage.getItem('push_permission_dismissed')`, or `typeof Notification === 'undefined'`
   - If `Notification.permission === 'granted'` on mount, skip prompt and call `registerToken()` directly
@@ -138,13 +138,13 @@ Layer FCM push delivery on top of the existing smart-notifications system. Tasks
   - Call `initFcmForegroundListener()` after successful registration
   - _Requirements: 1.1, 1.5, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 7.1_
 
-- [ ] 8. Update NotificationBell to handle push-received events
+- [x] 8. Update NotificationBell to handle push-received events
   - In `src/components/common/NotificationBell.tsx`, add a `useEffect` that registers a `skids:push-received` listener on `window`
   - Handler calls the existing `fetchNotifications()` function to refresh the list
   - Clean up listener on unmount
   - _Requirements: 6.2_
 
-- [ ] 9. Checkpoint — Ensure all tests pass
+- [x] 9. Checkpoint — Ensure all tests pass
   - Run `vitest --run` and confirm all unit tests pass
   - Verify no TypeScript errors in new files
   - Ask the user if any questions arise before proceeding
