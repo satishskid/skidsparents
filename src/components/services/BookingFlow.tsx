@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { parseDiscountPct, computeDiscountedPrice } from '@/lib/pricing/discount'
 
 type Step = 'service' | 'child' | 'provider' | 'summary' | 'payment'
 
@@ -82,7 +83,7 @@ function Spinner() {
 
 // ─── Step 1: Service Selector ──────────────────────────
 
-function ServiceSelector({ onSelect }: { onSelect: (s: Service) => void }) {
+function ServiceSelector({ onSelect, discountPct }: { onSelect: (s: Service) => void; discountPct: number }) {
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -127,9 +128,25 @@ function ServiceSelector({ onSelect }: { onSelect: (s: Service) => void }) {
               </span>
             </div>
             <div className="mt-2 flex items-center justify-between">
-              <span className="text-green-700 font-bold text-base">
-                ₹{(s.priceCents / 100).toLocaleString('en-IN')}
-              </span>
+              {(() => {
+                const isTeleconsult = s.deliveryType === 'telehealth' || s.category === 'consultation'
+                const showDiscount = isTeleconsult && discountPct > 0
+                const discounted = computeDiscountedPrice(s.priceCents, discountPct)
+                return showDiscount ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-400 line-through text-sm">
+                      ₹{(s.priceCents / 100).toLocaleString('en-IN')}
+                    </span>
+                    <span className="text-green-700 font-bold text-base">
+                      ₹{(discounted / 100).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-green-700 font-bold text-base">
+                    ₹{(s.priceCents / 100).toLocaleString('en-IN')}
+                  </span>
+                )
+              })()}
               <span className="text-xs text-gray-400 capitalize">{s.deliveryType?.replace('_', ' ')}</span>
             </div>
           </button>
@@ -337,12 +354,14 @@ function OrderSummary({
   child,
   provider,
   slot,
+  discountPct,
   onConfirm,
 }: {
   service: Service
   child: Child
   provider: Provider
   slot: SelectedSlot
+  discountPct: number
   onConfirm: () => void
 }) {
   const [agreed, setAgreed] = useState(false)
@@ -355,7 +374,18 @@ function OrderSummary({
           <span className="text-sm text-gray-500">Service</span>
           <div className="text-right">
             <p className="text-sm font-semibold text-gray-900">{service.name}</p>
-            <p className="text-green-700 font-bold">₹{(service.priceCents / 100).toLocaleString('en-IN')}</p>
+            {discountPct > 0 ? (
+              <div className="flex items-center gap-2 justify-end">
+                <span className="text-gray-400 line-through text-sm">
+                  ₹{(service.priceCents / 100).toLocaleString('en-IN')}
+                </span>
+                <span className="text-green-700 font-bold">
+                  ₹{(computeDiscountedPrice(service.priceCents, discountPct) / 100).toLocaleString('en-IN')}
+                </span>
+              </div>
+            ) : (
+              <p className="text-green-700 font-bold">₹{(service.priceCents / 100).toLocaleString('en-IN')}</p>
+            )}
           </div>
         </div>
         <div className="p-4 flex justify-between">
@@ -415,6 +445,7 @@ function PaymentGate({
   provider,
   slot,
   user,
+  discountPct,
 }: {
   token: string
   service: Service
@@ -422,6 +453,7 @@ function PaymentGate({
   provider: Provider
   slot: SelectedSlot
   user: any
+  discountPct: number
 }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'success' | 'error'>('loading')
   const [error, setError] = useState('')
@@ -444,6 +476,7 @@ function PaymentGate({
             childId: child.id,
             providerId: provider.id,
             slotId: slot.id,
+            amount_cents: discountPct > 0 ? computeDiscountedPrice(service.priceCents, discountPct) : undefined,
           }),
         })
         if (!res.ok) throw new Error('Failed to create order')
@@ -589,6 +622,17 @@ export default function BookingFlow() {
   const [selectedChild, setSelectedChild] = useState<Child | null>(null)
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<SelectedSlot | null>(null)
+  const [features, setFeatures] = useState<string[]>([])
+
+  useEffect(() => {
+    if (!token) return
+    fetch('/api/subscriptions/me', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then((d: any) => { if (d) setFeatures(d.features ?? []) })
+      .catch(() => {})
+  }, [token])
+
+  const discountPct = parseDiscountPct(features)
 
   if (authLoading) return <Spinner />
 
@@ -637,6 +681,7 @@ export default function BookingFlow() {
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           {step === 'service' && (
             <ServiceSelector
+              discountPct={discountPct}
               onSelect={s => {
                 setSelectedService(s)
                 setStep('child')
@@ -676,6 +721,7 @@ export default function BookingFlow() {
                 child={selectedChild}
                 provider={selectedProvider}
                 slot={selectedSlot}
+                discountPct={discountPct}
                 onConfirm={() => setStep('payment')}
               />
             )}
@@ -692,6 +738,7 @@ export default function BookingFlow() {
                 provider={selectedProvider}
                 slot={selectedSlot}
                 user={user}
+                discountPct={discountPct}
               />
             )}
         </div>

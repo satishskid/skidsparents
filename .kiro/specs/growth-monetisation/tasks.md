@@ -240,7 +240,7 @@ Implement four capabilities in order: DB schema, health score engine, health sco
 
   - [x] 8.3 Git commit: "fix: habit page CTA auth-awareness"
 
-- [-] 9. Final checkpoint
+- [x] 9. Final checkpoint
   - Run `vitest --run` and confirm all 344+ tests pass (no regressions)
   - Verify Cloudflare Workers compatibility: no `process`, `fs`, `path`, or other Node.js-only APIs imported in any new file
   - Git commit: "chore: final checkpoint — all tests passing"

@@ -130,7 +130,7 @@ export default function ChildDashboard({ childId }: { childId: string }) {
             <p className="text-sm text-gray-500">{getAgeLabel(child.dob)}</p>
           </div>
         </div>
-        {token && <HealthScoreGauge childId={childId} token={token} />}
+        {token && <HealthScoreGauge childId={childId} token={token} features={features} />}
         {token && (
           <div className="mt-3">
             <PhrPdfExport child={child} token={token} features={features} />

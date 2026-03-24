@@ -3,6 +3,7 @@ import { useAuth } from '@/lib/hooks/useAuth'
 import ChildRegistration from './ChildRegistration'
 import ReferralBanner from './ReferralBanner'
 import ChatWidget from '@/components/chat/ChatWidget'
+import SubscriptionCard from '@/components/subscription/SubscriptionCard'
 
 interface Child {
   id: string
@@ -150,6 +151,9 @@ export default function UserProfile() {
           Sign Out
         </button>
       </div>
+
+      {/* Subscription */}
+      {token && <SubscriptionCard token={token} />}
 
       {/* Children */}
       <div>

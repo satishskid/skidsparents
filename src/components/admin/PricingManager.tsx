@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { parseDiscountPct, serializeDiscountPct } from '@/lib/pricing/discount'
 
 const KNOWN_FEATURES = [
   'pdf_export',
@@ -47,14 +48,37 @@ function TierForm({
   error: string | null
 }) {
   const [form, setForm] = useState<TierFormData>(initial)
+  const [discountPct, setDiscountPct] = useState<number>(parseDiscountPct(initial.features))
+  const [discountError, setDiscountError] = useState<string | null>(null)
+
+  const teleconsultChecked = form.features.some(f => f === 'teleconsult_discount_pct' || f.startsWith('teleconsult_discount_pct:'))
 
   function toggleFeature(key: string) {
     setForm((f) => ({
       ...f,
-      features: f.features.includes(key)
-        ? f.features.filter((k) => k !== key)
-        : [...f.features, key],
+      features: f.features.includes(key) || f.features.some(fk => fk.startsWith(key + ':'))
+        ? f.features.filter((k) => k !== key && !k.startsWith(key + ':'))
+        : [...f.features.filter(k => !k.startsWith(key + ':')), key],
     }))
+  }
+
+  function handleSave() {
+    if (teleconsultChecked) {
+      if (discountPct < 0 || discountPct > 100) {
+        setDiscountError('Discount must be between 0 and 100')
+        return
+      }
+      setDiscountError(null)
+      const serialized = serializeDiscountPct(discountPct)
+      const updatedFeatures = [
+        ...form.features.filter(f => !f.startsWith('teleconsult_discount_pct')),
+        serialized,
+      ]
+      onSave({ ...form, features: updatedFeatures })
+    } else {
+      setDiscountError(null)
+      onSave(form)
+    }
   }
 
   return (
@@ -121,13 +145,34 @@ function TierForm({
             <label key={key} className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
               <input
                 type="checkbox"
-                checked={form.features.includes(key)}
+                checked={form.features.includes(key) || form.features.some(f => f.startsWith(key + ':'))}
                 onChange={() => toggleFeature(key)}
               />
               {key}
             </label>
           ))}
         </div>
+        {teleconsultChecked && (
+          <div className="mt-2">
+            <label className="block text-xs font-semibold text-gray-600 mb-1">
+              Teleconsult Discount (%)
+            </label>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              className="w-32 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              value={discountPct}
+              onChange={(e) => {
+                setDiscountPct(Number(e.target.value))
+                setDiscountError(null)
+              }}
+            />
+            {discountError && (
+              <p className="text-xs text-red-600 mt-1">{discountError}</p>
+            )}
+          </div>
+        )}
       </div>
 
       {error && <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
@@ -140,7 +185,7 @@ function TierForm({
           Cancel
         </button>
         <button
-          onClick={() => onSave(form)}
+          onClick={handleSave}
           disabled={saving || !form.name}
           className="px-4 py-2 text-sm font-semibold bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
         >
