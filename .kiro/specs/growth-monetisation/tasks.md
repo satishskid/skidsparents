@@ -79,7 +79,7 @@ Implement four capabilities in order: DB schema, health score engine, health sco
 
   - [x] 2.9 Git commit: "feat: health score engine + API route"
 
-- [-] 3. Health score display
+- [x] 3. Health score display
   - [x] 3.1 Create `src/components/phr/HealthScoreGauge.tsx`
     - Props: `{ childId: string; token: string }`
     - Fetch from `/api/children/:childId/health-score` on mount
@@ -94,9 +94,9 @@ Implement four capabilities in order: DB schema, health score engine, health sco
     - Only render when `token` is available
     - _Requirements: 4.1, 4.9_
 
-  - [ ] 3.3 Git commit: "feat: HealthScoreGauge component + ChildDashboard integration"
+  - [x] 3.3 Git commit: "feat: HealthScoreGauge component + ChildDashboard integration"
 
-- [-] 4. Subscription utilities
+- [x] 4. Subscription utilities
   - [x] 4.1 Create `src/lib/subscriptions.ts`
     - Implement `getParentFeatures(parentId, db)`: query most recent active `parent_subscriptions` row, parse `features_snapshot_json`; fall back to `['pdf_export', 'health_score_basic']` on no row or DB error
     - Implement `hasFeature(parentId, feature, db)`: call `getParentFeatures` and check inclusion
@@ -132,9 +132,9 @@ Implement four capabilities in order: DB schema, health score engine, health sco
     - Free tier seed row has `amount_cents = 0` and includes `pdf_export`
     - _Requirements: 7.3, 10.1, 10.3_
 
-  - [ ] 4.7 Git commit: "feat: subscription utilities (getParentFeatures, hasFeature)"
+  - [x] 4.7 Git commit: "feat: subscription utilities (getParentFeatures, hasFeature)"
 
-- [-] 5. Admin pricing API routes
+- [x] 5. Admin pricing API routes
   - [x] 5.1 Create `src/pages/api/admin/pricing/tiers.ts`
     - `GET`: return all `pricing_tiers` rows ordered by `created_at`
     - `POST`: validate body (name, amount_cents, features_json array), insert new row, return created tier
@@ -173,9 +173,9 @@ Implement four capabilities in order: DB schema, health score engine, health sco
     - `POST`: create new `parent_subscriptions` row with `features_snapshot_json` copied from tier's current `features_json`; reject reactivation of existing expired/cancelled rows (400 `"Reactivation requires a new payment"`)
     - _Requirements: 8.4, 8.5, 11.3, 11.5, 12.3_
 
-  - [ ] 5.8 Git commit: "feat: admin pricing API routes + subscription endpoints"
+  - [x] 5.8 Git commit: "feat: admin pricing API routes + subscription endpoints"
 
-- [-] 6. Admin pricing UI
+- [x] 6. Admin pricing UI
   - [x] 6.1 Create `src/components/admin/PricingManager.tsx`
     - Fetch and display all tiers in a table: name, monthly price, yearly price, active status, feature keys
     - "New Tier" button opens a modal with `TierForm` (name, description, currency, amount_cents, amount_yearly_cents, is_active toggle)
@@ -189,9 +189,9 @@ Implement four capabilities in order: DB schema, health score engine, health sco
     - Mount `<PricingManager client:load />` inside the existing admin layout
     - _Requirements: 9.1_
 
-  - [ ] 6.3 Git commit: "feat: PricingManager admin UI + pricing admin page"
+  - [x] 6.3 Git commit: "feat: PricingManager admin UI + pricing admin page"
 
-- [-] 7. PDF export component
+- [x] 7. PDF export component
   - [x] 7.1 Install `@react-pdf/renderer` (browser-compatible build) — add to `package.json` dependencies
     - Verify no Node.js-only transitive dependencies are introduced
     - _Requirements: 6.1, 6.3_
@@ -222,9 +222,9 @@ Implement four capabilities in order: DB schema, health score engine, health sco
     - Render `<PhrPdfExport child={child} token={token} features={features} />` in the child header section
     - _Requirements: 7.1, 7.2_
 
-  - [ ] 7.6 Git commit: "feat: PhrPdfExport component + ChildDashboard integration"
+  - [x] 7.6 Git commit: "feat: PhrPdfExport component + ChildDashboard integration"
 
-- [-] 8. Public content navigation fix
+- [x] 8. Public content navigation fix
   - [x] 8.1 Update `src/pages/habits/[habit].astro` to add auth-aware CTA
     - Change the "Open PHR Dashboard" anchor `href` to `#`
     - Add an inline `<script>` that on CTA click checks `localStorage` for a Firebase auth token (key pattern `firebase:authUser:<projectId>:[DEFAULT]`)
@@ -238,9 +238,9 @@ Implement four capabilities in order: DB schema, health score engine, health sco
     - // Feature: growth-monetisation, Property 13: CTA auth-check routing
     - _Requirements: 2.1, 2.2, 2.3_
 
-  - [ ] 8.3 Git commit: "fix: habit page CTA auth-awareness"
+  - [x] 8.3 Git commit: "fix: habit page CTA auth-awareness"
 
-- [ ] 9. Final checkpoint
+- [-] 9. Final checkpoint
   - Run `vitest --run` and confirm all 344+ tests pass (no regressions)
   - Verify Cloudflare Workers compatibility: no `process`, `fs`, `path`, or other Node.js-only APIs imported in any new file
   - Git commit: "chore: final checkpoint — all tests passing"
