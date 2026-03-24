@@ -6,6 +6,7 @@
 import type { APIRoute } from 'astro'
 import { verifyIdToken, extractBearerToken } from '@/lib/firebase/server'
 import { getEnv } from '@/lib/runtime/env'
+import { generateReferralCode } from '@/lib/referral/generateCode'
 
 export const prerender = false
 
@@ -62,12 +63,38 @@ export const POST: APIRoute = async ({ request, locals }) => {
         .run()
     }
 
+    // Generate referral code for new parents (idempotent — AND referral_code IS NULL guard)
+    if (isNew) {
+      const code = await generateReferralCode(decoded.uid)
+      await db
+        .prepare('UPDATE parents SET referral_code = ? WHERE id = ? AND referral_code IS NULL')
+        .bind(code, parentId)
+        .run()
+    }
+
     // Fire-and-forget: generate notifications for this parent on login
     const origin = new URL(request.url).origin
     fetch(`${origin}/api/notifications/generate`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     }).catch(() => {}) // intentionally non-blocking
+
+    // Fire-and-forget: attribute referral if code present in request body
+    if (isNew) {
+      try {
+        const body = await request.clone().json() as { referralCode?: string }
+        const referralCode = body?.referralCode
+        if (referralCode) {
+          fetch(`${origin}/api/referrals/attribute`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ referralCode, refereeParentId: parentId }),
+          }).catch(() => {})
+        }
+      } catch {
+        // body may not be JSON — ignore
+      }
+    }
 
     return new Response(JSON.stringify({ parentId, isNew }), {
       status: 200,

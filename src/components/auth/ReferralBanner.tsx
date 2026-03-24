@@ -1,48 +1,93 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { buildReferralLink } from '@/lib/referral/buildLink'
+
+interface Stats {
+  referralCode: string
+  referralLink: string
+  signupCount: number
+  shareCount: number
+  isChampion: boolean
+}
 
 export default function ReferralBanner() {
-  const { user } = useAuth()
+  const { user, token } = useAuth()
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
 
-  if (!user) return null
+  useEffect(() => {
+    if (!token) { setLoading(false); return }
+    fetch('/api/referrals/stats', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json() as Promise<Stats>)
+      .then(setStats)
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [token])
 
-  // Generate referral code from uid
-  const refCode = user.uid.slice(0, 8)
-  const referralLink = `https://skidsparent.pages.dev/?ref=${refCode}`
-  const shareText = `I use SKIDS Parent to track my child's health — milestones, growth, nutrition, vision & more. Evidence-based tools built for Indian parents. Try it free!\n\n${referralLink}`
+  if (!user || loading || !stats) return null
+
+  const copyLink = buildReferralLink(stats.referralCode, 'copy')
+  const waLink = buildReferralLink(stats.referralCode, 'whatsapp')
+  const shareText = `I use SKIDS Parent to track my child's health — milestones, growth, nutrition, vision & more. Evidence-based tools built for Indian parents. Try it free!\n\n${waLink}`
+
+  function recordShare(platform: 'copy' | 'whatsapp') {
+    if (!token || !stats) return
+    fetch('/api/social-shares', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        platform,
+        contentType: 'referral',
+        contentId: stats.referralCode,
+        shareUrl: platform === 'whatsapp' ? waLink : copyLink,
+        utmCampaign: 'skids_referral',
+      }),
+    }).catch(() => {})
+  }
 
   async function handleCopy() {
     try {
-      await navigator.clipboard.writeText(referralLink)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2500)
+      await navigator.clipboard.writeText(copyLink)
     } catch {
       const ta = document.createElement('textarea')
-      ta.value = referralLink
+      ta.value = copyLink
       document.body.appendChild(ta)
       ta.select()
       document.execCommand('copy')
       document.body.removeChild(ta)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2500)
     }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2500)
+    recordShare('copy')
   }
 
   function handleWhatsApp() {
     window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank')
+    recordShare('whatsapp')
   }
 
   return (
     <div className="rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100 p-5">
+      {/* Champion badge */}
+      {stats.isChampion && (
+        <div className="flex items-center gap-2 mb-3 px-3 py-1.5 rounded-full bg-amber-100 border border-amber-200 w-fit">
+          <span className="text-sm">🏆</span>
+          <span className="text-xs font-bold text-amber-700">SKIDS Champion</span>
+        </div>
+      )}
+
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-lg flex-shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-lg shrink-0">
           🎁
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-bold text-gray-900">Know a parent who'd love this?</h3>
           <p className="mt-1 text-xs text-gray-500 leading-relaxed">
-            Share SKIDS Parent with friends. Help more parents track their child's health journey.
+            Share SKIDS Parent with friends.
+            {stats.signupCount > 0 && ` ${stats.signupCount} parent${stats.signupCount > 1 ? 's' : ''} joined via your link.`}
           </p>
         </div>
       </div>
@@ -50,14 +95,12 @@ export default function ReferralBanner() {
       {/* Referral link */}
       <div className="mt-4 flex items-center gap-2">
         <div className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-white border border-gray-200 text-xs text-gray-600 truncate font-mono">
-          {referralLink}
+          {`parent.skids.clinic/ref/${stats.referralCode}`}
         </div>
         <button
           onClick={handleCopy}
-          className={`flex-shrink-0 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
-            copied
-              ? 'bg-green-600 text-white'
-              : 'bg-gray-900 text-white hover:bg-gray-800'
+          className={`shrink-0 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
+            copied ? 'bg-green-600 text-white' : 'bg-gray-900 text-white hover:bg-gray-800'
           }`}
         >
           {copied ? 'Copied!' : 'Copy'}

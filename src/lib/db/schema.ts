@@ -13,6 +13,8 @@ export const parents = sqliteTable('parents', {
   city: text('city'),
   createdAt: text('created_at').default(sql`(datetime('now'))`),
   onboardingCompleted: integer('onboarding_completed', { mode: 'boolean' }).default(false),
+  referralCode: text('referral_code').unique(),
+  isChampion: integer('is_champion', { mode: 'boolean' }).default(false),
 })
 
 export const children = sqliteTable('children', {
@@ -313,11 +315,20 @@ export const socialShares = sqliteTable('social_shares', {
     enum: ['whatsapp', 'instagram', 'facebook', 'twitter', 'linkedin', 'medium', 'copy'],
   }).notNull(),
   contentType: text('content_type', {
-    enum: ['blog', 'organ', 'habit', 'milestone', 'growth', 'intervention'],
+    enum: ['blog', 'organ', 'habit', 'milestone', 'growth', 'intervention', 'referral'],
   }).notNull(),
   contentId: text('content_id').notNull(),
   shareUrl: text('share_url').notNull(),
   utmCampaign: text('utm_campaign'),
+  createdAt: text('created_at').default(sql`(datetime('now'))`),
+})
+
+// ─── Referrals ─────────────────────────────────────────
+
+export const referrals = sqliteTable('referrals', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  referrerParentId: text('referrer_parent_id').notNull().references(() => parents.id),
+  refereeParentId: text('referee_parent_id').notNull().unique().references(() => parents.id),
   createdAt: text('created_at').default(sql`(datetime('now'))`),
 })
 

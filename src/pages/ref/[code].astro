@@ -1,0 +1,46 @@
+---
+export const prerender = false
+
+import { getEnv } from '@/lib/runtime/env'
+
+const { code } = Astro.params
+const env = getEnv(Astro.locals)
+
+interface ParentRow { id: string }
+let valid = false
+
+if (code) {
+  try {
+    const row = await env.DB.prepare(
+      'SELECT id FROM parents WHERE referral_code = ?'
+    ).bind(code).first<ParentRow>()
+    valid = !!row
+  } catch {
+    valid = false
+  }
+}
+
+if (!valid) {
+  return Astro.redirect('/login')
+}
+
+// Set short-lived cookie so the code survives the redirect
+Astro.response.headers.set(
+  'Set-Cookie',
+  `referralCode=${code}; Path=/; SameSite=Lax; Max-Age=3600`
+)
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SKIDS Parent — Referral</title>
+</head>
+<body>
+  <script define:vars={{ code }}>
+    sessionStorage.setItem('referralCode', code)
+    window.location.href = '/login'
+  </script>
+</body>
+</html>

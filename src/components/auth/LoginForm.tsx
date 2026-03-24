@@ -25,12 +25,15 @@ export default function LoginForm() {
   async function syncAndRedirect(idToken: string) {
     setStep('syncing')
     try {
+      const referralCode = sessionStorage.getItem('referralCode') ?? undefined
       const res = await fetch('/api/auth/session', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${idToken}` },
+        headers: { Authorization: `Bearer ${idToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ referralCode }),
       })
       const data = await res.json() as { isNew?: boolean }
       if (data.isNew) sessionStorage.setItem('skids_is_new', 'true')
+      sessionStorage.removeItem('referralCode')
       const params = new URLSearchParams(window.location.search)
       const redirect = params.get('redirect') || '/me'
       window.location.href = data.isNew ? '/me' : redirect
