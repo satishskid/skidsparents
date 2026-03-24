@@ -6,7 +6,7 @@ Implement four capabilities in order: DB schema, health score engine, health sco
 
 ## Tasks
 
-- [ ] 1. DB schema + migration
+- [x] 1. DB schema + migration
   - [x] 1.1 Add `pricingTiers` and `parentSubscriptions` tables to `src/lib/db/schema.ts`
     - Add `pricingTiers` table definition matching design data model (id, name, description, currency, amount_cents, amount_yearly_cents, features_json, is_active, created_at)
     - Add `parentSubscriptions` table definition (id, parent_id FK→parents.id, tier_id FK→pricing_tiers.id, status enum, started_at, expires_at, payment_id, billing_cycle, features_snapshot_json, created_at)
@@ -19,42 +19,42 @@ Implement four capabilities in order: DB schema, health score engine, health sco
     - Seed the free tier row: `id='free'`, `amount_cents=0`, `features_json='["pdf_export","health_score_basic"]'`
     - _Requirements: 8.1, 8.2, 8.5, 8.6_
 
-  - [ ] 1.3 Git commit: "feat: add pricing_tiers and parent_subscriptions schema + migration"
+  - [x] 1.3 Git commit: "feat: add pricing_tiers and parent_subscriptions schema + migration"
 
-- [ ] 2. Health score engine
-  - [~] 2.1 Create `src/lib/phr/health-score.ts` with pure scoring functions
+- [-] 2. Health score engine
+  - [x] 2.1 Create `src/lib/phr/health-score.ts` with pure scoring functions
     - Define `GrowthInput`, `DevelopmentInput`, `HabitsInput`, `NutritionInput`, `HealthScoreInputs`, `HealthScoreResult` interfaces
     - Implement `computeHealthScore(inputs)`: weight redistribution for absent components, per-component scoring formulas from design, return integer [0, 100]
     - Implement `computeTrend(current, previous)`: returns `'up'` | `'down'` | `'flat'` based on >2 point threshold
     - Implement `getScoreColor(score)`: returns `'red'` | `'amber'` | `'green'` per thresholds 40 / 70
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8_
 
-  - [ ]* 2.2 Write property test — Property 1: Health Score Bounds
+  - [x]* 2.2 Write property test — Property 1: Health Score Bounds
     - File: `src/lib/phr/health-score.test.ts`
     - Use `fc.record` with optional growth/dev/habits/nutrition fields; assert score ∈ [0, 100] and is integer
     - `{ numRuns: 1000 }`
     - // Feature: growth-monetisation, Property 1: output bounds
     - _Requirements: 3.2, 3.3, 3.9, 13.1_
 
-  - [ ]* 2.3 Write property test — Property 2: Weight Invariant
+  - [x]* 2.3 Write property test — Property 2: Weight Invariant
     - File: `src/lib/phr/health-score.test.ts`
     - All four components present; verify effective weights sum to 1.0 by back-calculating from component scores
     - // Feature: growth-monetisation, Property 2: weight invariant
     - _Requirements: 3.1, 3.4, 13.2_
 
-  - [ ]* 2.4 Write property test — Property 3: Color Coding Exhaustive
+  - [x]* 2.4 Write property test — Property 3: Color Coding Exhaustive
     - File: `src/lib/phr/health-score.test.ts`
     - `fc.integer({ min: 0, max: 100 })`; assert `getScoreColor` returns one of the three valid values and matches thresholds
     - // Feature: growth-monetisation, Property 3: color coding
     - _Requirements: 4.2, 4.3, 4.4_
 
-  - [ ]* 2.5 Write property test — Property 4: Trend Computation
+  - [x]* 2.5 Write property test — Property 4: Trend Computation
     - File: `src/lib/phr/health-score.test.ts`
     - `fc.tuple(fc.integer({min:0,max:100}), fc.integer({min:0,max:100}))`; assert up/down/flat rules
     - // Feature: growth-monetisation, Property 4: trend computation
     - _Requirements: 4.5, 4.6, 4.7, 4.8_
 
-  - [ ]* 2.6 Write unit tests for health score engine
+  - [x]* 2.6 Write unit tests for health score engine
     - All four components with known values → expected weighted score
     - Growth-only input → score equals growth component at 100% weight
     - All streaks = 0 → habits component = 0; all streaks = 30 → habits component = 100
@@ -62,7 +62,7 @@ Implement four capabilities in order: DB schema, health score engine, health sco
     - `computeTrend(75, 70)` → `'up'`, `computeTrend(70, 75)` → `'down'`, `computeTrend(70, 71)` → `'flat'`
     - _Requirements: 3.1–3.9, 4.2–4.8_
 
-  - [~] 2.7 Create API route `src/pages/api/children/[childId]/health-score.ts`
+  - [x] 2.7 Create API route `src/pages/api/children/[childId]/health-score.ts`
     - Authenticate via `getParentId(request, env)`; return 401 if unauthenticated
     - Verify child belongs to parent; return 403 if not
     - Query D1: most recent `growth_records.who_zscore_json`, milestone counts (achieved vs eligible), latest `habits_log.streak_days` per category, most recent `parent_observations` with `category='nutrition'`
@@ -77,7 +77,7 @@ Implement four capabilities in order: DB schema, health score engine, health sco
     - Valid request with mocked D1 → 200 with score ∈ [0, 100]
     - _Requirements: 3.2_
 
-  - [ ] 2.9 Git commit: "feat: health score engine + API route"
+  - [-] 2.9 Git commit: "feat: health score engine + API route"
 
 - [ ] 3. Health score display
   - [~] 3.1 Create `src/components/phr/HealthScoreGauge.tsx`
