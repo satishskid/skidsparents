@@ -427,6 +427,33 @@ export const pushSubscriptions = sqliteTable('push_subscriptions', {
   isActive: integer('is_active', { mode: 'boolean' }).default(true),
 })
 
+// ─── Tiered Pricing ───────────────────────────────────
+
+export const pricingTiers = sqliteTable('pricing_tiers', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  name: text('name').notNull(),
+  description: text('description'),
+  currency: text('currency').default('INR'),
+  amountCents: integer('amount_cents').notNull().default(0),
+  amountYearlyCents: integer('amount_yearly_cents').notNull().default(0),
+  featuresJson: text('features_json').notNull().default('[]'),
+  isActive: integer('is_active', { mode: 'boolean' }).default(true),
+  createdAt: text('created_at').default(sql`(datetime('now'))`),
+})
+
+export const parentSubscriptions = sqliteTable('parent_subscriptions', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  parentId: text('parent_id').notNull().references(() => parents.id),
+  tierId: text('tier_id').notNull().references(() => pricingTiers.id),
+  status: text('status', { enum: ['active', 'expired', 'cancelled'] }).default('active'),
+  startedAt: text('started_at').default(sql`(datetime('now'))`),
+  expiresAt: text('expires_at'),
+  paymentId: text('payment_id'),
+  billingCycle: text('billing_cycle', { enum: ['monthly', 'yearly'] }).default('monthly'),
+  featuresSnapshotJson: text('features_snapshot_json').notNull().default('[]'),
+  createdAt: text('created_at').default(sql`(datetime('now'))`),
+})
+
 // ─── Derived Types ─────────────────────────────────────
 
 export type NotificationType = typeof notifications.type.enumValues[number]
