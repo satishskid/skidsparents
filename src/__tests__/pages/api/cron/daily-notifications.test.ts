@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { POST } from './daily-notifications'
+import { POST } from '../../../../pages/api/cron/daily-notifications'
 
 // ─── Mocks ─────────────────────────────────────────────────────────────────
 

@@ -41,7 +41,7 @@ describe('PhrPdfExport — property tests', () => {
     fc.assert(
       fc.property(
         fc.string({ minLength: 1, maxLength: 50 }),
-        fc.date({ min: new Date('2020-01-01'), max: new Date('2030-12-31') }),
+        fc.date({ min: new Date('2020-01-01T00:00:00.000Z'), max: new Date('2030-12-31T23:59:59.999Z'), noInvalidDate: true }),
         (name, date) => {
           const filename = buildFilename(name, date)
           const sanitised = sanitiseName(name)

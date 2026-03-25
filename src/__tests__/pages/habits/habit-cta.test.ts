@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import * as fc from 'fast-check'
-import { ctaAuthCheck, type StorageLike } from './habit-cta'
+import { ctaAuthCheck, type StorageLike } from '../../../lib/habits/habit-cta'
 
 function mockStorage(keys: string[]): StorageLike {
   return {

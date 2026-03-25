@@ -296,8 +296,10 @@ export function ChartCanvas({ series, points, xDomain, metric, ageMonths, onPoin
           label={{ value: yUnit, angle: -90, position: 'insideLeft', offset: 10, fontSize: 10 }}
         />
         <Tooltip
-          formatter={(val: number, name: string) => [val.toFixed(1), name]}
-          labelFormatter={(label: number) => `${label} months`}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          formatter={(val: any, name: any) => [typeof val === 'number' ? val.toFixed(1) : String(val ?? ''), name] as any}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          labelFormatter={(label: any) => `${label} months`}
         />
 
         {/* Percentile bands */}
@@ -335,11 +337,11 @@ export function ChartCanvas({ series, points, xDomain, metric, ageMonths, onPoin
           dataKey="value"
           stroke="#16a34a"
           strokeWidth={2}
-          dot={(props: { cx: number; cy: number; payload: ChartPoint }) => (
+          dot={(props: { cx?: number; cy?: number; payload: ChartPoint }) => (
             <Dot
               key={`dot-${props.payload.ageMonths}`}
-              cx={props.cx}
-              cy={props.cy}
+              cx={props.cx ?? 0}
+              cy={props.cy ?? 0}
               r={5}
               fill="#16a34a"
               stroke="#fff"
@@ -433,7 +435,17 @@ export default function GrowthChart({ childId, childName, dob, sex, token }: Gro
   const series = whoData ? whoData.getWhoSeries(activeMetric, resolvedSex) : []
 
   const rawPoints: ChartPoint[] = whoData
-    ? whoData.toChartPoints(records, activeMetric, dob).map((p) => ({
+    ? whoData.toChartPoints(
+        records.map((r) => ({
+          date: r.date,
+          weightKg: r.weight_kg ?? null,
+          heightCm: r.height_cm ?? null,
+          headCm: r.head_circ_cm ?? null,
+          bmiKgm2: r.bmi ?? null,
+        })),
+        activeMetric,
+        dob,
+      ).map((p) => ({
         ...p,
         percentileRank: whoData.interpolatePercentile(p.ageMonths, p.value, series),
       }))

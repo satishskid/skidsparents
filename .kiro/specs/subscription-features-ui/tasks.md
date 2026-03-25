@@ -13,18 +13,18 @@ Implement three user-facing capabilities on top of the existing `growth-monetisa
     - `serializeDiscountPct(n)` returns `"teleconsult_discount_pct:${Math.round(n)}"`
     - _Requirements: 6.2, 6.3, 6.5, 7.3, 9.3, 9.4, 9.5_
 
-  - [ ]* 1.2 Write unit tests for discount utilities in `src/lib/pricing/discount.test.ts`
+  - [x]* 1.2 Write unit tests for discount utilities in `src/lib/pricing/discount.test.ts`
     - `computeDiscountedPrice(10000, 20)` → `8000`; `(10000, 0)` → `10000`; `(10000, 100)` → `0`; `(999, 33)` → `669`
     - `parseDiscountPct(['teleconsult_discount_pct:20'])` → `20`; `([])` → `0`; `(['teleconsult_discount_pct:abc'])` → `0`; `(['teleconsult_discount_pct:150'])` → `0`
     - `serializeDiscountPct(20)` → `'teleconsult_discount_pct:20'`
     - _Requirements: 6.2, 6.3, 6.5, 7.3_
 
-  - [ ]* 1.3 Write property test: discount config round-trip (Property 4)
+  - [x]* 1.3 Write property test: discount config round-trip (Property 4)
     - `// Feature: subscription-features-ui, Property 4: Discount config round-trip`
     - `fc.integer({ min: 0, max: 100 })` → assert `parseDiscountPct([serializeDiscountPct(N)]) === N`
     - _Requirements: 6.2, 6.3, 9.5_
 
-  - [ ]* 1.4 Write property tests: discount computation bounds and identity (Property 5)
+  - [x]* 1.4 Write property tests: discount computation bounds and identity (Property 5)
     - `// Feature: subscription-features-ui, Property 5: Discount computation bounds and identity`
     - Bounds: `fc.tuple(fc.integer({ min: 0 }), fc.integer({ min: 0, max: 100 }))` with `{ numRuns: 500 }` → assert `0 ≤ result ≤ priceCents`
     - Identity: `fc.integer({ min: 0 })` → assert `computeDiscountedPrice(p, 0) === p`
@@ -44,14 +44,14 @@ Implement three user-facing capabilities on top of the existing `growth-monetisa
     - Return 200 `{ ok: true }` on success; 500 on DB error
     - _Requirements: 2.4, 2.6, 2.7, 3.1, 3.2, 3.3_
 
-  - [ ]* 3.2 Write unit tests for cancel endpoint in `src/pages/api/subscriptions/cancel.test.ts`
+  - [x]* 3.2 Write unit tests for cancel endpoint in `src/pages/api/subscriptions/cancel.test.ts`
     - Unauthenticated request → 401
     - No active subscription → 400 `{ error: 'no_active_subscription' }`
     - Active subscription → 200 `{ ok: true }`, status updated to `'cancelled'`
     - Row with `status = 'expired'` → 400, row unchanged
     - _Requirements: 2.4, 2.6, 2.7, 3.1_
 
-  - [ ]* 3.3 Write property test: cancel column isolation (Property 1)
+  - [x]* 3.3 Write property test: cancel column isolation (Property 1)
     - `// Feature: subscription-features-ui, Property 1: Cancel column isolation`
     - Generate random subscription rows with `fc.record`; after cancel, assert only `status` changed and all other columns are byte-for-byte identical
     - `fc.constantFrom('expired', 'cancelled')` as initial status → assert 400 returned and row unchanged
@@ -70,7 +70,7 @@ Implement three user-facing capabilities on top of the existing `growth-monetisa
     - Cancel flow: inline confirmation → `POST /api/subscriptions/cancel` → on success refetch; on error show inline error
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 2.5, 2.8_
 
-  - [ ]* 5.2 Write unit tests for `SubscriptionCard` in `src/components/subscription/SubscriptionCard.test.tsx`
+  - [x]* 5.2 Write unit tests for `SubscriptionCard` in `src/components/subscription/SubscriptionCard.test.tsx`
     - `subscription = null` → renders "Free Plan"
     - `subscription.status = 'active'` → renders "Cancel Plan" button
     - `subscription.status = 'cancelled'` → does not render "Cancel Plan" button

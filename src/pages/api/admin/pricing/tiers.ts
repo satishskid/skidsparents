@@ -10,7 +10,7 @@ function isAdminAuthorized(request: Request, adminKey: string): boolean {
 
 export const GET: APIRoute = async ({ request, locals }) => {
   const env = getEnv(locals)
-  if (!isAdminAuthorized(request, env.ADMIN_KEY)) {
+  if (!isAdminAuthorized(request, env.ADMIN_KEY ?? '')) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
   }
 
@@ -38,7 +38,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const env = getEnv(locals)
-  if (!isAdminAuthorized(request, env.ADMIN_KEY)) {
+  if (!isAdminAuthorized(request, env.ADMIN_KEY ?? '')) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
   }
 

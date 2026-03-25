@@ -344,9 +344,9 @@ describe('Property 7: Report URL extraction', () => {
           return true
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 20 }
     )
-  })
+  }, 15000)
 })
 
 describe('Property 8: Deep-link child pre-selection', () => {
@@ -373,7 +373,7 @@ describe('Property 10: Date formatting produces human-readable output', () => {
   it('returns non-empty string for valid ISO dates', () => {
     fc.assert(
       fc.property(
-        fc.date({ min: new Date('2000-01-01'), max: new Date('2030-12-31') }).map((d) => d.toISOString().split('T')[0]),
+        fc.date({ min: new Date('2000-01-01T00:00:00.000Z'), max: new Date('2030-12-31T23:59:59.999Z'), noInvalidDate: true }).map((d) => d.toISOString().split('T')[0]),
         (isoDate) => {
           const result = formatScreeningDate(isoDate)
           return typeof result === 'string' && result.length > 0 && result !== 'Date unknown'

@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { POST } from './generate'
+import { POST } from '../../../../pages/api/notifications/generate'
 
 // ─── Mocks ─────────────────────────────────────────────────────────────────
 
