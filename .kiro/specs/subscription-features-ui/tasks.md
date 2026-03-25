@@ -31,7 +31,7 @@ Implement three user-facing capabilities on top of the existing `growth-monetisa
     - Annihilation: `fc.integer({ min: 0 })` → assert `computeDiscountedPrice(p, 100) === 0`
     - _Requirements: 7.3, 9.3, 9.4_
 
-- [ ] 2. Checkpoint — commit phase 1
+- [x] 2. Checkpoint — commit phase 1
   - Ensure all tests pass, ask the user if questions arise.
   - Git commit: `feat: add computeDiscountedPrice, parseDiscountPct, serializeDiscountPct with tests`
 
@@ -57,7 +57,7 @@ Implement three user-facing capabilities on top of the existing `growth-monetisa
     - `fc.constantFrom('expired', 'cancelled')` as initial status → assert 400 returned and row unchanged
     - _Requirements: 3.1, 3.2, 9.1_
 
-- [ ] 4. Checkpoint — commit phase 2
+- [x] 4. Checkpoint — commit phase 2
   - Ensure all tests pass, ask the user if questions arise.
   - Git commit: `feat: add POST /api/subscriptions/cancel endpoint with tests`
 
@@ -83,7 +83,7 @@ Implement three user-facing capabilities on top of the existing `growth-monetisa
   - Render only when `token` is available
   - _Requirements: 1.1, 1.4_
 
-- [ ] 7. Checkpoint — commit phase 3
+- [x] 7. Checkpoint — commit phase 3
   - Ensure all tests pass, ask the user if questions arise.
   - Git commit: `feat: add SubscriptionCard component and integrate into UserProfile`
 
@@ -109,7 +109,7 @@ Implement three user-facing capabilities on top of the existing `growth-monetisa
   - `ChildDashboard` already fetches `features` from `GET /api/subscriptions/me`; pass it as `features={features}` to `<HealthScoreGauge>`
   - _Requirements: 4.1, 4.3_
 
-- [ ] 10. Checkpoint — commit phase 4
+- [x] 10. Checkpoint — commit phase 4
   - Ensure all tests pass, ask the user if questions arise.
   - Git commit: `feat: add HealthScoreGauge detailed view with feature gating`
 
