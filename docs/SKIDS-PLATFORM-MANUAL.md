@@ -256,3 +256,33 @@ skids.clinic                         → Marketing site
 ---
 
 *Generated March 25, 2026 | SKIDS Health Technologies*
+
+---
+
+## Cloudflare Pages — AI Binding Setup
+
+The Dr. SKIDS chat feature requires a **Cloudflare Workers AI binding** to be configured in the Cloudflare Pages project. Without this binding, the Chat API will throw `"No AI runtime available"` and the ChatWidget will display an AI unavailable error to users.
+
+### Steps to configure
+
+1. Open the [Cloudflare Dashboard](https://dash.cloudflare.com) and navigate to **Workers & Pages**.
+2. Select the **skidsparents** Pages project.
+3. Go to **Settings → Functions → Bindings**.
+4. Under **AI Bindings**, click **Add binding**.
+5. Set the **Variable name** to `AI` (exactly, case-sensitive).
+6. The AI binding is a **Cloudflare-managed binding** — it requires no API key, secret value, or external account. Cloudflare provisions it automatically.
+7. Click **Save** and trigger a new deployment (or redeploy the latest build) for the binding to take effect.
+
+### Verification
+
+After deployment, open the Timeline page and send a test message to Dr. SKIDS. A successful response confirms the binding is active. If you still see the AI unavailable message, check that:
+
+- The variable name is exactly `AI` (not `ai` or `Workers_AI`)
+- The deployment was triggered **after** saving the binding (bindings are injected at build/deploy time)
+- The Cloudflare account has Workers AI enabled (it is included in all paid plans and the free tier with limits)
+
+### Notes
+
+- The AI binding is separate from the `KV` namespace binding (used for rate limiting) and the `DB` D1 binding. All three must be configured for full functionality.
+- Without the `AI` binding, only the premium AI paths (Gemini, Claude) remain functional for premium users. Free-tier users will see the unavailable error.
+- The Workers AI models used are `@cf/meta/llama-4-scout-17b-16e-instruct` (primary) and `@cf/meta/llama-3.1-8b-instruct` (fallback). Both are available on all Cloudflare plans with no additional configuration.
