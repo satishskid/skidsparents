@@ -54,6 +54,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
   let skipped = 0
 
   try {
+    // Ensure system parent exists
+    const systemParent = await db.prepare('SELECT id FROM parents WHERE id = ?').bind('system').first()
+    if (!systemParent) {
+      await db.prepare(
+        `INSERT INTO parents (id, firebase_uid, name, email, created_at, onboarding_completed)
+         VALUES ('system', 'system-blog-seeder', 'SKIDS Team', 'team@skids.clinic', datetime('now'), 1)`
+      ).run()
+    }
+
     for (const article of articles) {
       if (!article.blogId || !article.title) { skipped++; continue }
 
@@ -68,16 +77,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const groupId = mapBlogToGroup(article.category || '', article.tags || [])
       const content = article.summary || (article.content ? article.content.slice(0, 500) : article.title)
 
-      // Use a system parent_id (create if doesn't exist)
-      const systemParentId = 'system-blog-seeder'
-      
       await db.prepare(
         `INSERT INTO forum_posts (id, group_id, parent_id, author_name, title, content, status, pinned, source, blog_slug, created_at, updated_at)
-         VALUES (?, ?, ?, 'SKIDS Team', ?, ?, 'approved', 1, 'blog', ?, datetime('now'), datetime('now'))`
+         VALUES (?, ?, 'system', 'SKIDS Team', ?, ?, 'approved', 1, 'blog', ?, datetime('now'), datetime('now'))`
       ).bind(
         crypto.randomUUID(),
         groupId,
-        systemParentId,
         article.title.slice(0, 200),
         content.slice(0, 5000),
         article.blogId
