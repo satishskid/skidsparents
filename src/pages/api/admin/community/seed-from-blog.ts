@@ -70,7 +70,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       await db.prepare(
         `INSERT INTO forum_posts (id, group_id, parent_id, author_name, title, content, status, pinned, source, blog_slug, created_at, updated_at)
-         VALUES (?, ?, 'system', 'SKIDS Team', ?, ?, 'approved', 1, 'blog', ?, datetime('now'), datetime('now'))`
+         VALUES (?, ?, NULL, 'SKIDS Team', ?, ?, 'approved', 1, 'blog', ?, datetime('now'), datetime('now'))`
       ).bind(
         crypto.randomUUID(),
         groupId,
