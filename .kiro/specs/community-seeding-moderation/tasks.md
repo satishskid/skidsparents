@@ -6,13 +6,13 @@ Extend the existing forum schema with moderation metadata, implement admin seedi
 
 ## Tasks
 
-- [ ] 1. Database migration and schema update
+- [x] 1. Database migration and schema update
   - Create `migrations/0008_community_moderation.sql` with `ALTER TABLE forum_posts ADD COLUMN` statements for `status`, `pinned`, `source`, `blog_slug`, and the composite index
   - Update `src/lib/db/schema.ts` to add `status`, `pinned`, `source`, `blogSlug` fields to the `forumPosts` Drizzle table definition
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
 
-- [ ] 2. Blog-to-group mapping utility
-  - [ ] 2.1 Implement `mapBlogToGroup(category: string, tags: string[]): string` in `src/lib/community/mapBlogToGroup.ts` using the keyword priority table from the design
+- [x] 2. Blog-to-group mapping utility
+  - [x] 2.1 Implement `mapBlogToGroup(category: string, tags: string[]): string` in `src/lib/community/mapBlogToGroup.ts` using the keyword priority table from the design
     - _Requirements: 2.2_
 
   - [ ]* 2.2 Write property test for blog-to-group mapping
@@ -20,8 +20,8 @@ Extend the existing forum schema with moderation metadata, implement admin seedi
     - **Validates: Requirements 2.2**
     - File: `src/__tests__/community/mapBlogToGroup.test.ts`
 
-- [ ] 3. Blog seeding endpoint
-  - [ ] 3.1 Implement `src/pages/api/admin/community/seed-from-blog.ts` — fetch Blog_API, map each article, skip existing `blog_slug`, insert approved pinned posts, return `{ seeded, skipped, total }`
+- [x] 3. Blog seeding endpoint
+  - [x] 3.1 Implement `src/pages/api/admin/community/seed-from-blog.ts` — fetch Blog_API, map each article, skip existing `blog_slug`, insert approved pinned posts, return `{ seeded, skipped, total }`
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7_
 
   - [ ]* 3.2 Write property test for seeded post field invariants
@@ -47,7 +47,7 @@ Extend the existing forum schema with moderation metadata, implement admin seedi
 - [ ] 4. Checkpoint — ensure migration applies cleanly and seeder unit tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 5. Update `POST /api/forum/posts` to default to pending status
+- [x] 5. Update `POST /api/forum/posts` to default to pending status
   - Modify `src/pages/api/forum/posts.ts` POST handler to insert with `status = 'pending'` and skip `post_count` increment
   - Return HTTP 201 with the post object including `status: 'pending'`
   - Return HTTP 401 when parent is not authenticated
@@ -63,7 +63,7 @@ Extend the existing forum schema with moderation metadata, implement admin seedi
     - **Validates: Requirements 3.3**
     - File: `src/__tests__/community/postCount.test.ts`
 
-- [ ] 6. Update `GET /api/forum/posts` for visibility, ordering, and status flags
+- [x] 6. Update `GET /api/forum/posts` for visibility, ordering, and status flags
   - Modify `src/pages/api/forum/posts.ts` GET handler to:
     - Return only `approved` posts for unauthenticated callers
     - Return `approved` + own `pending` + own `rejected` posts for authenticated parents
@@ -92,7 +92,7 @@ Extend the existing forum schema with moderation metadata, implement admin seedi
     - **Validates: Requirements 4.3, 7.2**
     - File: `src/__tests__/community/postFlags.test.ts`
 
-- [ ] 7. Update `GET /api/forum/groups` to count only approved posts
+- [x] 7. Update `GET /api/forum/groups` to count only approved posts
   - Modify `src/pages/api/forum/groups.ts` to compute `post_count` from a `COUNT` of `forum_posts` where `status = 'approved'` per group, rather than reading the stored column
   - _Requirements: 8.1_
 
@@ -104,19 +104,19 @@ Extend the existing forum schema with moderation metadata, implement admin seedi
 - [ ] 8. Checkpoint — ensure public forum API tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 9. Admin moderation API endpoints
-  - [ ] 9.1 Implement `src/pages/api/admin/community/posts/index.ts`
+- [x] 9. Admin moderation API endpoints
+  - [x] 9.1 Implement `src/pages/api/admin/community/posts/index.ts`
     - GET: return all `pending` posts
     - POST: create a post with `status = 'approved'`, increment group `post_count`, return HTTP 201
     - Require valid `ADMIN_KEY`; return HTTP 401 otherwise
     - _Requirements: 5.2, 5.6, 11.1, 11.2, 11.3_
 
-  - [ ] 9.2 Implement `src/pages/api/admin/community/posts/[id]/approve.ts`
+  - [x] 9.2 Implement `src/pages/api/admin/community/posts/[id]/approve.ts`
     - Set `status = 'approved'`, increment group `post_count` by 1, return HTTP 200 with updated post
     - Return HTTP 401 without valid `ADMIN_KEY`; HTTP 404 if post not found
     - _Requirements: 6.1, 6.3, 6.4_
 
-  - [ ] 9.3 Implement `src/pages/api/admin/community/posts/[id]/reject.ts`
+  - [x] 9.3 Implement `src/pages/api/admin/community/posts/[id]/reject.ts`
     - Set `status = 'rejected'`, decrement group `post_count` by 1 (floor 0), return HTTP 200 with updated post
     - Return HTTP 401 without valid `ADMIN_KEY`; HTTP 404 if post not found
     - _Requirements: 6.2, 6.3, 6.4_
@@ -141,7 +141,7 @@ Extend the existing forum schema with moderation metadata, implement admin seedi
     - Test HTTP 404 for unknown post ID on both endpoints
     - _Requirements: 6.3, 6.4_
 
-- [ ] 10. Block reactions on non-approved posts
+- [x] 10. Block reactions on non-approved posts
   - Modify the forum likes/reactions API handler to check `status = 'approved'` before recording a reaction; return HTTP 403 with `{ error: 'Reactions are only allowed on approved posts' }` otherwise
   - _Requirements: 9.2, 9.3_
 
@@ -150,8 +150,8 @@ Extend the existing forum schema with moderation metadata, implement admin seedi
     - **Validates: Requirements 9.2, 9.3**
     - File: `src/__tests__/community/reactions.test.ts`
 
-- [ ] 11. Admin moderation UI
-  - [ ] 11.1 Create `src/components/admin/CommunityModerationPanel.tsx`
+- [-] 11. Admin moderation UI
+  - [x] 11.1 Create `src/components/admin/CommunityModerationPanel.tsx`
     - Fetch and display pending posts (title, content preview, author name, group name, submission date)
     - Approve button calls `POST /api/admin/community/posts/:id/approve` and removes post from list
     - Reject button calls `POST /api/admin/community/posts/:id/reject` and removes post from list
@@ -169,7 +169,7 @@ Extend the existing forum schema with moderation metadata, implement admin seedi
     - Test admin panel accessible at /admin/community
     - _Requirements: 5.1, 5.2, 5.5_
 
-- [ ] 12. Update CreatePostForm confirmation message
+- [x] 12. Update CreatePostForm confirmation message
   - Modify `src/components/community/CreatePostForm.tsx` to display "Your post has been submitted and is awaiting review." on successful submission
   - _Requirements: 3.4_
 
@@ -177,7 +177,7 @@ Extend the existing forum schema with moderation metadata, implement admin seedi
     - Test that the "awaiting review" message renders after successful POST
     - _Requirements: 3.4_
 
-- [ ] 13. Update post card UI for rejected posts
+- [x] 13. Update post card UI for rejected posts
   - Modify the community post card component to display "Your post was not approved" label when `isRejected: true` is present on a post returned to its author
   - _Requirements: 7.3_
 

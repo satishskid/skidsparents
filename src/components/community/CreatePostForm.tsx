@@ -12,6 +12,7 @@ export default function CreatePostForm({ groupId, onSuccess }: Props) {
   const [isAnonymous, setIsAnonymous] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [submitted, setSubmitted] = useState(false)
 
   const titleError = title.length > 200 ? 'Title must be 200 characters or less' : null
   const contentError = content.length > 5000 ? 'Content must be 5000 characters or less' : null
@@ -40,6 +41,7 @@ export default function CreatePostForm({ groupId, onSuccess }: Props) {
       setTitle('')
       setContent('')
       setIsAnonymous(false)
+      setSubmitted(true)
       onSuccess?.(data.post)
     } catch (e: unknown) {
       setError(e instanceof Error ? (e.message || 'Something went wrong') : 'Something went wrong')
@@ -51,6 +53,12 @@ export default function CreatePostForm({ groupId, onSuccess }: Props) {
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
       <h3 className="font-semibold text-gray-900">Start a Discussion</h3>
+
+      {submitted && (
+        <div className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">
+          Your post has been submitted and is awaiting review.
+        </div>
+      )}
 
       {error && (
         <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</div>

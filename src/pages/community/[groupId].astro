@@ -122,8 +122,16 @@ const { groupId } = Astro.params
         return
       }
 
-      // Reload posts
-      await loadPosts()
+      // Show confirmation and reload
+      const postsListEl = document.getElementById('posts-list')
+      if (postsListEl) {
+        const notice = document.createElement('div')
+        notice.className = 'bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-700 mb-4'
+        notice.textContent = 'Your post has been submitted and is awaiting review.'
+        postsListEl.prepend(notice)
+      }
+      document.getElementById('new-post-form')?.classList.add('hidden')
+      document.getElementById('new-post-btn')?.classList.remove('hidden')
     } catch (e) {
       alert('Failed to post. Please try again.')
     } finally {
@@ -133,15 +141,19 @@ const { groupId } = Astro.params
   }
 
   function postCard(p: any) {
+    const pinnedBadge = p.pinned ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium mr-2">📌 Pinned</span>' : ''
+    const pendingBadge = p.isPending ? '<span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">⏳ Awaiting review</span>' : ''
+    const rejectedBadge = p.isRejected ? '<span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">❌ Your post was not approved</span>' : ''
     return `
-      <a href="/community/${groupId}/${p.id}" class="block bg-white rounded-xl border border-gray-200 p-5 hover:border-green-400 hover:shadow-sm transition-all">
+      <a href="/community/${groupId}/${p.id}" class="block bg-white rounded-xl border ${p.isRejected ? 'border-red-200' : p.isPending ? 'border-amber-200' : 'border-gray-200'} p-5 hover:border-green-400 hover:shadow-sm transition-all">
+        <div class="flex items-center gap-2 mb-2">${pinnedBadge}${pendingBadge}${rejectedBadge}</div>
         <h3 class="font-semibold text-gray-900 mb-1">${escapeHtml(p.title)}</h3>
         <p class="text-sm text-gray-600 line-clamp-2 mb-3">${escapeHtml(p.content)}</p>
         <div class="flex items-center gap-4 text-xs text-gray-400">
           <span>by ${escapeHtml(p.authorName)}</span>
           <span>❤️ ${p.likes || 0}</span>
           <span>💬 ${p.commentCount || 0}</span>
-          <span>${new Date(p.createdAt).toLocaleDateString('en-IN')}</span>
+          <span>${new Date(p.createdAt || p.created_at).toLocaleDateString('en-IN')}</span>
         </div>
       </a>
     `

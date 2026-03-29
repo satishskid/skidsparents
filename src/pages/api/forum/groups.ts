@@ -41,7 +41,21 @@ export async function GET({ locals }: APIContext) {
       groups = await db.select().from(forumGroups).all()
     }
 
-    return new Response(JSON.stringify({ groups }))
+    // Compute post_count from approved posts only
+    const countResult = await env.DB.prepare(
+      `SELECT group_id, COUNT(*) as cnt FROM forum_posts WHERE status = 'approved' GROUP BY group_id`
+    ).all()
+    const countMap: Record<string, number> = {}
+    for (const row of (countResult.results ?? []) as any[]) {
+      countMap[row.group_id] = row.cnt
+    }
+
+    const groupsWithCount = groups.map(g => ({
+      ...g,
+      postCount: countMap[g.id] ?? 0,
+    }))
+
+    return new Response(JSON.stringify({ groups: groupsWithCount }))
   } catch (error) {
     console.error('Forum groups error:', error)
     return new Response(JSON.stringify({ error: 'Failed to fetch groups' }), { status: 500 })

@@ -1,0 +1,23 @@
+---
+export const prerender = false
+import CommunityModerationPanel from '@/components/admin/CommunityModerationPanel'
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SKIDS Admin — Community Moderation</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body class="min-h-screen bg-gray-50">
+  <div class="max-w-3xl mx-auto py-8 px-4">
+    <div class="mb-6">
+      <a href="/admin" class="text-sm text-green-600 hover:underline">← Admin</a>
+      <span class="text-sm text-gray-400 mx-2">/</span>
+      <span class="text-sm text-gray-600">Community Moderation</span>
+    </div>
+    <CommunityModerationPanel client:load />
+  </div>
+</body>
+</html>

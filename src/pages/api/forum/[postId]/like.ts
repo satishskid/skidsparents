@@ -19,6 +19,11 @@ export async function POST({ request, locals, params }: APIContext) {
   const post = await db.select().from(forumPosts).where(eq(forumPosts.id, postId!)).get()
   if (!post) return new Response(JSON.stringify({ error: 'Post not found' }), { status: 404 })
 
+  // Only allow reactions on approved posts
+  if (post.status !== 'approved') {
+    return new Response(JSON.stringify({ error: 'Reactions are only allowed on approved posts' }), { status: 403 })
+  }
+
   // Check for duplicate like
   const existing = await db
     .select()

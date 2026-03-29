@@ -272,6 +272,10 @@ export const forumPosts = sqliteTable('forum_posts', {
   likes: integer('likes').default(0),
   commentCount: integer('comment_count').default(0),
   isHidden: integer('is_hidden', { mode: 'boolean' }).default(false),
+  status: text('status', { enum: ['pending', 'approved', 'rejected'] }).notNull().default('approved'),
+  pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
+  source: text('source'),
+  blogSlug: text('blog_slug'),
   createdAt: text('created_at').default(sql`(datetime('now'))`),
   updatedAt: text('updated_at').default(sql`(datetime('now'))`),
 })
