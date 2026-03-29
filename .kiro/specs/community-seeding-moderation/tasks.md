@@ -181,7 +181,7 @@ Extend the existing forum schema with moderation metadata, implement admin seedi
   - Modify the community post card component to display "Your post was not approved" label when `isRejected: true` is present on a post returned to its author
   - _Requirements: 7.3_
 
-- [ ] 14. Final checkpoint — ensure all tests pass
+- [x] 14. Final checkpoint — ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

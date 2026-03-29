@@ -44,7 +44,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
     const data = await res.json() as BlogArticle[] | { blogs?: BlogArticle[]; items?: BlogArticle[] }
     articles = Array.isArray(data) ? data : (data.blogs ?? data.items ?? [])
-  } catch {
+  } catch (err) {
+    console.error('Blog API fetch error:', err)
     return new Response(JSON.stringify({ error: 'Blog API returned invalid response' }), { status: 502 })
   }
 
@@ -52,41 +53,51 @@ export const POST: APIRoute = async ({ request, locals }) => {
   let seeded = 0
   let skipped = 0
 
-  for (const article of articles) {
-    if (!article.blogId || !article.title) { skipped++; continue }
+  try {
+    for (const article of articles) {
+      if (!article.blogId || !article.title) { skipped++; continue }
 
-    // Check if already seeded
-    const existing = await db
-      .prepare('SELECT id FROM forum_posts WHERE blog_slug = ?')
-      .bind(article.blogId)
-      .first()
+      // Check if already seeded
+      const existing = await db
+        .prepare('SELECT id FROM forum_posts WHERE blog_slug = ?')
+        .bind(article.blogId)
+        .first()
 
-    if (existing) { skipped++; continue }
+      if (existing) { skipped++; continue }
 
-    const groupId = mapBlogToGroup(article.category || '', article.tags || [])
-    const content = article.summary || (article.content ? article.content.slice(0, 500) : article.title)
+      const groupId = mapBlogToGroup(article.category || '', article.tags || [])
+      const content = article.summary || (article.content ? article.content.slice(0, 500) : article.title)
 
-    await db.prepare(
-      `INSERT INTO forum_posts (id, group_id, parent_id, author_name, title, content, status, pinned, source, blog_slug, created_at, updated_at)
-       VALUES (?, ?, 'system', 'SKIDS Team', ?, ?, 'approved', 1, 'blog', ?, datetime('now'), datetime('now'))`
-    ).bind(
-      crypto.randomUUID(),
-      groupId,
-      article.title.slice(0, 200),
-      content.slice(0, 5000),
-      article.blogId
-    ).run()
+      await db.prepare(
+        `INSERT INTO forum_posts (id, group_id, parent_id, author_name, title, content, status, pinned, source, blog_slug, created_at, updated_at)
+         VALUES (?, ?, 'system', 'SKIDS Team', ?, ?, 'approved', 1, 'blog', ?, datetime('now'), datetime('now'))`
+      ).bind(
+        crypto.randomUUID(),
+        groupId,
+        article.title.slice(0, 200),
+        content.slice(0, 5000),
+        article.blogId
+      ).run()
 
-    // Increment group post count
-    await db.prepare(
-      'UPDATE forum_groups SET post_count = post_count + 1 WHERE id = ?'
-    ).bind(groupId).run()
+      // Increment group post count
+      await db.prepare(
+        'UPDATE forum_groups SET post_count = post_count + 1 WHERE id = ?'
+      ).bind(groupId).run()
 
-    seeded++
+      seeded++
+    }
+
+    return new Response(JSON.stringify({ seeded, skipped, total: articles.length }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  } catch (err) {
+    console.error('Database seeding error:', err)
+    return new Response(JSON.stringify({ 
+      error: 'Database error during seeding', 
+      details: err instanceof Error ? err.message : String(err),
+      seeded,
+      skipped
+    }), { status: 500 })
   }
-
-  return new Response(JSON.stringify({ seeded, skipped, total: articles.length }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  })
 }
