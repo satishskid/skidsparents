@@ -13,10 +13,10 @@ import { runWorkersAI, runGemini, runGroq, runClaude, type AIMessage, type AIRes
 
 export type { AIMessage, AIResponse }
 
-// Rate limits per tier (requests per minute)
+// Rate limits per tier (requests per day)
 const RATE_LIMITS: Record<string, number> = {
   free: 20,
-  premium: 60,
+  premium: 100,
 }
 
 /**
@@ -45,7 +45,7 @@ export async function checkRateLimit(
   if (!kv) return { allowed: true, remaining: 999 }
 
   const limit = RATE_LIMITS[tier] ?? RATE_LIMITS.free
-  const key = `chat_rl:${tier}:${parentId}`
+  const key = `chat_daily:${tier}:${parentId}`
 
   try {
     const current = await kv.get(key)
@@ -53,7 +53,7 @@ export async function checkRateLimit(
     if (count >= limit) {
       return { allowed: false, remaining: 0 }
     }
-    await kv.put(key, String(count + 1), { expirationTtl: 60 })
+    await kv.put(key, String(count + 1), { expirationTtl: 86400 })
     return { allowed: true, remaining: limit - count - 1 }
   } catch {
     // KV failure — allow through

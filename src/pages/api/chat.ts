@@ -37,8 +37,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const { allowed, remaining } = await checkRateLimit(parentId, tier, kv)
   if (!allowed) {
     const msg = premium
-      ? 'You\'ve reached the premium limit of 60 questions per minute. Please wait a moment.'
-      : 'You\'ve reached the free limit of 20 questions per minute. Upgrade to premium for higher limits.'
+      ? 'You\'ve used all 100 of your premium questions today. Your quota resets at midnight IST.'
+      : 'You\'ve used all 20 of your free questions today. Your quota resets at midnight IST. Upgrade to SKIDS Premium for 100 questions per day.'
     return new Response(
       JSON.stringify({ error: msg, upgradeAvailable: !premium }),
       { status: 429, headers: { 'Content-Type': 'application/json', 'X-RateLimit-Remaining': '0' } }
