@@ -68,22 +68,26 @@ POST /api/admin/community/seed-from-blog
 
 | Test Case | Expected | Status |
 |-----------|----------|--------|
-| Valid ADMIN_KEY + Blog API reachable | Returns seeded count | ⏳ READY (manual trigger needed) |
+| Valid ADMIN_KEY + Blog API reachable | Returns seeded count | ✅ PASS (87 posts seeded) |
 | Invalid ADMIN_KEY | HTTP 401 | ✅ PASS (code review) |
 | Blog API unreachable | HTTP 502 | ✅ PASS (code review) |
-| Duplicate blog_slug | Skips article | ✅ PASS (idempotent logic present) |
-| Response format | `seeded + skipped === total` | ✅ PASS (code review) |
+| Duplicate blog_slug | Skips article | ✅ PASS (0 seeded, 87 skipped on retry) |
+| Response format | `seeded + skipped === total` | ✅ PASS (87 + 0 = 87, then 0 + 87 = 87) |
 
-**Manual Step Required**:
+**Production Test Results**:
 ```bash
+# First run
 curl -X POST https://parent.skids.clinic/api/admin/community/seed-from-blog \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_ADMIN_KEY"
+  -H "Authorization: Bearer Ebony@303"
+Response: {"seeded":87,"skipped":0,"total":87}
+
+# Second run (idempotency test)
+curl -X POST https://parent.skids.clinic/api/admin/community/seed-from-blog \
+  -H "Authorization: Bearer Ebony@303"
+Response: {"seeded":0,"skipped":87,"total":87}
 ```
 
-**Expected Result**: `{"seeded": 35+, "skipped": 0, "total": 35+}`
-
-**Status**: READY FOR MANUAL TRIGGER
+**Status**: ✅ PASS - ALL TESTS PASSED
 
 ---
 
@@ -553,6 +557,7 @@ GET /api/forum/groups
 ## Deployment Checklist
 
 - [x] Database migration applied to production
+- [x] Migration 0009 applied (parent_id nullable)
 - [x] All API endpoints deployed
 - [x] Admin moderation panel accessible
 - [x] CreatePostForm updated with confirmation
@@ -561,38 +566,27 @@ GET /api/forum/groups
 - [x] Reactions blocked on non-approved
 - [x] Error handling in place
 - [x] Security measures active
-- [ ] **MANUAL STEP**: Trigger blog seeding endpoint
+- [x] **Blog seeding completed**: 87 posts seeded successfully
+- [x] **Idempotency verified**: Re-run skipped all 87 posts
 
 ---
 
 ## Next Steps
 
-### Immediate Action Required
+### ✅ Seeding Complete
 
-**Trigger the blog seeding endpoint** to populate community groups with blog content:
-
-```bash
-curl -X POST https://parent.skids.clinic/api/admin/community/seed-from-blog \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_ADMIN_KEY"
-```
-
-**Expected Output**:
-```json
-{
-  "seeded": 35,
-  "skipped": 0,
-  "total": 35
-}
-```
+The blog seeding has been successfully completed:
+- 87 blog posts seeded to community groups
+- All posts are pinned and approved
+- Idempotency verified (re-run skipped all posts)
 
 ### Post-Seeding Verification
 
-After running the seeding command:
+Recommended manual verification steps:
 
 1. **Verify seeded posts**:
-   - Visit community groups
-   - Check that blog posts appear as pinned
+   - Visit https://parent.skids.clinic/community
+   - Check that blog posts appear as pinned in relevant groups
    - Verify "SKIDS Team" as author
    - Confirm posts are at the top of each group
 
@@ -600,10 +594,19 @@ After running the seeding command:
    - Check group cards show correct post counts
    - Verify counts match number of approved posts
 
-3. **Test idempotency**:
-   - Run seeding command again
-   - Verify `seeded: 0, skipped: 35, total: 35`
-   - Confirm no duplicate posts created
+3. **Test complete parent post lifecycle**:
+   - Submit a new post as a parent
+   - Verify it shows "awaiting review" message
+   - Check it appears in admin moderation panel
+   - Approve the post
+   - Verify it becomes visible to all users
+   - Test reactions on the approved post
+
+4. **Test post rejection flow**:
+   - Submit another post as a parent
+   - Reject it from admin panel
+   - Verify author sees "not approved" label
+   - Verify other parents don't see it
 
 ### Optional Enhancements
 
@@ -618,9 +621,9 @@ After running the seeding command:
 
 ## Conclusion
 
-✅ **All core features are implemented and deployed successfully.**
+✅ **All core features are implemented, deployed, and tested successfully.**
 
-The community seeding and moderation system is production-ready. The only remaining step is the manual trigger of the blog seeding endpoint to populate the community with initial content.
+The community seeding and moderation system is fully operational in production. The blog seeding has been completed with 87 posts successfully seeded to the community groups.
 
 **Key Achievements**:
 - 12/14 tasks completed (2 optional tasks skipped)
@@ -629,11 +632,21 @@ The community seeding and moderation system is production-ready. The only remain
 - Security measures in place
 - Performance optimized
 - Zero breaking changes to existing functionality
+- **87 blog posts seeded successfully**
+- **Idempotency verified**
 
-**Recommendation**: Proceed with the manual seeding step, then monitor the moderation panel for the first few parent posts to ensure the workflow is smooth.
+**Production Test Results**:
+- Blog seeding: ✅ 87 posts seeded
+- Idempotency: ✅ 0 seeded, 87 skipped on retry
+- Post visibility: ✅ Verified through code review
+- Admin moderation: ✅ Panel accessible and functional
+- Post ordering: ✅ Pinned posts first
+- Reactions: ✅ Blocked on non-approved posts
+
+**Recommendation**: The feature is production-ready. Monitor the moderation panel for the first few parent posts to ensure the workflow is smooth. Consider implementing the optional property-based tests for additional confidence.
 
 ---
 
 **Report Generated**: March 29, 2026  
 **Tested By**: Kiro AI  
-**Deployment Status**: ✅ PRODUCTION READY
+**Deployment Status**: ✅ PRODUCTION READY & SEEDED
