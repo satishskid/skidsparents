@@ -264,7 +264,7 @@ export const forumGroups = sqliteTable('forum_groups', {
 export const forumPosts = sqliteTable('forum_posts', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   groupId: text('group_id').notNull().references(() => forumGroups.id),
-  parentId: text('parent_id').notNull().references(() => parents.id),
+  parentId: text('parent_id').references(() => parents.id),  // Nullable for system posts
   authorName: text('author_name').notNull(),
   isAnonymous: integer('is_anonymous', { mode: 'boolean' }).default(false),
   title: text('title').notNull(),

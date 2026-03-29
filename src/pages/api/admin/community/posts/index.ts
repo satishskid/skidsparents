@@ -42,7 +42,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const id = crypto.randomUUID()
   await env.DB.prepare(
     `INSERT INTO forum_posts (id, group_id, parent_id, author_name, title, content, status, pinned, created_at, updated_at)
-     VALUES (?, ?, 'system', 'SKIDS Team', ?, ?, 'approved', 0, datetime('now'), datetime('now'))`
+     VALUES (?, ?, NULL, 'SKIDS Team', ?, ?, 'approved', 0, datetime('now'), datetime('now'))`
   ).bind(id, groupId, title.trim(), content.trim()).run()
 
   await env.DB.prepare('UPDATE forum_groups SET post_count = post_count + 1 WHERE id = ?').bind(groupId).run()

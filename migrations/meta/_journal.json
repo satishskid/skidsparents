@@ -15,6 +15,20 @@
       "when": 1773806043352,
       "tag": "0007_pricing_tiers",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1743148800000,
+      "tag": "0008_community_moderation",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1743148900000,
+      "tag": "0009_nullable_parent_id",
+      "breakpoints": true
     }
   ]
 }
