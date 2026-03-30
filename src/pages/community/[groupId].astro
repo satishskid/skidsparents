@@ -7,7 +7,15 @@ const { groupId } = Astro.params
 <BaseLayout title="Community" description="Parent discussions on SKIDS Parent">
   <div class="min-h-screen bg-gray-50">
     <div class="max-w-3xl mx-auto px-4 py-8">
-      <a href="/community" class="text-sm text-green-600 hover:underline mb-4 inline-block">← All Groups</a>
+      <a
+        href="/"
+        class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 mb-6 transition-colors"
+      >
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+        </svg>
+        Back to Home
+      </a>
       <div id="forum-root" data-group-id={groupId}></div>
     </div>
   </div>
@@ -16,12 +24,32 @@ const { groupId } = Astro.params
 <script>
   const groupId = document.getElementById('forum-root')?.dataset.groupId
 
+  // Detect auth state using Firebase client
+  async function getAuthUser(): Promise<boolean> {
+    try {
+      const { auth } = await import('/src/lib/firebase/client.js')
+      return new Promise((resolve) => {
+        const unsubscribe = auth.onAuthStateChanged((user: any) => {
+          unsubscribe()
+          resolve(!!user)
+        })
+      })
+    } catch {
+      return false
+    }
+  }
+
   async function loadPosts() {
     const root = document.getElementById('forum-root')
     if (!root || !groupId) return
 
-    // Load group info
-    const groupsRes = await fetch('/api/forum/groups')
+    // Detect auth state in parallel with data loading
+    const [isAuthenticated, groupsRes, postsRes] = await Promise.all([
+      getAuthUser(),
+      fetch('/api/forum/groups'),
+      fetch(`/api/forum/posts?groupId=${groupId}`),
+    ])
+
     const { groups } = await groupsRes.json()
     const group = groups.find((g: any) => g.id === groupId)
 
@@ -30,9 +58,9 @@ const { groupId } = Astro.params
       return
     }
 
-    // Load posts
-    const postsRes = await fetch(`/api/forum/posts?groupId=${groupId}`)
     const { posts } = await postsRes.json()
+
+    const currentUrl = encodeURIComponent(window.location.pathname)
 
     root.innerHTML = `
       <div>
@@ -44,29 +72,45 @@ const { groupId } = Astro.params
           </div>
         </div>
 
-        <!-- New Post Button -->
-        <button id="new-post-btn" class="mb-6 w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-xl transition-colors">
-          + Start a Discussion
-        </button>
+        ${isAuthenticated ? `
+          <!-- New Post Button (authenticated users only) -->
+          <button id="new-post-btn" class="mb-6 w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-xl transition-colors">
+            + Start a Discussion
+          </button>
 
-        <!-- New Post Form (hidden by default) -->
-        <div id="new-post-form" class="hidden mb-6 bg-white rounded-xl border border-gray-200 p-5">
-          <h3 class="font-semibold text-gray-900 mb-4">New Post</h3>
-          <input id="post-title" type="text" placeholder="Title (max 200 chars)" maxlength="200"
-            class="w-full border border-gray-300 rounded-lg px-3 py-2 mb-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
-          <textarea id="post-content" placeholder="Share your experience or question..." rows="4" maxlength="5000"
-            class="w-full border border-gray-300 rounded-lg px-3 py-2 mb-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"></textarea>
-          <div class="flex items-center justify-between">
-            <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-              <input type="checkbox" id="post-anon" class="rounded" />
-              Post anonymously
-            </label>
-            <div class="flex gap-2">
-              <button id="cancel-post" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Cancel</button>
-              <button id="submit-post" class="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700">Post</button>
+          <!-- New Post Form (hidden by default) -->
+          <div id="new-post-form" class="hidden mb-6 bg-white rounded-xl border border-gray-200 p-5">
+            <h3 class="font-semibold text-gray-900 mb-4">New Post</h3>
+            <input id="post-title" type="text" placeholder="Title (max 200 chars)" maxlength="200"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 mb-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+            <textarea id="post-content" placeholder="Share your experience or question..." rows="4" maxlength="5000"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 mb-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"></textarea>
+            <div class="flex items-center justify-between">
+              <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                <input type="checkbox" id="post-anon" class="rounded" />
+                Post anonymously
+              </label>
+              <div class="flex gap-2">
+                <button id="cancel-post" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Cancel</button>
+                <button id="submit-post" class="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700">Post</button>
+              </div>
             </div>
           </div>
-        </div>
+        ` : `
+          <!-- Sign-in prompt for unauthenticated users -->
+          <div class="mb-6 bg-green-50 border border-green-200 rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div class="flex-1">
+              <p class="font-semibold text-green-900 mb-1">Join the conversation</p>
+              <p class="text-sm text-green-700">Share experiences, ask questions, and connect with other parents.</p>
+            </div>
+            <a
+              href="/login?redirect=${currentUrl}"
+              class="shrink-0 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors"
+            >
+              Sign in to post
+            </a>
+          </div>
+        `}
 
         <!-- Posts List -->
         <div id="posts-list" class="space-y-4">
@@ -78,16 +122,21 @@ const { groupId } = Astro.params
       </div>
     `
 
-    // Wire up new post form
-    document.getElementById('new-post-btn')?.addEventListener('click', () => {
-      document.getElementById('new-post-form')?.classList.remove('hidden')
-      document.getElementById('new-post-btn')?.classList.add('hidden')
-    })
-    document.getElementById('cancel-post')?.addEventListener('click', () => {
-      document.getElementById('new-post-form')?.classList.add('hidden')
-      document.getElementById('new-post-btn')?.classList.remove('hidden')
-    })
-    document.getElementById('submit-post')?.addEventListener('click', submitPost)
+    if (isAuthenticated) {
+      // Wire up new post form
+      document.getElementById('new-post-btn')?.addEventListener('click', () => {
+        document.getElementById('new-post-form')?.classList.remove('hidden')
+        document.getElementById('new-post-btn')?.classList.add('hidden')
+      })
+      document.getElementById('cancel-post')?.addEventListener('click', () => {
+        document.getElementById('new-post-form')?.classList.add('hidden')
+        document.getElementById('new-post-btn')?.classList.remove('hidden')
+      })
+      document.getElementById('submit-post')?.addEventListener('click', submitPost)
+    }
+
+    // Set up scroll-triggered sign-in prompt (task 19.3)
+    setupScrollPrompt(isAuthenticated)
   }
 
   async function submitPost() {
@@ -161,6 +210,115 @@ const { groupId } = Astro.params
 
   function escapeHtml(str: string) {
     return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  }
+
+  function setupScrollPrompt(isAuthenticated: boolean) {
+    // Only show for unauthenticated users, once per session
+    if (isAuthenticated) return
+    const SESSION_KEY = 'skids_community_prompt_shown'
+    if (sessionStorage.getItem(SESSION_KEY)) return
+
+    const postsList = document.getElementById('posts-list')
+    if (!postsList) return
+
+    // Watch the 3rd post card
+    const postCards = postsList.querySelectorAll('a')
+    const thirdPost = postCards[2]
+    if (!thirdPost) return
+
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries[0].isIntersecting) return
+      observer.disconnect()
+
+      // Guard again in case it was shown between observer setup and trigger
+      if (sessionStorage.getItem(SESSION_KEY)) return
+      sessionStorage.setItem(SESSION_KEY, '1')
+
+      // Fire tracking events
+      const currentPath = window.location.pathname
+      try {
+        if (typeof window !== 'undefined') {
+          // G4
+          if ((window as any).gtag) {
+            (window as any).gtag('event', 'sign_in_prompt_view', {
+              prompt_type: 'community_scroll',
+              page: currentPath,
+              feature: 'community',
+            })
+          }
+          // Meta Pixel
+          if ((window as any).fbq) {
+            (window as any).fbq('track', 'SignInPromptView', {
+              prompt_type: 'community_scroll',
+              page: currentPath,
+              feature: 'community',
+            })
+          }
+          // skidsTrack if available
+          if ((window as any).skidsTrack) {
+            (window as any).skidsTrack('sign_in_prompt_view', {
+              prompt_type: 'community_scroll',
+              page: currentPath,
+              feature: 'community',
+            })
+          }
+        }
+      } catch (_) {}
+
+      // Build and inject sticky banner
+      const currentUrl = encodeURIComponent(window.location.pathname)
+      const banner = document.createElement('div')
+      banner.id = 'scroll-signin-banner'
+      banner.setAttribute('role', 'banner')
+      banner.setAttribute('aria-label', 'Sign in prompt')
+      banner.innerHTML = `
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+          <p class="text-sm text-white font-medium">
+            💬 Join the conversation — share experiences with other parents
+          </p>
+          <div class="flex items-center gap-3 shrink-0">
+            <a
+              href="/login?redirect=${currentUrl}"
+              class="px-4 py-2 bg-white text-green-700 text-sm font-semibold rounded-lg hover:bg-green-50 transition-colors"
+            >
+              Sign in to join
+            </a>
+            <button
+              id="scroll-signin-dismiss"
+              aria-label="Dismiss prompt"
+              class="text-green-200 hover:text-white text-lg leading-none"
+            >✕</button>
+          </div>
+        </div>
+      `
+      banner.style.cssText = [
+        'position:fixed',
+        'bottom:0',
+        'left:0',
+        'right:0',
+        'background:#16a34a',
+        'padding:14px 20px',
+        'z-index:50',
+        'box-shadow:0 -2px 12px rgba(0,0,0,0.15)',
+        'animation:slideUp 0.3s ease-out',
+      ].join(';')
+
+      // Inject keyframe animation once
+      if (!document.getElementById('scroll-banner-style')) {
+        const style = document.createElement('style')
+        style.id = 'scroll-banner-style'
+        style.textContent = '@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}'
+        document.head.appendChild(style)
+      }
+
+      document.body.appendChild(banner)
+
+      document.getElementById('scroll-signin-dismiss')?.addEventListener('click', () => {
+        banner.remove()
+      })
+    }, { threshold: 0.5 })
+
+    observer.observe(thirdPost)
   }
 
   loadPosts()

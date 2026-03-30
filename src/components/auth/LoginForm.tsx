@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { sendPhoneOTP } from '@/lib/firebase/client'
 import type { ConfirmationResult } from 'firebase/auth'
+import { trackEvent, trackMetaEvent } from '@/lib/utils/analytics'
 
 export default function LoginForm() {
   const { user, loading, token } = useAuth()
@@ -22,7 +23,7 @@ export default function LoginForm() {
     )
   }
 
-  async function syncAndRedirect(idToken: string) {
+  async function syncAndRedirect(idToken: string, method: 'google' | 'phone' = 'google') {
     setStep('syncing')
     try {
       const referralCode = sessionStorage.getItem('referralCode') ?? undefined
@@ -34,6 +35,15 @@ export default function LoginForm() {
       const data = await res.json() as { isNew?: boolean }
       if (data.isNew) sessionStorage.setItem('skids_is_new', 'true')
       sessionStorage.removeItem('referralCode')
+
+      // Fire auth tracking events (Requirement 10.3)
+      if (data.isNew) {
+        trackEvent('sign_up', { method, is_new_user: true })
+        trackMetaEvent('CompleteRegistration', { method })
+      } else {
+        trackEvent('login', { method, is_new_user: false })
+      }
+
       const params = new URLSearchParams(window.location.search)
       const redirect = params.get('redirect') || '/me'
       window.location.href = data.isNew ? '/me' : redirect
@@ -49,7 +59,7 @@ export default function LoginForm() {
       const { signInWithGoogle } = await import('@/lib/firebase/client')
       const u = await signInWithGoogle()
       const t = await u.getIdToken()
-      await syncAndRedirect(t)
+      await syncAndRedirect(t, 'google')
     } catch (e: unknown) {
       if (e instanceof Error && (e as any).code !== 'auth/popup-closed-by-user') {
         setError('Google sign-in failed. Please try again.')
@@ -83,7 +93,7 @@ export default function LoginForm() {
     try {
       const result = await confirmation.confirm(otp)
       const t = await result.user.getIdToken()
-      await syncAndRedirect(t)
+      await syncAndRedirect(t, 'phone')
     } catch {
       setError('Invalid OTP. Please try again.')
       setStep('otp')

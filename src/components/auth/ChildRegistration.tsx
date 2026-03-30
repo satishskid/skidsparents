@@ -1,12 +1,15 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { trackEvent, trackMetaEvent } from '@/lib/utils/analytics'
 
 interface Props {
   token: string
   onComplete: (childId: string) => void
   onClose: () => void
+  childCount?: number
+  features?: string[]
 }
 
-export default function ChildRegistration({ token, onComplete, onClose }: Props) {
+export default function ChildRegistration({ token, onComplete, onClose, childCount = 0, features = [] }: Props) {
   const [step, setStep] = useState(0)
   const [name, setName] = useState('')
   const [dob, setDob] = useState('')
@@ -14,6 +17,59 @@ export default function ChildRegistration({ token, onComplete, onClose }: Props)
   const [allergies, setAllergies] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<Element | null>(null)
+
+  const showUpgradePrompt = childCount >= 1 && !features.includes('unlimited_children')
+
+  useEffect(() => {
+    if (showUpgradePrompt) {
+      trackEvent('upgrade_prompt_view', { prompt_type: 'multiple_children' })
+      trackMetaEvent('upgrade_prompt_view', { prompt_type: 'multiple_children' })
+    }
+  }, [showUpgradePrompt])
+
+  // Store trigger element and move focus into modal on open
+  useEffect(() => {
+    triggerRef.current = document.activeElement
+    const focusable = dialogRef.current?.querySelector<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )
+    focusable?.focus()
+    return () => {
+      // Return focus to trigger on unmount
+      if (triggerRef.current instanceof HTMLElement) {
+        triggerRef.current.focus()
+      }
+    }
+  }, [])
+
+  // Escape key closes modal; Tab key traps focus within modal
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Escape') {
+      onClose()
+      return
+    }
+    if (e.key === 'Tab' && dialogRef.current) {
+      const focusableSelectors = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      const focusableEls = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(focusableSelectors))
+      if (focusableEls.length === 0) return
+      const first = focusableEls[0]
+      const last = focusableEls[focusableEls.length - 1]
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault()
+          last.focus()
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
+    }
+  }, [onClose])
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -185,9 +241,27 @@ export default function ChildRegistration({ token, onComplete, onClose }: Props)
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Add child"
         className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto p-6 animate-slide-up"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={handleKeyDown}
       >
+        {/* Upgrade prompt banner */}
+        {showUpgradePrompt && (
+          <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
+            <span className="mt-0.5 text-amber-500">⭐</span>
+            <div className="flex-1">
+              <span className="text-amber-800">Have multiple children? Track unlimited profiles with Premium.</span>{' '}
+              <a href="/me#subscription" className="font-semibold text-amber-700 underline underline-offset-2 hover:text-amber-900">
+                View plans
+              </a>
+            </div>
+          </div>
+        )}
+
         {/* Progress */}
         <div className="flex gap-1.5 mb-6">
           {[0, 1, 2, 3].map((i) => (

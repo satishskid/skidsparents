@@ -148,32 +148,40 @@ const canonicalUrl = canonical || Astro.url.href
     <!-- End Google Tag Manager -->
 
     <!-- Google Analytics 4 (brand=skids namespace — STRICT COMPLIANCE) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-SLTRDFVCVN"></script>
-    <script is:inline>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-SLTRDFVCVN', {
-        brand: 'skids',
-        center: 'online',
-        send_page_view: true
-      });
-    </script>
+    {import.meta.env.PUBLIC_GA4_MEASUREMENT_ID && (
+      <>
+        <script async src={`https://www.googletagmanager.com/gtag/js?id=${import.meta.env.PUBLIC_GA4_MEASUREMENT_ID}`}></script>
+        <script is:inline define:vars={{ ga4Id: import.meta.env.PUBLIC_GA4_MEASUREMENT_ID }}>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', ga4Id, {
+            brand: 'skids',
+            center: 'online',
+            send_page_view: true
+          });
+        </script>
+      </>
+    )}
 
     <!-- Meta Pixel (brand=skids namespace — STRICT COMPLIANCE) -->
-    <script is:inline>
-      !function(f,b,e,v,n,t,s)
-      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-      n.queue=[];t=b.createElement(e);t.async=!0;
-      t.src=v;s=b.getElementsByTagName(e)[0];
-      s.parentNode.insertBefore(t,s)}(window, document,'script',
-      'https://connect.facebook.net/en_US/fbevents.js');
-      fbq('init', '1244835147469135');
-      fbq('track', 'PageView', { brand: 'skids' });
-    </script>
-    <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1244835147469135&ev=PageView&noscript=1" /></noscript>
+    {import.meta.env.PUBLIC_META_PIXEL_ID && (
+      <>
+        <script is:inline define:vars={{ metaPixelId: import.meta.env.PUBLIC_META_PIXEL_ID }}>
+          !function(f,b,e,v,n,t,s)
+          {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+          n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+          if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+          n.queue=[];t=b.createElement(e);t.async=!0;
+          t.src=v;s=b.getElementsByTagName(e)[0];
+          s.parentNode.insertBefore(t,s)}(window, document,'script',
+          'https://connect.facebook.net/en_US/fbevents.js');
+          fbq('init', metaPixelId);
+          // Initial PageView will be tracked by skidsTrack below with page_type
+        </script>
+        <noscript><img height="1" width="1" style="display:none" src={`https://www.facebook.com/tr?id=${import.meta.env.PUBLIC_META_PIXEL_ID}&ev=PageView&noscript=1`} /></noscript>
+      </>
+    )}
 
     <!-- Cloudflare Web Analytics (brand=skids) -->
     <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "309a8c94a071430fbbec01c920007bda"}'></script>
@@ -247,6 +255,10 @@ const canonicalUrl = canonical || Astro.url.href
 
           // Fire to Meta Pixel (brand in custom_data)
           if (typeof fbq === 'function') {
+            // For page_view events, also fire standard PageView
+            if (eventName === 'page_view') {
+              fbq('track', 'PageView', p);
+            }
             fbq('trackCustom', eventName, p);
           }
         };
@@ -293,6 +305,27 @@ const canonicalUrl = canonical || Astro.url.href
           return lead;
         };
 
+        // ─── Capture UTM parameters on initial page load ───
+        // This must happen BEFORE any tracking events to ensure UTM params are available
+        (function() {
+          var params = new URLSearchParams(window.location.search);
+          var utmParams = {
+            utm_source: params.get('utm_source'),
+            utm_medium: params.get('utm_medium'),
+            utm_campaign: params.get('utm_campaign'),
+            utm_term: params.get('utm_term'),
+            utm_content: params.get('utm_content'),
+            referral_code: params.get('ref')
+          };
+          
+          // Store in sessionStorage for persistence
+          try {
+            sessionStorage.setItem('utm_params', JSON.stringify(utmParams));
+          } catch(e) {
+            console.error('[SKIDS] Failed to store UTM parameters:', e);
+          }
+        })();
+
         // ─── Auto-track page context ───
         window.skidsTrack('page_view', {
           funnel_stage: (function() {
@@ -304,6 +337,14 @@ const canonicalUrl = canonical || Astro.url.href
             if (path.indexOf('/services') === 0) return 'intent';
             if (path.indexOf('/me') === 0) return 'retention';
             return 'awareness';
+          })(),
+          page_type: (function() {
+            var path = window.location.pathname;
+            if (path === '/') return 'homepage';
+            if (path.indexOf('/blog') === 0) return 'blog';
+            if (path.indexOf('/discover') === 0) return 'discover';
+            if (path.indexOf('/community') === 0) return 'community';
+            return 'other';
           })(),
           asset_code: window.location.pathname.replace(/\//g, '_').replace(/^_|_$/g, '') || 'home',
           page_path: window.location.pathname

@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { trackEvent, trackMetaEvent } from '@/lib/utils/analytics'
 
 interface Props {
   interventionSlug: string
@@ -27,6 +28,13 @@ export default function ServiceInterestForm({ interventionSlug, status, ctaLabel
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!user) {
+      trackEvent('sign_in_prompt_view', { prompt_type: 'intervention_booking' })
+      trackMetaEvent('sign_in_prompt_view', { prompt_type: 'intervention_booking' })
+    }
+  }, [user])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -82,7 +90,24 @@ export default function ServiceInterestForm({ interventionSlug, status, ctaLabel
   }
 
   return (
-    <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+    <div className="space-y-3">
+      {!user && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-start gap-3">
+          <span className="text-xl mt-0.5">🔔</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-blue-900 font-medium">
+              Sign in to track appointments and receive reminders for your child's health interventions
+            </p>
+            <a
+              href="/login?redirect=/interventions"
+              className="inline-block mt-2 text-xs font-semibold text-blue-700 hover:text-blue-900 underline underline-offset-2"
+            >
+              Sign in to track →
+            </a>
+          </div>
+        </div>
+      )}
+      <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
       <h3 className="text-lg font-bold text-gray-900 mb-1">
         {status === 'available' ? ctaLabel : `Join the ${brand} Waitlist`}
       </h3>
@@ -130,6 +155,7 @@ export default function ServiceInterestForm({ interventionSlug, status, ctaLabel
           {submitting ? 'Submitting...' : status === 'available' ? ctaLabel : 'Join Waitlist'}
         </button>
       </form>
+      </div>
     </div>
   )
 }

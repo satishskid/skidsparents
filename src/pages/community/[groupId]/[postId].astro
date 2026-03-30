@@ -17,11 +17,27 @@ const { groupId, postId } = Astro.params
   const postId = document.getElementById('post-root')?.dataset.postId
   const groupId = document.getElementById('post-root')?.dataset.groupId
 
+  // Detect auth state using Firebase client
+  async function getAuthUser(): Promise<boolean> {
+    try {
+      const { auth } = await import('/src/lib/firebase/client.js')
+      return new Promise((resolve) => {
+        const unsubscribe = auth.onAuthStateChanged((user: any) => {
+          unsubscribe()
+          resolve(!!user)
+        })
+      })
+    } catch {
+      return false
+    }
+  }
+
   async function loadPost() {
     const root = document.getElementById('post-root')
     if (!root || !postId) return
 
-    const [postsRes, commentsRes] = await Promise.all([
+    const [isAuthenticated, postsRes, commentsRes] = await Promise.all([
+      getAuthUser(),
       fetch(`/api/forum/posts?groupId=${groupId}`),
       fetch(`/api/forum/${postId}/comments`),
     ])
@@ -35,6 +51,8 @@ const { groupId, postId } = Astro.params
       return
     }
 
+    const currentUrl = encodeURIComponent(window.location.pathname)
+
     root.innerHTML = `
       <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
         <h1 class="text-2xl font-bold text-gray-900 mb-2">${escapeHtml(post.title)}</h1>
@@ -44,9 +62,12 @@ const { groupId, postId } = Astro.params
         </div>
         <p class="text-gray-700 whitespace-pre-wrap">${escapeHtml(post.content)}</p>
         <div class="mt-4 flex items-center gap-4">
-          <button id="like-post-btn" class="flex items-center gap-1 text-sm text-gray-500 hover:text-red-500 transition-colors">
-            ❤️ <span id="like-count">${post.likes || 0}</span>
-          </button>
+          ${isAuthenticated
+            ? `<button id="like-post-btn" class="flex items-center gap-1 text-sm text-gray-500 hover:text-red-500 transition-colors">
+                ❤️ <span id="like-count">${post.likes || 0}</span>
+               </button>`
+            : `<span class="flex items-center gap-1 text-sm text-gray-400">❤️ ${post.likes || 0}</span>`
+          }
         </div>
       </div>
 
@@ -61,59 +82,77 @@ const { groupId, postId } = Astro.params
         </div>
       </div>
 
-      <!-- Add Comment -->
-      <div class="bg-white rounded-xl border border-gray-200 p-5">
-        <h3 class="font-semibold text-gray-900 mb-3">Add a Comment</h3>
-        <textarea id="comment-content" placeholder="Share your thoughts..." rows="3" maxlength="2000"
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 mb-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"></textarea>
-        <div class="flex items-center justify-between">
-          <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-            <input type="checkbox" id="comment-anon" class="rounded" />
-            Post anonymously
-          </label>
-          <button id="submit-comment" class="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700">
-            Reply
-          </button>
+      ${isAuthenticated ? `
+        <!-- Add Comment (authenticated users only) -->
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+          <h3 class="font-semibold text-gray-900 mb-3">Add a Comment</h3>
+          <textarea id="comment-content" placeholder="Share your thoughts..." rows="3" maxlength="2000"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 mb-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"></textarea>
+          <div class="flex items-center justify-between">
+            <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+              <input type="checkbox" id="comment-anon" class="rounded" />
+              Post anonymously
+            </label>
+            <button id="submit-comment" class="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700">
+              Reply
+            </button>
+          </div>
         </div>
-      </div>
+      ` : `
+        <!-- Sign-in prompt for unauthenticated users -->
+        <div class="bg-green-50 border border-green-200 rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div class="flex-1">
+            <p class="font-semibold text-green-900 mb-1">Join the conversation</p>
+            <p class="text-sm text-green-700">Share experiences, ask questions, and connect with other parents.</p>
+          </div>
+          <a
+            href="/login?redirect=${currentUrl}"
+            class="shrink-0 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors"
+          >
+            Sign in to reply
+          </a>
+        </div>
+      `}
     `
 
-    // Like post
-    document.getElementById('like-post-btn')?.addEventListener('click', async () => {
-      const res = await fetch(`/api/forum/${postId}/like`, { method: 'POST' })
-      if (res.status === 401) { window.location.href = '/login'; return }
-      const data = await res.json()
-      if (data.likes !== undefined) {
-        document.getElementById('like-count')!.textContent = data.likes
-      }
-    })
-
-    // Submit comment
-    document.getElementById('submit-comment')?.addEventListener('click', async () => {
-      const content = (document.getElementById('comment-content') as HTMLTextAreaElement)?.value.trim()
-      const isAnonymous = (document.getElementById('comment-anon') as HTMLInputElement)?.checked
-
-      if (!content) return
-
-      const btn = document.getElementById('submit-comment') as HTMLButtonElement
-      btn.disabled = true
-      btn.textContent = 'Posting...'
-
-      const res = await fetch(`/api/forum/${postId}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, isAnonymous }),
+    if (isAuthenticated) {
+      // Like post
+      document.getElementById('like-post-btn')?.addEventListener('click', async () => {
+        const res = await fetch(`/api/forum/${postId}/like`, { method: 'POST' })
+        if (res.status === 401) { window.location.href = '/login'; return }
+        const data = await res.json()
+        if (data.likes !== undefined) {
+          document.getElementById('like-count')!.textContent = data.likes
+        }
       })
 
-      if (res.status === 401) { window.location.href = '/login'; return }
+      // Submit comment
+      document.getElementById('submit-comment')?.addEventListener('click', async () => {
+        const content = (document.getElementById('comment-content') as HTMLTextAreaElement)?.value.trim()
+        const isAnonymous = (document.getElementById('comment-anon') as HTMLInputElement)?.checked
 
-      if (res.ok) {
-        await loadPost()
-      } else {
-        btn.disabled = false
-        btn.textContent = 'Reply'
-      }
-    })
+        if (!content) return
+
+        const btn = document.getElementById('submit-comment') as HTMLButtonElement
+        btn.disabled = true
+        btn.textContent = 'Posting...'
+
+        const res = await fetch(`/api/forum/${postId}/comments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content, isAnonymous }),
+        })
+
+        if (res.status === 401) { window.location.href = '/login'; return }
+
+        if (res.ok) {
+          await loadPost()
+        } else {
+          btn.disabled = false
+          btn.textContent = 'Reply'
+        }
+      })
+    }
   }
 
   function commentCard(c: any) {

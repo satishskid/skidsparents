@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { trackEvent, trackMetaEvent } from '@/lib/utils/analytics'
 
 const QUICK_QUESTIONS = [
   'My child isn\'t talking yet',
@@ -16,6 +17,7 @@ const ONBOARDING_WELCOME = `Hi! I'm Dr. SKIDS. To build the best health record f
 interface Message {
   role: 'user' | 'bot'
   text: string
+  showSignInPrompt?: boolean
 }
 
 interface ChatWidgetProps {
@@ -26,6 +28,24 @@ interface ChatWidgetProps {
   children?: { id: string; name: string }[]
   mode?: 'standard' | 'onboarding'
   initialMessage?: string
+}
+
+// Inline sign-in prompt shown after general answers for unauthenticated users
+function SignInPrompt() {
+  return (
+    <div className="mt-2 p-3 rounded-xl bg-green-50 border border-green-200 text-sm">
+      <p className="text-green-800 font-medium mb-1">Want personalised answers?</p>
+      <p className="text-green-700 text-xs mb-2 leading-relaxed">
+        Sign in to get guidance tailored to your child's age and profile — so every answer is specific to them.
+      </p>
+      <a
+        href="/login?redirect=/timeline"
+        className="inline-block px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700 transition-colors"
+      >
+        Sign In for Personalised Answers
+      </a>
+    </div>
+  )
 }
 
 export default function ChatWidget({ fullScreen = false, token: tokenProp, childId: initialChildId, childName, children: childrenListProp, mode, initialMessage }: ChatWidgetProps) {
@@ -95,12 +115,48 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
     setInput('')
     setLoading(true)
 
-    // If no token (unauthenticated), acknowledge the question then prompt sign-in
+    // If no token (unauthenticated), call public endpoint for general answer + show sign-in prompt
     if (!token) {
-      setMessages((prev) => [
-        ...prev,
-        { role: 'bot', text: `That's a great question — and I want to give you a proper answer based on your child's age and profile.\n\nTo do that, I need you to sign in first. It only takes a moment, and then I can give you personalised guidance.\n\nTap "Sign In" at the top to get started!` },
-      ])
+      try {
+        const res = await fetch('/api/chat-public', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text.trim() }),
+        })
+
+        if (res.status === 429) {
+          // Rate limit hit — show sign-in prompt with limit message
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: 'bot',
+              text: `You've asked a lot of questions! Sign in to get unlimited personalised answers based on your child's age and profile.`,
+              showSignInPrompt: true,
+            },
+          ])
+          trackEvent('sign_in_prompt_view', { prompt_type: 'chat', feature: 'dr_skids_chat', reason: 'rate_limit' })
+          trackMetaEvent('SignInPromptView', { prompt_type: 'chat', feature: 'dr_skids_chat', reason: 'rate_limit' })
+          setLoading(false)
+          return
+        }
+
+        const data = await res.json() as { response?: string; error?: string }
+        const generalAnswer = data.response || 'I wasn\'t able to respond. Please try again.'
+
+        setMessages((prev) => [
+          ...prev,
+          { role: 'bot', text: generalAnswer, showSignInPrompt: true },
+        ])
+
+        // Track sign-in prompt view (Requirement 10.2)
+        trackEvent('sign_in_prompt_view', { prompt_type: 'chat', feature: 'dr_skids_chat', page: window.location.pathname })
+        trackMetaEvent('SignInPromptView', { prompt_type: 'chat', feature: 'dr_skids_chat', page: window.location.pathname })
+      } catch {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'bot', text: 'Connection problem — please check your internet and try again.' },
+        ])
+      }
       setLoading(false)
       return
     }
@@ -209,14 +265,17 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
                   S
                 </div>
               )}
-              <div
-                className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
-                  msg.role === 'user'
-                    ? 'bg-green-600 text-white rounded-br-md'
-                    : 'bg-gray-50 text-gray-700 rounded-bl-md border border-gray-100'
-                }`}
-              >
-                {msg.text}
+              <div className={`max-w-[80%] ${msg.role === 'user' ? '' : 'flex-1'}`}>
+                <div
+                  className={`px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+                    msg.role === 'user'
+                      ? 'bg-green-600 text-white rounded-br-md'
+                      : 'bg-gray-50 text-gray-700 rounded-bl-md border border-gray-100'
+                  }`}
+                >
+                  {msg.text}
+                </div>
+                {msg.showSignInPrompt && <SignInPrompt />}
               </div>
             </div>
           ))}
@@ -328,14 +387,17 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div
-                  className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
-                    msg.role === 'user'
-                      ? 'bg-green-600 text-white rounded-br-md'
-                      : 'bg-gray-100 text-gray-700 rounded-bl-md'
-                  }`}
-                >
-                  {msg.text}
+                <div className={`max-w-[85%] ${msg.role === 'user' ? '' : 'flex-1'}`}>
+                  <div
+                    className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+                      msg.role === 'user'
+                        ? 'bg-green-600 text-white rounded-br-md'
+                        : 'bg-gray-100 text-gray-700 rounded-bl-md'
+                    }`}
+                  >
+                    {msg.text}
+                  </div>
+                  {msg.showSignInPrompt && <SignInPrompt />}
                 </div>
               </div>
             ))}

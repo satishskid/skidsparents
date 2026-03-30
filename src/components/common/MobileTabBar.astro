@@ -45,8 +45,10 @@ const tabs = [
           href={tab.href}
           class:list={[
             'flex flex-col items-center justify-center gap-0.5 w-16 py-1 rounded-lg transition-colors',
-            active ? 'text-green-600' : 'text-gray-400 hover:text-gray-600',
+            active ? 'bg-green-50 text-green-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50',
           ]}
+          aria-current={active ? 'page' : undefined}
+          aria-label={tab.label}
         >
           {/* Icons */}
           {tab.icon === 'home' && (

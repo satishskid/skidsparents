@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getScoreColor } from '@/lib/phr/health-score'
+import { trackEvent, trackMetaEvent } from '@/lib/utils/analytics'
 
 interface Props {
   childId: string
@@ -45,6 +46,7 @@ const TREND_ICON = {
 export default function HealthScoreGauge({ childId, token, features = [] }: Props) {
   const [data, setData] = useState<HealthScoreData | null>(null)
   const [loading, setLoading] = useState(true)
+  const isFreeTier = !features.includes('health_score_detailed')
 
   useEffect(() => {
     let cancelled = false
@@ -57,6 +59,14 @@ export default function HealthScoreGauge({ childId, token, features = [] }: Prop
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [childId, token])
+
+  useEffect(() => {
+    if (isFreeTier) {
+      trackEvent('upgrade_prompt_view', { prompt_type: 'health_score' })
+      trackMetaEvent('upgrade_prompt_view', { prompt_type: 'health_score' })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   if (loading) {
     return (
@@ -78,6 +88,7 @@ export default function HealthScoreGauge({ childId, token, features = [] }: Prop
   const trend = TREND_ICON[data.trend]
 
   const showDetailed = features.includes('health_score_detailed') && Object.keys(data.components).length > 0
+  const showUpgradePrompt = isFreeTier
 
   return (
     <div className="mt-3 space-y-3">
@@ -141,6 +152,21 @@ export default function HealthScoreGauge({ childId, token, features = [] }: Prop
               </div>
             )
           })}
+        </div>
+      )}
+
+      {showUpgradePrompt && (
+        <div className="mt-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs text-gray-400 mb-0.5">🔒 Detailed breakdown</p>
+            <p className="text-xs text-gray-500 leading-snug">Want to understand your child's health in detail?</p>
+          </div>
+          <a
+            href="/me#subscription"
+            className="shrink-0 text-xs font-medium text-indigo-600 hover:text-indigo-700 whitespace-nowrap"
+          >
+            View plans
+          </a>
         </div>
       )}
     </div>
