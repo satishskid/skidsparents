@@ -41,6 +41,17 @@ const blogDate = blog.createdAt
   : ''
 const isoDate = blog.createdAt ? new Date(blog.createdAt).toISOString() : ''
 
+// Generate SEO keywords from blog content
+const seoKeywords = [
+  blog.category || 'child health',
+  'parenting',
+  'child development',
+  'pediatric health',
+  'Indian parents',
+  'SKIDS',
+  ...(blog.title ? blog.title.toLowerCase().split(' ').filter((w: string) => w.length > 4).slice(0, 3) : [])
+]
+
 // Linked organ
 const linkedOrgan = getOrganForCategory(blog.category || '')
 
@@ -67,6 +78,7 @@ const catColor = categoryColors[blog.category] || 'bg-gray-100 text-gray-600'
 <BaseLayout
   title={blog.title}
   description={`${blog.title} — Expert insights on ${blog.category || 'child health'} from SKIDS Parent. Evidence-based guidance for modern parents.`}
+  keywords={seoKeywords}
   ogImage={blog.thumbnail}
   ogType="article"
   article={{
