@@ -6,7 +6,7 @@ Surgical fixes across four source files and two layout files: upgrade the Worker
 
 ## Tasks
 
-- [ ] 1. Upgrade Workers AI model in providers.ts
+- [x] 1. Upgrade Workers AI model in providers.ts
   - In `src/lib/ai/providers.ts`, update `runWorkersAI` to try `@cf/meta/llama-4-scout-17b-16e-instruct` first, falling back to `@cf/meta/llama-3.1-8b-instruct` on failure
   - If both models throw, let the error propagate to the caller
   - Update the returned `model` field to reflect whichever model succeeded
@@ -20,7 +20,7 @@ Surgical fixes across four source files and two layout files: upgrade the Worker
     - **Property 2: Fallback to Llama-3.1-8b on primary failure**
     - **Validates: Requirements 1.2**
 
-- [ ] 2. Switch rate limiting to per-day quotas in router.ts
+- [x] 2. Switch rate limiting to per-day quotas in router.ts
   - In `src/lib/ai/router.ts`, update `RATE_LIMITS` to `{ free: 20, premium: 100 }`
   - Update `checkRateLimit` to use KV key format `chat_daily:{tier}:{parentId}` with TTL `86400`
   - Keep the return shape `{ allowed: boolean; remaining: number }` unchanged
@@ -41,7 +41,7 @@ Surgical fixes across four source files and two layout files: upgrade the Worker
 - [ ] 3. Checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 4. Update chat.ts — error messages and response shape
+- [x] 4. Update chat.ts — error messages and response shape
   - In `src/pages/api/chat.ts`, update the 429 response body:
     - Free user: `"You've used all 20 of your free questions today. Your quota resets at midnight IST."` + `upgradeAvailable: true`
     - Premium user: `"You've used all 100 of your premium questions today. Your quota resets at midnight IST."`
@@ -58,7 +58,7 @@ Surgical fixes across four source files and two layout files: upgrade the Worker
     - **Property 7: Successful response always includes X-RateLimit-Remaining header**
     - **Validates: Requirements 3.1**
 
-- [ ] 5. Update ChatWidget.tsx — quota display and error handling
+- [x] 5. Update ChatWidget.tsx — quota display and error handling
   - Add `remaining: number | null` and `dailyLimit: number | null` state
   - After each successful response, read `X-RateLimit-Remaining` header and `dailyLimit` from JSON body; update state
   - Render quota display below the input: `"{N} of {M} questions remaining today"` — gray when N > 5, amber when N ≤ 5, hidden when `remaining` is null

@@ -29,20 +29,23 @@ export async function runWorkersAI(
     content: m.content,
   }))
 
+  // Try Llama-4-Scout first (newer, better model)
   try {
     const res = await ai.run('@cf/meta/llama-4-scout-17b-16e-instruct', {
       messages: cfMessages,
       max_tokens: maxTokens,
     })
     return { text: res.response || '', model: 'llama-4-scout-17b-16e-instruct', tier: 'free' }
-  } catch {
-    // Fallback to smaller model
-    const res = await ai.run('@cf/meta/llama-3.1-8b-instruct', {
-      messages: cfMessages,
-      max_tokens: maxTokens,
-    })
-    return { text: res.response || '', model: 'llama-3.1-8b-instruct', tier: 'free' }
+  } catch (err) {
+    console.warn('[WorkersAI] Llama-4-Scout failed, falling back to Llama-3.1-8b:', err)
   }
+
+  // Fallback to Llama-3.1-8b
+  const res = await ai.run('@cf/meta/llama-3.1-8b-instruct', {
+    messages: cfMessages,
+    max_tokens: maxTokens,
+  })
+  return { text: res.response || '', model: 'llama-3.1-8b-instruct', tier: 'free' }
 }
 
 // ─── Google Gemini (premium) ──────────────────────────

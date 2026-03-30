@@ -40,12 +40,16 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
   const [conversationId, setConversationId] = useState<string | undefined>()
   const [selectedChildId, setSelectedChildId] = useState(initialChildId)
   const [childrenList, setChildrenList] = useState(childrenListProp)
+  const [remaining, setRemaining] = useState<number | null>(null)
+  const [dailyLimit, setDailyLimit] = useState<number | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const clearChat = useCallback(() => {
     setMessages([{ role: 'bot', text: mode === 'onboarding' ? (initialMessage || ONBOARDING_WELCOME) : WELCOME_MESSAGE }])
     setConversationId(undefined)
     setInput('')
+    setRemaining(null)
+    setDailyLimit(null)
   }, [mode, initialMessage])
 
   // Auto-fetch children list when authenticated
@@ -130,7 +134,17 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
         throw new Error(`HTTP ${res.status}`)
       }
 
-      const data = await res.json() as { response?: string; conversationId?: string }
+      const data = await res.json() as { response?: string; conversationId?: string; dailyLimit?: number }
+      
+      // Update quota state from response
+      const remainingHeader = res.headers.get('X-RateLimit-Remaining')
+      if (remainingHeader !== null) {
+        setRemaining(parseInt(remainingHeader, 10))
+      }
+      if (data.dailyLimit) {
+        setDailyLimit(data.dailyLimit)
+      }
+
       setMessages((prev) => [
         ...prev,
         { role: 'bot', text: data.response || 'I wasn\'t able to respond. Please try again.' },
@@ -141,7 +155,7 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: 'bot', text: 'I\'m having trouble connecting right now. Please try again in a moment.' },
+        { role: 'bot', text: 'Connection problem — please check your internet and try again.' },
       ])
     } finally {
       setLoading(false)
@@ -245,6 +259,11 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
               </svg>
             </button>
           </div>
+          {remaining !== null && dailyLimit !== null && (
+            <p className={`mt-1.5 text-[10px] text-center ${remaining <= 5 ? 'text-amber-600' : 'text-gray-400'}`}>
+              {remaining} of {dailyLimit} questions remaining today
+            </p>
+          )}
         </div>
       </div>
     )
@@ -361,6 +380,11 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
                 </svg>
               </button>
             </div>
+            {remaining !== null && dailyLimit !== null && (
+              <p className={`mt-1.5 text-[10px] text-center leading-tight ${remaining <= 5 ? 'text-amber-600' : 'text-gray-400'}`}>
+                {remaining} of {dailyLimit} questions remaining today
+              </p>
+            )}
             <p className="mt-1.5 text-[10px] text-gray-400 text-center leading-tight">
               For guidance only · Not a substitute for medical advice · Always consult your paediatrician
             </p>

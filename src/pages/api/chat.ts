@@ -36,11 +36,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const { allowed, remaining } = await checkRateLimit(parentId, tier, kv)
   if (!allowed) {
-    const msg = premium
-      ? 'You\'ve used all 100 of your premium questions today. Your quota resets at midnight IST.'
-      : 'You\'ve used all 20 of your free questions today. Your quota resets at midnight IST. Upgrade to SKIDS Premium for 100 questions per day.'
+    const limit = tier === 'premium' ? 100 : 20
+    const msg = tier === 'premium'
+      ? `You've used all ${limit} of your premium questions today. Your quota resets at midnight IST.`
+      : `You've used all ${limit} of your free questions today. Your quota resets at midnight IST.`
     return new Response(
-      JSON.stringify({ error: msg, upgradeAvailable: !premium }),
+      JSON.stringify({ error: msg, upgradeAvailable: tier !== 'premium', dailyLimit: limit }),
       { status: 429, headers: { 'Content-Type': 'application/json', 'X-RateLimit-Remaining': '0' } }
     )
   }
@@ -190,9 +191,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     try {
       aiResult = await routeToModel(aiMessages, tier, env)
     } catch (modelErr) {
-      console.error('[Chat] All models failed:', modelErr)
+      console.error('[Chat] Model routing failed:', modelErr)
+      const errorMsg = modelErr instanceof Error && modelErr.message === 'No AI runtime available'
+        ? "Dr. SKIDS AI service is temporarily unavailable. Please try again shortly or contact support."
+        : "I'm having a moment — please try again in a few seconds. If this keeps happening, you can reach us on WhatsApp."
       return new Response(
-        JSON.stringify({ response: "I'm having a moment — please try again in a few seconds. If this keeps happening, you can reach us on WhatsApp.", conversationId }),
+        JSON.stringify({ response: errorMsg, conversationId }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       )
     }
@@ -234,7 +238,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     return new Response(
-      JSON.stringify({ response: responseText, conversationId, model: aiResult.model, tier: aiResult.tier }),
+      JSON.stringify({ 
+        response: responseText, 
+        conversationId, 
+        model: aiResult.model, 
+        tier: aiResult.tier,
+        dailyLimit: tier === 'premium' ? 100 : 20
+      }),
       { status: 200, headers: { 'Content-Type': 'application/json', 'X-RateLimit-Remaining': String(remaining) } }
     )
   } catch (e: unknown) {
