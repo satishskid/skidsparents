@@ -1,0 +1,28 @@
+---
+/**
+ * Doctor Clinic Console — MedScribe cockpit
+ *
+ * Full clinical consultation interface:
+ *   - Twin PHR strip (same D1 data parent sees)
+ *   - 12 subspecialty AI assistants
+ *   - Regional protocol engine (IAP/AAP/Gulf AP)
+ *   - Care plan generation
+ *
+ * Auth: Firebase (skidsparent project) — doctor must be logged in.
+ * Data: Reads directly from D1 (no bridge API).
+ *
+ * URL params (optional, from dashboard):
+ *   ?childId=xxx&name=Arjun&age=6y&gender=Male
+ */
+import DoctorLayout from '@/layouts/DoctorLayout.astro'
+import MedScribeConsole from '@/components/doctor/MedScribeConsole'
+
+export const prerender = true
+---
+
+<DoctorLayout
+  title="Clinic Console"
+  description="SKIDS Clinic Console — AI-powered pediatric consultation cockpit."
+>
+  <MedScribeConsole client:load />
+</DoctorLayout>

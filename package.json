@@ -1,9 +1,9 @@
 {
-  "name": "skids-parent",
-  "version": "0.1.0",
+  "name": "skids-d2c",
+  "version": "0.2.0",
   "type": "module",
   "private": true,
-  "description": "SKIDS Parent — The place where today's parents come to raise smart, healthy S-Kids",
+  "description": "SKIDS D2C — Parent + Doctor co-caring platform. Twin PHR, AI-powered clinic console, regional protocols.",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
