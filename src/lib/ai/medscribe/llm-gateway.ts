@@ -39,17 +39,11 @@ export const DEFAULT_LLM_CONFIG: LLMConfig = {
   mode: 'auto',
   ollamaUrl: 'http://localhost:11434',
   ollamaModel: 'lfm2.5-vl:1.6b',
-  cloudGatewayUrl: typeof window !== 'undefined'
-    ? (process.env.NEXT_PUBLIC_CLOUDFLARE_AI_GATEWAY_URL || '')
-    : '',
+  cloudGatewayUrl: (typeof import.meta !== 'undefined' && import.meta.env?.PUBLIC_CLOUDFLARE_AI_GATEWAY_URL) || '',
   cloudProvider: 'groq',
   cloudApiKey: '',
-  groqApiKey: typeof window !== 'undefined'
-    ? (process.env.NEXT_PUBLIC_GROQ_API_KEY || '')
-    : '',
-  geminiApiKey: typeof window !== 'undefined'
-    ? (process.env.NEXT_PUBLIC_GEMINI_API_KEY || '')
-    : '',
+  groqApiKey: (typeof import.meta !== 'undefined' && import.meta.env?.PUBLIC_GROQ_API_KEY) || '',
+  geminiApiKey: (typeof import.meta !== 'undefined' && import.meta.env?.PUBLIC_GEMINI_API_KEY) || '',
   sendImagesToCloud: false,
 }
 

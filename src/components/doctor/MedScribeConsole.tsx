@@ -63,9 +63,12 @@ function Badge({ children, variant = 'secondary', className = '' }: {
   return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${variants[variant]} ${className}`}>{children}</span>
 }
 
-function Input({ className = '', ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={`flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 ${className}`} {...props} />
-}
+const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
+  ({ className = '', ...props }, ref) => {
+    return <input ref={ref} className={`flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 ${className}`} {...props} />
+  }
+)
+Input.displayName = 'Input'
 
 // ============================================
 // TYPES
@@ -502,6 +505,14 @@ export default function MedScribeConsole({ doctorName, doctorRole, doctorId, onS
   // Today's screening findings (from SKIDS Screen pre-checkin)
   const [screeningFindings, setScreeningFindings] = useState<ScreeningFinding[]>([])
 
+  // Gate: consultation explicitly started (prevents auto-switch while typing name)
+  // Auto-start if arriving from dashboard with a patient name in URL
+  const [consultationStarted, setConsultationStarted] = useState(() => {
+    if (typeof window === 'undefined') return false
+    const params = new URLSearchParams(window.location.search)
+    return !!params.get('name')
+  })
+
   // Care plan
   const [carePlan, setCarePlan] = useState<CarePlan | null>(null)
 
@@ -748,6 +759,7 @@ export default function MedScribeConsole({ doctorName, doctorRole, doctorId, onS
     setArtifactPanelOpen(false)
     setInvolvedAssistants(new Set())
     setActiveAgents([])
+    setConsultationStarted(false)
   }, [])
 
   // ============================================
@@ -1174,7 +1186,7 @@ export default function MedScribeConsole({ doctorName, doctorRole, doctorId, onS
   // ONBOARDING — no patient loaded
   // ============================================
 
-  if (!childContext.name) {
+  if (!consultationStarted) {
     return (
       <div className="h-screen flex flex-col bg-background">
         <div className="h-11 border-b flex items-center px-4 shrink-0 bg-card gap-3">
@@ -1212,12 +1224,27 @@ export default function MedScribeConsole({ doctorName, doctorRole, doctorId, onS
                 </select>
               </div>
               <Input placeholder="Chief complaint / parent concern" value={childContext.parentConcerns || ''} onChange={e => setChildContext(prev => ({ ...prev, parentConcerns: e.target.value }))} className="h-9" />
+              <button
+                onClick={() => {
+                  if (!childContext.name.trim()) return
+                  setConsultationStarted(true)
+                }}
+                disabled={!childContext.name.trim()}
+                className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-all ${
+                  childContext.name.trim()
+                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                Start Consultation →
+              </button>
             </div>
             <button
               onClick={() => {
                 setChildContext({ name: 'Arjun K', age: '6 years', gender: 'male', parentConcerns: 'Mother reports squinting at blackboard for 3 months' })
                 setPatientRecord(getDemoPatientRecord())
                 setScreeningFindings(getDemoScreeningFindings())
+                setConsultationStarted(true)
               }}
               className="w-full text-left p-3 rounded-lg border border-dashed hover:border-blue-300 hover:bg-blue-50/50 transition-all text-xs text-muted-foreground"
             >
