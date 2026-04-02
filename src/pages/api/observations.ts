@@ -1,11 +1,17 @@
 /**
- * GET  /api/observations?childId=xxx — List parent observations
- * POST /api/observations — Add a new observation
+ * GET  /api/observations?childId=xxx — List parent observations (with projections)
+ * POST /api/observations — Add a new observation → triggers probabilistic projection
+ *
+ * The POST endpoint is where the SKIDS Life Record intelligence fires.
+ * Every observation triggers the probability engine, which projects
+ * probable conditions using the child's complete life record.
  */
 
 import type { APIRoute } from 'astro'
 import { getParentId, verifyChildOwnership } from './children'
 import { getEnv } from '@/lib/runtime/env'
+import { buildLifeRecordContext } from '../../lib/ai/life-record/context-builder'
+import { projectObservation, getParentSummary } from '../../lib/ai/life-record/probability-engine'
 
 export const prerender = false
 
@@ -84,7 +90,80 @@ export const POST: APIRoute = async ({ request, locals }) => {
       body.concernLevel || 'none'
     ).run()
 
-    return new Response(JSON.stringify({ id, created: true }), {
+    // ═══════════════════════════════════════════════════════
+    // SKIDS LIFE RECORD — Probabilistic Projection
+    // The moment an observation is saved, the probability
+    // engine fires to project probable conditions.
+    // ═══════════════════════════════════════════════════════
+    let projectionSummary = null
+    try {
+      // 1. Build the child's complete life record context from DB
+      const lifeRecord = await buildLifeRecordContext(body.childId, env.DB)
+
+      // 2. Run the probability engine
+      const projectionResult = projectObservation(body.observationText, lifeRecord, id)
+
+      // 3. Store the projection result
+      const projResultId = crypto.randomUUID()
+      await env.DB.prepare(
+        `INSERT INTO projection_results (id, observation_id, child_id, observation_text, child_age_months, projections_count, domains_detected_json, clarifying_questions_json, confidence, computed_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(
+        projResultId,
+        id,
+        body.childId,
+        body.observationText,
+        lifeRecord.child.ageMonths,
+        projectionResult.projections.length,
+        JSON.stringify(projectionResult.domainsDetected),
+        JSON.stringify(projectionResult.clarifyingQuestions),
+        projectionResult.confidence,
+        projectionResult.computedAt
+      ).run()
+
+      // 4. Store each individual projection
+      for (const proj of projectionResult.projections) {
+        await env.DB.prepare(
+          `INSERT INTO observation_projections (id, observation_id, child_id, observation_text, condition_name, icd10, domain, category, base_probability, adjusted_probability, urgency, must_not_miss, parent_explanation, modifiers_json, evidence_for_json, evidence_against_json, parent_next_steps_json, doctor_exam_points_json, rule_out_before_json, citation, doctor_status, confidence)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+          crypto.randomUUID(),
+          id,
+          body.childId,
+          body.observationText,
+          proj.conditionName,
+          proj.icd10 || null,
+          proj.domain,
+          proj.category,
+          proj.baseProbability,
+          proj.adjustedProbability,
+          proj.urgency,
+          proj.mustNotMiss ? 1 : 0,
+          proj.parentExplanation,
+          JSON.stringify(proj.modifiersApplied),
+          JSON.stringify(proj.evidenceFor),
+          JSON.stringify(proj.evidenceAgainst),
+          JSON.stringify(proj.parentNextSteps),
+          JSON.stringify(proj.doctorExamPoints),
+          JSON.stringify(proj.ruleOutBefore),
+          proj.citation || null,
+          'projected',
+          projectionResult.confidence
+        ).run()
+      }
+
+      // 5. Generate parent-friendly summary
+      projectionSummary = getParentSummary(projectionResult)
+    } catch (projErr: any) {
+      // Projection failure should NOT block the observation from being saved
+      console.error('[Observations] Projection error (non-blocking):', projErr)
+    }
+
+    return new Response(JSON.stringify({
+      id,
+      created: true,
+      projection: projectionSummary,
+    }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     })

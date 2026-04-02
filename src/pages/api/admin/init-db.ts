@@ -63,6 +63,8 @@ CREATE TABLE IF NOT EXISTS children (
   photo_url TEXT,
   blood_group TEXT,
   allergies_json TEXT,
+  v3_child_id TEXT,
+  v3_campaign_code TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
 `
@@ -233,6 +235,225 @@ CREATE TABLE IF NOT EXISTS campaigns (
 );
 `
 
+const CREATE_DOCTORS_TABLE = `
+CREATE TABLE IF NOT EXISTS doctors (
+  id TEXT PRIMARY KEY,
+  firebase_uid TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL DEFAULT '',
+  email TEXT,
+  phone TEXT,
+  avatar_url TEXT,
+  specialty TEXT DEFAULT 'pediatrician',
+  role TEXT DEFAULT 'primary',
+  clinic_name TEXT,
+  city TEXT,
+  license_number TEXT,
+  is_active INTEGER DEFAULT 1,
+  ai_preference TEXT DEFAULT 'chips',
+  ai_model_provider TEXT,
+  ai_api_key_encrypted TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+`
+
+const CREATE_DOCTOR_PATIENTS_TABLE = `
+CREATE TABLE IF NOT EXISTS doctor_patients (
+  id TEXT PRIMARY KEY,
+  doctor_id TEXT NOT NULL REFERENCES doctors(id),
+  child_id TEXT NOT NULL REFERENCES children(id),
+  relationship TEXT DEFAULT 'primary',
+  linked_by TEXT DEFAULT 'doctor',
+  status TEXT DEFAULT 'active',
+  notes TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  UNIQUE(doctor_id, child_id)
+);
+`
+
+const CREATE_PROTOCOLS_TABLE = `
+CREATE TABLE IF NOT EXISTS protocols (
+  id TEXT PRIMARY KEY,
+  slug TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  category TEXT NOT NULL,
+  description TEXT,
+  age_range TEXT,
+  trigger_conditions TEXT,
+  steps_json TEXT NOT NULL,
+  is_active INTEGER DEFAULT 1,
+  version INTEGER DEFAULT 1,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+`
+
+const CREATE_PROTOCOL_ASSIGNMENTS_TABLE = `
+CREATE TABLE IF NOT EXISTS protocol_assignments (
+  id TEXT PRIMARY KEY,
+  protocol_id TEXT NOT NULL REFERENCES protocols(id),
+  child_id TEXT NOT NULL REFERENCES children(id),
+  doctor_id TEXT NOT NULL REFERENCES doctors(id),
+  status TEXT DEFAULT 'active',
+  current_step INTEGER DEFAULT 0,
+  steps_completed_json TEXT DEFAULT '[]',
+  notes TEXT,
+  started_at TEXT DEFAULT (datetime('now')),
+  completed_at TEXT,
+  updated_at TEXT DEFAULT (datetime('now')),
+  UNIQUE(protocol_id, child_id)
+);
+`
+
+// ── SKIDS Life Record — Probabilistic Projection Tables ──
+
+const CREATE_OBSERVATION_PROJECTIONS_TABLE = `
+CREATE TABLE IF NOT EXISTS observation_projections (
+  id TEXT PRIMARY KEY,
+  observation_id TEXT NOT NULL,
+  child_id TEXT NOT NULL REFERENCES children(id),
+  observation_text TEXT NOT NULL,
+  condition_name TEXT NOT NULL,
+  icd10 TEXT,
+  domain TEXT NOT NULL,
+  category TEXT NOT NULL,
+  base_probability REAL NOT NULL,
+  adjusted_probability REAL NOT NULL,
+  urgency TEXT NOT NULL DEFAULT 'routine',
+  must_not_miss INTEGER DEFAULT 0,
+  parent_explanation TEXT,
+  modifiers_json TEXT,
+  evidence_for_json TEXT,
+  evidence_against_json TEXT,
+  parent_next_steps_json TEXT,
+  doctor_exam_points_json TEXT,
+  rule_out_before_json TEXT,
+  citation TEXT,
+  doctor_status TEXT DEFAULT 'projected',
+  doctor_notes TEXT,
+  doctor_id TEXT,
+  refined_at TEXT,
+  confidence REAL,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+`
+
+const CREATE_PROJECTION_RESULTS_TABLE = `
+CREATE TABLE IF NOT EXISTS projection_results (
+  id TEXT PRIMARY KEY,
+  observation_id TEXT NOT NULL,
+  child_id TEXT NOT NULL REFERENCES children(id),
+  observation_text TEXT NOT NULL,
+  child_age_months INTEGER NOT NULL,
+  projections_count INTEGER DEFAULT 0,
+  domains_detected_json TEXT,
+  clarifying_questions_json TEXT,
+  confidence REAL,
+  computed_at TEXT DEFAULT (datetime('now'))
+);
+`
+
+const CREATE_DOCTOR_REFINEMENTS_TABLE = `
+CREATE TABLE IF NOT EXISTS doctor_refinements (
+  id TEXT PRIMARY KEY,
+  projection_id TEXT NOT NULL REFERENCES observation_projections(id),
+  doctor_id TEXT NOT NULL REFERENCES doctors(id),
+  child_id TEXT NOT NULL REFERENCES children(id),
+  condition_name TEXT NOT NULL,
+  action TEXT NOT NULL,
+  clinical_findings TEXT,
+  adjusted_probability REAL,
+  notes TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+`
+
+const CREATE_BIRTH_HISTORY_TABLE = `
+CREATE TABLE IF NOT EXISTS birth_history (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL UNIQUE REFERENCES children(id),
+  gestational_weeks INTEGER,
+  delivery_mode TEXT,
+  birth_weight_grams INTEGER,
+  nicu_stay INTEGER DEFAULT 0,
+  nicu_days INTEGER,
+  apgar_score INTEGER,
+  complications_json TEXT,
+  notes TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+`
+
+const CREATE_FAMILY_HISTORY_TABLE = `
+CREATE TABLE IF NOT EXISTS family_history (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL REFERENCES children(id),
+  condition TEXT NOT NULL,
+  relation TEXT,
+  notes TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+`
+
+const CREATE_SCREENING_RESULTS_TABLE = `
+CREATE TABLE IF NOT EXISTS screening_results (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL REFERENCES children(id),
+  screening_type TEXT NOT NULL,
+  date TEXT NOT NULL,
+  result TEXT NOT NULL,
+  findings_json TEXT,
+  provider TEXT,
+  notes TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+`
+
+const CREATE_DIET_RECORDS_TABLE = `
+CREATE TABLE IF NOT EXISTS diet_records (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL REFERENCES children(id),
+  date TEXT NOT NULL,
+  breastfed INTEGER,
+  formula_fed INTEGER,
+  solids_started INTEGER,
+  food_diversity INTEGER,
+  iron_supplement INTEGER,
+  vitamin_d INTEGER,
+  notes TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+`
+
+const CREATE_ACTIVE_CONDITIONS_TABLE = `
+CREATE TABLE IF NOT EXISTS active_conditions (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL REFERENCES children(id),
+  condition_name TEXT NOT NULL,
+  icd10 TEXT,
+  diagnosed_date TEXT,
+  status TEXT DEFAULT 'active',
+  notes TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+`
+
+const CREATE_MEDICATIONS_TABLE = `
+CREATE TABLE IF NOT EXISTS medications (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL REFERENCES children(id),
+  medication_name TEXT NOT NULL,
+  dosage TEXT,
+  frequency TEXT,
+  start_date TEXT,
+  end_date TEXT,
+  prescriber TEXT,
+  status TEXT DEFAULT 'active',
+  created_at TEXT DEFAULT (datetime('now'))
+);
+`
+
 const INDEX_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_leads_brand ON leads(brand)`,
   `CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status)`,
@@ -257,6 +478,36 @@ const INDEX_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_products_status ON products(status)`,
   `CREATE INDEX IF NOT EXISTS idx_campaigns_slug ON campaigns(product_slug)`,
   `CREATE INDEX IF NOT EXISTS idx_campaigns_code ON campaigns(campaign_code)`,
+  `CREATE INDEX IF NOT EXISTS idx_doctors_firebase ON doctors(firebase_uid)`,
+  `CREATE INDEX IF NOT EXISTS idx_doctors_specialty ON doctors(specialty)`,
+  `CREATE INDEX IF NOT EXISTS idx_doctor_patients_doctor ON doctor_patients(doctor_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_doctor_patients_child ON doctor_patients(child_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_doctor_patients_status ON doctor_patients(status)`,
+  `CREATE INDEX IF NOT EXISTS idx_protocols_slug ON protocols(slug)`,
+  `CREATE INDEX IF NOT EXISTS idx_protocols_category ON protocols(category)`,
+  `CREATE INDEX IF NOT EXISTS idx_assignments_child ON protocol_assignments(child_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_assignments_doctor ON protocol_assignments(doctor_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_assignments_status ON protocol_assignments(status)`,
+  // Life Record indexes
+  `CREATE INDEX IF NOT EXISTS idx_obs_proj_observation ON observation_projections(observation_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_obs_proj_child ON observation_projections(child_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_obs_proj_domain ON observation_projections(domain)`,
+  `CREATE INDEX IF NOT EXISTS idx_obs_proj_status ON observation_projections(doctor_status)`,
+  `CREATE INDEX IF NOT EXISTS idx_obs_proj_must_not_miss ON observation_projections(must_not_miss)`,
+  `CREATE INDEX IF NOT EXISTS idx_proj_results_child ON projection_results(child_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_proj_results_obs ON projection_results(observation_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_doctor_refinements_proj ON doctor_refinements(projection_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_doctor_refinements_doctor ON doctor_refinements(doctor_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_doctor_refinements_child ON doctor_refinements(child_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_birth_history_child ON birth_history(child_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_family_history_child ON family_history(child_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_screening_results_child ON screening_results(child_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_screening_results_type ON screening_results(screening_type)`,
+  `CREATE INDEX IF NOT EXISTS idx_diet_records_child ON diet_records(child_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_active_conditions_child ON active_conditions(child_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_active_conditions_status ON active_conditions(status)`,
+  `CREATE INDEX IF NOT EXISTS idx_medications_child ON medications(child_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_medications_status ON medications(status)`,
 ]
 
 export const GET: APIRoute = async (ctx) => {
@@ -294,12 +545,37 @@ async function handleInit(request: Request, locals: App.Locals) {
     await db.prepare(CREATE_SCREENING_IMPORTS_TABLE).run()
     await db.prepare(CREATE_PRODUCTS_TABLE).run()
     await db.prepare(CREATE_CAMPAIGNS_TABLE).run()
+    await db.prepare(CREATE_DOCTORS_TABLE).run()
+    await db.prepare(CREATE_DOCTOR_PATIENTS_TABLE).run()
+    await db.prepare(CREATE_PROTOCOLS_TABLE).run()
+    await db.prepare(CREATE_PROTOCOL_ASSIGNMENTS_TABLE).run()
+    // Life Record tables
+    await db.prepare(CREATE_OBSERVATION_PROJECTIONS_TABLE).run()
+    await db.prepare(CREATE_PROJECTION_RESULTS_TABLE).run()
+    await db.prepare(CREATE_DOCTOR_REFINEMENTS_TABLE).run()
+    await db.prepare(CREATE_BIRTH_HISTORY_TABLE).run()
+    await db.prepare(CREATE_FAMILY_HISTORY_TABLE).run()
+    await db.prepare(CREATE_SCREENING_RESULTS_TABLE).run()
+    await db.prepare(CREATE_DIET_RECORDS_TABLE).run()
+    await db.prepare(CREATE_ACTIVE_CONDITIONS_TABLE).run()
+    await db.prepare(CREATE_MEDICATIONS_TABLE).run()
     for (const stmt of INDEX_STATEMENTS) {
       await db.prepare(stmt).run()
     }
 
+    // ── V3 Bridge columns (safe to run multiple times) ──
+    try {
+      await db.prepare(`ALTER TABLE children ADD COLUMN v3_child_id TEXT`).run()
+    } catch { /* column already exists */ }
+    try {
+      await db.prepare(`ALTER TABLE children ADD COLUMN v3_campaign_code TEXT`).run()
+    } catch { /* column already exists */ }
+    try {
+      await db.prepare(`CREATE INDEX IF NOT EXISTS idx_children_v3 ON children(v3_child_id)`).run()
+    } catch { /* index already exists */ }
+
     return new Response(
-      JSON.stringify({ success: true, message: 'All 14 tables ready' }),
+      JSON.stringify({ success: true, message: 'All 27 tables ready (18 core + 9 life record) + v3 bridge columns' }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
   } catch (e: unknown) {
