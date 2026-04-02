@@ -1,0 +1,35 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import OnboardingChat from '@/components/phr/OnboardingChat'
+
+export const prerender = true
+---
+
+<BaseLayout
+  title="Set Up Health Record | SKIDS"
+  description="Let's set up your child's continuous health life record."
+>
+  <main class="h-screen bg-gray-50">
+    <OnboardingChat
+      client:load
+      childId=""
+      childName=""
+    />
+  </main>
+
+  <script>
+    // Read childId and childName from URL params
+    const params = new URLSearchParams(window.location.search);
+    const childId = params.get('childId') || '';
+    const childName = params.get('childName') || 'your child';
+
+    // The React component will read these from the URL on mount
+    // We pass them as data attributes on a hidden element
+    const el = document.getElementById('onboarding-data');
+    if (el) {
+      el.dataset.childId = childId;
+      el.dataset.childName = childName;
+    }
+  </script>
+  <div id="onboarding-data" class="hidden" />
+</BaseLayout>

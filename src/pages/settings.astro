@@ -1,0 +1,21 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import Navbar from '@/components/common/Navbar.astro'
+import MobileTabBar from '@/components/common/MobileTabBar.astro'
+import SettingsPage from '@/components/phr/SettingsPage'
+
+export const prerender = true
+---
+
+<BaseLayout
+  title="Settings | SKIDS Parent"
+  description="Manage your notifications, preferences, and account settings."
+>
+  <Navbar />
+
+  <main class="min-h-screen bg-gray-50">
+    <SettingsPage client:load />
+  </main>
+
+  <MobileTabBar />
+</BaseLayout>
