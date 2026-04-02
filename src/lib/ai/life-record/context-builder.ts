@@ -44,6 +44,10 @@ export async function buildLifeRecordContext(
     medicationRows,
     dietRow,
     illnessRows,
+    growthTrackRows,
+    interventionRows,
+    interventionComplianceRows,
+    escalationRows,
   ] = await Promise.all([
     // Child demographics
     db.prepare('SELECT * FROM children WHERE id = ?').bind(childId).first(),
@@ -70,6 +74,22 @@ export async function buildLifeRecordContext(
     // Recent illnesses (from observations categorized as illness, last 90 days)
     db.prepare(
       "SELECT * FROM parent_observations WHERE child_id = ? AND category IN ('illness', 'sick', 'fever', 'infection') AND date >= date('now', '-90 days') ORDER BY date DESC"
+    ).bind(childId).all().then((r: any) => r.results || []).catch(() => []),
+    // Active growth tracks for this child
+    db.prepare(
+      "SELECT gt.*, gtp.status as progress_status, gtp.parent_engagement_score, gtp.flagged_for_ped FROM growth_tracks gt LEFT JOIN growth_track_progress gtp ON gt.id = gtp.track_id AND gtp.child_id = ? WHERE gtp.status = 'active' OR gtp.status IS NULL"
+    ).bind(childId).all().then((r: any) => r.results || []).catch(() => []),
+    // Active intervention assignments
+    db.prepare(
+      "SELECT ia.*, ip.name as protocol_name, ip.category, ip.condition_name FROM intervention_assignments ia JOIN intervention_protocols ip ON ia.intervention_protocol_id = ip.id WHERE ia.child_id = ? AND ia.status = 'active'"
+    ).bind(childId).all().then((r: any) => r.results || []).catch(() => []),
+    // Intervention compliance/streaks
+    db.prepare(
+      "SELECT s.* FROM intervention_streaks s JOIN intervention_assignments ia ON s.assignment_id = ia.id WHERE ia.child_id = ? AND ia.status = 'active'"
+    ).bind(childId).all().then((r: any) => r.results || []).catch(() => []),
+    // Recent escalations (last 30 days)
+    db.prepare(
+      "SELECT * FROM intervention_escalations WHERE child_id = ? AND created_at >= date('now', '-30 days') ORDER BY created_at DESC LIMIT 10"
     ).bind(childId).all().then((r: any) => r.results || []).catch(() => []),
   ])
 
@@ -183,6 +203,49 @@ export async function buildLifeRecordContext(
       }
     : {}
 
+  // Build active growth tracks context
+  const activeGrowthTracks = (growthTrackRows as any[])
+    .filter((gt: any) => {
+      // Include tracks whose age range covers this child
+      return ageMonths >= (gt.age_min_months || 0) && ageMonths <= (gt.age_max_months || 216)
+    })
+    .map((gt: any) => ({
+      domain: gt.domain,
+      title: gt.title,
+      agePeriod: gt.age_period,
+      status: gt.progress_status || 'active',
+      engagementScore: gt.parent_engagement_score || 0,
+      flaggedForPed: gt.flagged_for_ped || 0,
+    }))
+
+  // Build active interventions context
+  const activeInterventions = (interventionRows as any[]).map((ia: any) => {
+    const comp = (interventionComplianceRows as any[]).find(
+      (s: any) => s.assignment_id === ia.id
+    )
+    return {
+      protocolName: ia.protocol_name,
+      category: ia.category,
+      conditionName: ia.condition_name,
+      status: ia.status,
+      startDate: ia.start_date,
+      compliancePct: comp?.compliance_pct ?? undefined,
+      currentStreak: comp?.current_streak ?? 0,
+      totalDone: comp?.total_done ?? 0,
+      totalSkipped: comp?.total_skipped ?? 0,
+    }
+  })
+
+  // Build recent escalations context
+  const recentEscalations = (escalationRows as any[]).map((e: any) => ({
+    type: e.escalation_type,
+    severity: e.severity,
+    title: e.title,
+    status: e.status,
+    source: e.source,
+    createdAt: e.created_at,
+  }))
+
   return {
     child: {
       id: childId,
@@ -233,6 +296,10 @@ export async function buildLifeRecordContext(
       type: i.category || 'illness',
       date: i.date,
     })),
+    // Growth tracks + interventions
+    activeGrowthTracks,
+    activeInterventions,
+    recentEscalations,
   }
 }
 
@@ -313,5 +380,8 @@ export function buildMinimalContext(
     currentMedications: [],
     diet: {},
     recentIllnesses: [],
+    activeGrowthTracks: [],
+    activeInterventions: [],
+    recentEscalations: [],
   }
 }

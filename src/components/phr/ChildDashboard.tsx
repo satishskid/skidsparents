@@ -30,6 +30,9 @@ import HealthScoreGauge from './HealthScoreGauge'
 import PhrPdfExport from './PhrPdfExport'
 import ScreeningTab from '../screening/ScreeningTab'
 import LHRSummary from './LHRSummary'
+import GrowthTrackCard from '../growth/GrowthTrackCard'
+import InterventionStrip from '../interventions/InterventionStrip'
+import InterventionProgress from '../interventions/InterventionProgress'
 
 interface Child {
   id: string
@@ -41,6 +44,7 @@ interface Child {
 }
 
 const MORE_TILES = [
+  { key: 'interventions', label: 'My Plan', emoji: '💊' },
   { key: 'milestones', label: 'Milestones', emoji: '🎯' },
   { key: 'habits', label: 'Habits', emoji: '✅' },
   { key: 'growth', label: 'Growth', emoji: '📏' },
@@ -189,6 +193,23 @@ export default function ChildDashboard({ childId }: { childId: string }) {
         )}
       </div>
 
+      {/* ─── 0.5. Growth Track (universal — every child) ─── */}
+      {token && (
+        <GrowthTrackCard
+          childId={childId}
+          token={token}
+        />
+      )}
+
+      {/* ─── 0.75. Intervention Strip (only if prescribed) ─── */}
+      {token && (
+        <InterventionStrip
+          childId={childId}
+          token={token}
+          onTaskLogged={handleObservationSaved}
+        />
+      )}
+
       {/* ─── 1. Daily Insight Carousel (Morning Briefing) ─── */}
       {token && (
         <DailyInsightCarousel
@@ -237,7 +258,7 @@ export default function ChildDashboard({ childId }: { childId: string }) {
         <div className="flex items-center gap-2 mb-2 px-1">
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">More</span>
         </div>
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-6 gap-2">
           {MORE_TILES.map((tile) => (
             <button
               key={tile.key}
@@ -257,6 +278,9 @@ export default function ChildDashboard({ childId }: { childId: string }) {
         {/* Expanded section */}
         {expandedSection && token && (
           <div className="mt-3">
+            {expandedSection === 'interventions' && (
+              <InterventionProgress childId={childId} token={token} />
+            )}
             {expandedSection === 'milestones' && (
               <MilestoneTracker childId={childId} ageMonths={ageMonths} token={token} />
             )}

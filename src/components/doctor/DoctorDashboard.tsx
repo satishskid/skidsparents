@@ -34,10 +34,32 @@ export default function DoctorDashboard() {
   const [showLink, setShowLink] = useState(false)
   const [selectedChild, setSelectedChild] = useState<{ id: string; name: string } | null>(null)
   const [search, setSearch] = useState('')
+  const [escalationCounts, setEscalationCounts] = useState<Record<string, number>>({})
 
   useEffect(() => {
-    if (token) fetchPatients()
+    if (token) {
+      fetchPatients()
+      fetchEscalations()
+    }
   }, [token])
+
+  async function fetchEscalations() {
+    try {
+      const res = await fetch('/api/doctor/interventions/escalations', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const counts: Record<string, number> = {}
+        for (const esc of (data.escalations || []) as any[]) {
+          if (esc.status === 'open' && esc.child_id) {
+            counts[esc.child_id] = (counts[esc.child_id] || 0) + 1
+          }
+        }
+        setEscalationCounts(counts)
+      }
+    } catch { /* ignore */ }
+  }
 
   async function fetchPatients() {
     setLoading(true)
@@ -166,13 +188,20 @@ export default function DoctorDashboard() {
                 className="w-full flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:border-blue-200 hover:shadow-sm transition-all text-left"
               >
                 {/* Avatar */}
-                {p.photo_url ? (
-                  <img src={p.photo_url} alt="" className="w-10 h-10 rounded-full object-cover" />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-semibold text-sm">
-                    {p.child_name[0].toUpperCase()}
-                  </div>
-                )}
+                <div className="relative flex-shrink-0">
+                  {p.photo_url ? (
+                    <img src={p.photo_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-semibold text-sm">
+                      {p.child_name[0].toUpperCase()}
+                    </div>
+                  )}
+                  {escalationCounts[p.child_id] > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1 shadow-sm">
+                      {escalationCounts[p.child_id]}
+                    </span>
+                  )}
+                </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">

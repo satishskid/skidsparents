@@ -59,6 +59,12 @@ export async function generateDailyInsights(
   // Growth updates
   insights.push(...generateGrowthInsights(genCtx))
 
+  // Growth track guidance — domain-specific developmental nurturing
+  insights.push(...generateGrowthTrackInsights(genCtx))
+
+  // Intervention progress — doctor-prescribed therapy updates
+  insights.push(...generateInterventionInsights(genCtx))
+
   // Age insights — general age-appropriate guidance
   insights.push(...generateAgeInsights(genCtx))
 
@@ -151,6 +157,49 @@ async function buildInsightContext(
   const approachingMilestones = ctx.milestones.notStarted
     .filter(m => m.expectedAgeMax > 0 && m.expectedAgeMax - ctx.child.ageMonths <= 2 && m.expectedAgeMax >= ctx.child.ageMonths)
 
+  // Growth tracks for this age
+  let activeGrowthTracks: Array<{ domain: string; title: string; keyMessage?: string; flaggedForPed: number }> = []
+  if (db) {
+    try {
+      const { results: tracks } = await db.prepare(
+        `SELECT gt.domain, gt.title, gt.key_message, COALESCE(gtp.flagged_for_ped, 0) as flagged_for_ped
+         FROM growth_tracks gt
+         LEFT JOIN growth_track_progress gtp ON gt.id = gtp.track_id AND gtp.child_id = ?
+         WHERE gt.age_min_months <= ? AND gt.age_max_months >= ?
+         LIMIT 8`
+      ).bind(ctx.child.id, ctx.child.ageMonths, ctx.child.ageMonths).all()
+
+      activeGrowthTracks = (tracks || []).map((t: any) => ({
+        domain: t.domain,
+        title: t.title,
+        keyMessage: t.key_message || undefined,
+        flaggedForPed: t.flagged_for_ped || 0,
+      }))
+    } catch { /* ignore */ }
+  }
+
+  // Active interventions with compliance
+  let activeInterventions: Array<{ protocolName: string; category: string; conditionName?: string; compliancePct?: number; currentStreak: number }> = []
+  if (db) {
+    try {
+      const { results: interventions } = await db.prepare(
+        `SELECT ip.name as protocol_name, ip.category, ip.condition_name, s.compliance_pct, s.current_streak
+         FROM intervention_assignments ia
+         JOIN intervention_protocols ip ON ia.intervention_protocol_id = ip.id
+         LEFT JOIN intervention_streaks s ON s.assignment_id = ia.id
+         WHERE ia.child_id = ? AND ia.status = 'active'`
+      ).bind(ctx.child.id).all()
+
+      activeInterventions = (interventions || []).map((i: any) => ({
+        protocolName: i.protocol_name,
+        category: i.category,
+        conditionName: i.condition_name || undefined,
+        compliancePct: i.compliance_pct ?? undefined,
+        currentStreak: i.current_streak || 0,
+      }))
+    } catch { /* ignore */ }
+  }
+
   return {
     childName: ctx.child.name,
     ageMonths: ctx.child.ageMonths,
@@ -166,6 +215,8 @@ async function buildInsightContext(
     isPreterm: (ctx.birthHistory.gestationalWeeks || 40) < 37,
     hadNicuStay: !!ctx.birthHistory.nicuStay,
     delayedMilestones: ctx.milestones.delayed,
+    activeGrowthTracks,
+    activeInterventions,
   }
 }
 
@@ -333,6 +384,80 @@ function generateAgeInsights(ctx: InsightGenerationContext): DailyInsight[] {
     priority: 3,
     emoji: insight.emoji,
   }]
+}
+
+function generateGrowthTrackInsights(ctx: InsightGenerationContext): DailyInsight[] {
+  if (!ctx.activeGrowthTracks || ctx.activeGrowthTracks.length === 0) return []
+
+  // Prioritize flagged tracks, then pick one with a key message
+  const flagged = ctx.activeGrowthTracks.find(t => t.flaggedForPed > 0)
+  if (flagged) {
+    const domainName = DOMAIN_DISPLAY[flagged.domain] || flagged.domain
+    return [{
+      id: `gt_flag_${flagged.domain}_${today()}`,
+      type: 'pattern_alert',
+      title: `${domainName} needs attention`,
+      body: `${ctx.childName}'s ${domainName.toLowerCase()} track has been flagged. This is worth discussing with your pediatrician at the next visit.`,
+      deepQueryPrompt: `${ctx.childName}'s ${domainName.toLowerCase()} growth track has been flagged for the pediatrician. What should I ask about?`,
+      domain: flagged.domain,
+      priority: 2,
+      emoji: '🚩',
+    }]
+  }
+
+  // Otherwise, surface a growth track tip
+  const track = ctx.activeGrowthTracks.find(t => t.keyMessage) || ctx.activeGrowthTracks[0]
+  if (!track) return []
+
+  const domainName = DOMAIN_DISPLAY[track.domain] || track.domain
+  return [{
+    id: `gt_tip_${track.domain}_${today()}`,
+    type: 'age_insight',
+    title: track.title || `${domainName} guidance`,
+    body: track.keyMessage || `${ctx.childName} is in the ${track.title} phase. This is a great time to focus on ${domainName.toLowerCase()} development.`,
+    deepQueryPrompt: `Tell me more about ${ctx.childName}'s ${domainName.toLowerCase()} development at ${formatAge(ctx.ageMonths)}. What should I focus on?`,
+    domain: track.domain,
+    priority: 3,
+    emoji: DOMAIN_EMOJI[track.domain] || '🌱',
+  }]
+}
+
+function generateInterventionInsights(ctx: InsightGenerationContext): DailyInsight[] {
+  if (!ctx.activeInterventions || ctx.activeInterventions.length === 0) return []
+
+  const insights: DailyInsight[] = []
+
+  // High compliance celebration
+  const highComp = ctx.activeInterventions.find(i => i.compliancePct !== undefined && i.compliancePct >= 80 && i.currentStreak >= 3)
+  if (highComp) {
+    insights.push({
+      id: `intv_streak_${highComp.category}_${today()}`,
+      type: 'celebration',
+      title: `Great job with ${highComp.protocolName}!`,
+      body: `${ctx.childName}'s ${highComp.protocolName} compliance is at ${Math.round(highComp.compliancePct!)}% with a ${highComp.currentStreak}-day streak. Consistency is key — keep it up!`,
+      deepQueryPrompt: `${ctx.childName} is doing well with ${highComp.protocolName}. What progress should I expect to see?`,
+      domain: highComp.category,
+      priority: 3,
+      emoji: '🌟',
+    })
+  }
+
+  // Low compliance encouragement (not shame)
+  const lowComp = ctx.activeInterventions.find(i => i.compliancePct !== undefined && i.compliancePct < 50)
+  if (lowComp) {
+    insights.push({
+      id: `intv_low_${lowComp.category}_${today()}`,
+      type: 'pattern_alert',
+      title: `${lowComp.protocolName} — every bit helps`,
+      body: `${ctx.childName}'s ${lowComp.protocolName} has been tricky to keep up with. That's okay — even partial effort matters. Try one task today.`,
+      deepQueryPrompt: `I'm struggling with ${ctx.childName}'s ${lowComp.protocolName} therapy. What are some tips to make it easier to stick with?`,
+      domain: lowComp.category,
+      priority: 2,
+      emoji: '💪',
+    })
+  }
+
+  return insights.slice(0, 1) // Max 1 intervention insight per day
 }
 
 // ============================================

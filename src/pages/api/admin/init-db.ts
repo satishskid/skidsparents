@@ -508,6 +508,165 @@ CREATE TABLE IF NOT EXISTS parent_settings (
 );
 `
 
+// ── Growth & Intervention Engine tables ──
+
+const CREATE_GROWTH_TRACKS_TABLE = `
+CREATE TABLE IF NOT EXISTS growth_tracks (
+  id TEXT PRIMARY KEY,
+  domain TEXT NOT NULL,
+  age_min_months INTEGER NOT NULL,
+  age_max_months INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  what_to_expect TEXT NOT NULL,
+  parent_guidance_json TEXT NOT NULL,
+  coaching_playbook_json TEXT NOT NULL,
+  milestones_json TEXT,
+  red_flags_json TEXT,
+  parental_coping_json TEXT,
+  evidence_base TEXT,
+  region TEXT DEFAULT 'global',
+  protocol_authority TEXT DEFAULT 'WHO',
+  is_active INTEGER DEFAULT 1,
+  version INTEGER DEFAULT 1,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+`
+
+const CREATE_GROWTH_TRACK_PROGRESS_TABLE = `
+CREATE TABLE IF NOT EXISTS growth_track_progress (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL REFERENCES children(id),
+  track_id TEXT NOT NULL REFERENCES growth_tracks(id),
+  status TEXT DEFAULT 'active',
+  parent_engagement_score REAL DEFAULT 0,
+  insights_viewed INTEGER DEFAULT 0,
+  coach_sessions INTEGER DEFAULT 0,
+  flagged_for_ped INTEGER DEFAULT 0,
+  started_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now')),
+  UNIQUE(child_id, track_id)
+);
+`
+
+const CREATE_INTERVENTION_PROTOCOLS_TABLE = `
+CREATE TABLE IF NOT EXISTS intervention_protocols (
+  id TEXT PRIMARY KEY,
+  slug TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  category TEXT NOT NULL,
+  subspecialty TEXT NOT NULL,
+  condition_name TEXT,
+  icd10 TEXT,
+  region TEXT NOT NULL DEFAULT 'global',
+  protocol_authority TEXT NOT NULL,
+  description TEXT,
+  evidence_base TEXT,
+  age_range_min INTEGER,
+  age_range_max INTEGER,
+  default_duration_days INTEGER NOT NULL,
+  default_frequency TEXT NOT NULL,
+  tasks_json TEXT NOT NULL,
+  coaching_playbook_json TEXT NOT NULL,
+  escalation_rules_json TEXT NOT NULL,
+  customizable_params_json TEXT,
+  prevalence_notes TEXT,
+  genetic_considerations TEXT,
+  dietary_context TEXT,
+  is_active INTEGER DEFAULT 1,
+  version INTEGER DEFAULT 1,
+  parent_locale TEXT DEFAULT 'en',
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+`
+
+const CREATE_INTERVENTION_ASSIGNMENTS_TABLE = `
+CREATE TABLE IF NOT EXISTS intervention_assignments (
+  id TEXT PRIMARY KEY,
+  intervention_protocol_id TEXT NOT NULL REFERENCES intervention_protocols(id),
+  child_id TEXT NOT NULL REFERENCES children(id),
+  doctor_id TEXT NOT NULL REFERENCES doctors(id),
+  status TEXT DEFAULT 'active',
+  start_date TEXT NOT NULL,
+  end_date TEXT,
+  custom_params_json TEXT,
+  child_region TEXT,
+  child_ethnic_origin TEXT,
+  doctor_notes TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now')),
+  UNIQUE(intervention_protocol_id, child_id, status)
+);
+`
+
+const CREATE_INTERVENTION_TASKS_TABLE = `
+CREATE TABLE IF NOT EXISTS intervention_tasks (
+  id TEXT PRIMARY KEY,
+  assignment_id TEXT NOT NULL REFERENCES intervention_assignments(id),
+  child_id TEXT NOT NULL REFERENCES children(id),
+  task_date TEXT NOT NULL,
+  task_key TEXT NOT NULL,
+  title TEXT NOT NULL,
+  instructions TEXT NOT NULL,
+  duration_minutes INTEGER,
+  sequence_in_day INTEGER DEFAULT 1,
+  status TEXT DEFAULT 'pending',
+  completed_at TEXT,
+  parent_note TEXT,
+  media_url TEXT,
+  media_type TEXT,
+  difficulty_rating INTEGER,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+`
+
+const CREATE_INTERVENTION_STREAKS_TABLE = `
+CREATE TABLE IF NOT EXISTS intervention_streaks (
+  id TEXT PRIMARY KEY,
+  assignment_id TEXT NOT NULL REFERENCES intervention_assignments(id) UNIQUE,
+  current_streak INTEGER DEFAULT 0,
+  longest_streak INTEGER DEFAULT 0,
+  total_done INTEGER DEFAULT 0,
+  total_skipped INTEGER DEFAULT 0,
+  total_partial INTEGER DEFAULT 0,
+  compliance_pct REAL DEFAULT 0,
+  last_completed_date TEXT,
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+`
+
+const CREATE_INTERVENTION_ESCALATIONS_TABLE = `
+CREATE TABLE IF NOT EXISTS intervention_escalations (
+  id TEXT PRIMARY KEY,
+  assignment_id TEXT NOT NULL REFERENCES intervention_assignments(id),
+  child_id TEXT NOT NULL REFERENCES children(id),
+  doctor_id TEXT NOT NULL REFERENCES doctors(id),
+  escalation_type TEXT NOT NULL,
+  severity TEXT DEFAULT 'info',
+  title TEXT NOT NULL,
+  detail TEXT,
+  source TEXT DEFAULT 'system',
+  status TEXT DEFAULT 'open',
+  resolved_at TEXT,
+  doctor_response TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+`
+
+const CREATE_INTERVENTION_CHAT_SESSIONS_TABLE = `
+CREATE TABLE IF NOT EXISTS intervention_chat_sessions (
+  id TEXT PRIMARY KEY,
+  assignment_id TEXT NOT NULL REFERENCES intervention_assignments(id),
+  parent_id TEXT NOT NULL REFERENCES parents(id),
+  child_id TEXT NOT NULL REFERENCES children(id),
+  messages_json TEXT DEFAULT '[]',
+  boundary_hits INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+`
+
 const INDEX_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_leads_brand ON leads(brand)`,
   `CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status)`,
@@ -571,6 +730,25 @@ const INDEX_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_nudge_dismissals_parent ON nudge_dismissals(parent_id)`,
   `CREATE INDEX IF NOT EXISTS idx_observations_date ON parent_observations(date)`,
   `CREATE INDEX IF NOT EXISTS idx_observations_category ON parent_observations(category)`,
+  // Growth & Intervention Engine indexes
+  `CREATE INDEX IF NOT EXISTS idx_growth_tracks_domain ON growth_tracks(domain)`,
+  `CREATE INDEX IF NOT EXISTS idx_growth_tracks_age ON growth_tracks(age_min_months, age_max_months)`,
+  `CREATE INDEX IF NOT EXISTS idx_growth_track_progress_child ON growth_track_progress(child_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_growth_track_progress_status ON growth_track_progress(status)`,
+  `CREATE INDEX IF NOT EXISTS idx_int_protocols_slug ON intervention_protocols(slug)`,
+  `CREATE INDEX IF NOT EXISTS idx_int_protocols_category ON intervention_protocols(category)`,
+  `CREATE INDEX IF NOT EXISTS idx_int_protocols_subspecialty ON intervention_protocols(subspecialty)`,
+  `CREATE INDEX IF NOT EXISTS idx_int_protocols_region ON intervention_protocols(region)`,
+  `CREATE INDEX IF NOT EXISTS idx_int_assignments_child ON intervention_assignments(child_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_int_assignments_doctor ON intervention_assignments(doctor_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_int_assignments_status ON intervention_assignments(status)`,
+  `CREATE INDEX IF NOT EXISTS idx_int_tasks_assignment ON intervention_tasks(assignment_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_int_tasks_child_date ON intervention_tasks(child_id, task_date)`,
+  `CREATE INDEX IF NOT EXISTS idx_int_tasks_status ON intervention_tasks(status)`,
+  `CREATE INDEX IF NOT EXISTS idx_int_escalations_doctor ON intervention_escalations(doctor_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_int_escalations_status ON intervention_escalations(status)`,
+  `CREATE INDEX IF NOT EXISTS idx_int_escalations_assignment ON intervention_escalations(assignment_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_int_chat_assignment ON intervention_chat_sessions(assignment_id)`,
 ]
 
 export const GET: APIRoute = async (ctx) => {
@@ -627,6 +805,15 @@ async function handleInit(request: Request, locals: App.Locals) {
     await db.prepare(CREATE_NOTIFICATIONS_TABLE).run()
     await db.prepare(CREATE_NUDGE_DISMISSALS_TABLE).run()
     await db.prepare(CREATE_PARENT_SETTINGS_TABLE).run()
+    // Growth & Intervention Engine tables
+    await db.prepare(CREATE_GROWTH_TRACKS_TABLE).run()
+    await db.prepare(CREATE_GROWTH_TRACK_PROGRESS_TABLE).run()
+    await db.prepare(CREATE_INTERVENTION_PROTOCOLS_TABLE).run()
+    await db.prepare(CREATE_INTERVENTION_ASSIGNMENTS_TABLE).run()
+    await db.prepare(CREATE_INTERVENTION_TASKS_TABLE).run()
+    await db.prepare(CREATE_INTERVENTION_STREAKS_TABLE).run()
+    await db.prepare(CREATE_INTERVENTION_ESCALATIONS_TABLE).run()
+    await db.prepare(CREATE_INTERVENTION_CHAT_SESSIONS_TABLE).run()
     for (const stmt of INDEX_STATEMENTS) {
       await db.prepare(stmt).run()
     }
@@ -653,8 +840,13 @@ async function handleInit(request: Request, locals: App.Locals) {
       await db.prepare(`ALTER TABLE parent_observations ADD COLUMN source TEXT DEFAULT 'active'`).run()
     } catch { /* column already exists */ }
 
+    // ── Doctor table column additions for protocol authority ──
+    try {
+      await db.prepare(`ALTER TABLE doctors ADD COLUMN default_protocol_authority TEXT DEFAULT 'IAP'`).run()
+    } catch { /* column already exists */ }
+
     return new Response(
-      JSON.stringify({ success: true, message: 'All 31 tables ready (18 core + 9 life record + 4 daily experience) + columns migrated' }),
+      JSON.stringify({ success: true, message: 'All 39 tables ready (18 core + 9 life record + 4 daily experience + 8 growth & intervention) + columns migrated' }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
   } catch (e: unknown) {

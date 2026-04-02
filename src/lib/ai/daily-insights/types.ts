@@ -59,4 +59,8 @@ export interface InsightGenerationContext {
   hadNicuStay: boolean
   /** Delayed milestones */
   delayedMilestones: Array<{ key: string; category: string }>
+  /** Active growth tracks for the child's current age */
+  activeGrowthTracks: Array<{ domain: string; title: string; keyMessage?: string; flaggedForPed: number }>
+  /** Active interventions with compliance */
+  activeInterventions: Array<{ protocolName: string; category: string; conditionName?: string; compliancePct?: number; currentStreak: number }>
 }

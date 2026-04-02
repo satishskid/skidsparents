@@ -185,6 +185,95 @@ export async function generateNudges(
     nudges.push(screeningNudge)
   }
 
+  // 8. Intervention task reminders (tasks due today)
+  if (db) {
+    try {
+      const todayStr = now.toISOString().split('T')[0]
+      const { results: dueTasks } = await db.prepare(
+        `SELECT it.*, ia.child_id FROM intervention_tasks it
+         JOIN intervention_assignments ia ON it.assignment_id = ia.id
+         WHERE ia.child_id = ? AND it.task_date = ? AND it.status = 'pending'
+         ORDER BY it.sequence_in_day ASC LIMIT 3`
+      ).bind(context.child.id, todayStr).all()
+
+      for (const task of (dueTasks || []) as any[]) {
+        nudges.push({
+          key: `itask_${task.id}_${todayStr}`,
+          id: `itask_${task.id}`,
+          type: 'milestone_window', // reuse existing type for therapy reminders
+          title: task.title || 'Therapy task due today',
+          body: task.instructions
+            ? `${task.instructions.substring(0, 100)}${task.instructions.length > 100 ? '...' : ''}`
+            : `${name} has a therapy task scheduled for today. Tap to log progress.`,
+          emoji: '💊',
+          actionType: 'add_observation',
+          actionData: task.task_key,
+          priority: 1,
+        })
+      }
+    } catch (err) {
+      console.error('[Nudges] Intervention tasks query error:', err)
+    }
+  }
+
+  // 9. Growth track red flag alerts
+  if (db) {
+    try {
+      const { results: flaggedTracks } = await db.prepare(
+        `SELECT gt.domain, gt.title, gtp.flagged_for_ped FROM growth_track_progress gtp
+         JOIN growth_tracks gt ON gtp.track_id = gt.id
+         WHERE gtp.child_id = ? AND gtp.status = 'active' AND gtp.flagged_for_ped > 0
+         ORDER BY gtp.flagged_for_ped DESC LIMIT 2`
+      ).bind(context.child.id).all()
+
+      for (const track of (flaggedTracks || []) as any[]) {
+        const displayName = DOMAIN_DISPLAY[track.domain] || track.domain
+        nudges.push({
+          key: `gtflag_${track.domain}_${Math.floor(age / 3)}`,
+          id: `gtflag_${track.domain}`,
+          type: 'pattern_alert',
+          title: `${displayName} — flagged for pediatrician`,
+          body: `${name}'s ${displayName.toLowerCase()} track has ${track.flagged_for_ped} red flag${track.flagged_for_ped > 1 ? 's' : ''}. Discuss with your doctor at the next visit.`,
+          emoji: '🚩',
+          actionType: 'open_chat',
+          actionData: `${name}'s ${displayName.toLowerCase()} growth track has been flagged. What should I discuss with the pediatrician?`,
+          priority: 1,
+        })
+      }
+    } catch (err) {
+      console.error('[Nudges] Growth track red flags query error:', err)
+    }
+  }
+
+  // 10. Low compliance warnings (intervention compliance below 50%)
+  if (db) {
+    try {
+      const { results: lowCompliance } = await db.prepare(
+        `SELECT s.compliance_pct, ip.name as protocol_name, ip.category FROM intervention_streaks s
+         JOIN intervention_assignments ia ON s.assignment_id = ia.id
+         JOIN intervention_protocols ip ON ia.intervention_protocol_id = ip.id
+         WHERE ia.child_id = ? AND ia.status = 'active' AND s.compliance_pct < 50
+         ORDER BY s.compliance_pct ASC LIMIT 2`
+      ).bind(context.child.id).all()
+
+      for (const comp of (lowCompliance || []) as any[]) {
+        nudges.push({
+          key: `lowcomp_${comp.category}_${now.toISOString().split('T')[0].substring(0, 7)}`,
+          id: `lowcomp_${comp.category}`,
+          type: 'pattern_alert',
+          title: `${comp.protocol_name} — compliance low`,
+          body: `${name}'s ${comp.protocol_name} compliance is at ${Math.round(comp.compliance_pct)}%. Even small steps count — try to do one task today.`,
+          emoji: '📉',
+          actionType: 'add_observation',
+          actionData: comp.category,
+          priority: 2,
+        })
+      }
+    } catch (err) {
+      console.error('[Nudges] Low compliance query error:', err)
+    }
+  }
+
   // Sort by priority
   nudges.sort((a, b) => a.priority - b.priority)
 

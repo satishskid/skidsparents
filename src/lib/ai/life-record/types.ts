@@ -197,6 +197,36 @@ export interface LifeRecordContext {
     type: string
     date: string
   }>
+  /** Active growth tracks for the child's current age */
+  activeGrowthTracks?: Array<{
+    domain: string
+    title: string
+    agePeriod: string
+    status: string
+    engagementScore: number
+    flaggedForPed: number
+  }>
+  /** Active doctor-prescribed interventions with compliance */
+  activeInterventions?: Array<{
+    protocolName: string
+    category: string
+    conditionName?: string
+    status: string
+    startDate: string
+    compliancePct?: number
+    currentStreak: number
+    totalDone: number
+    totalSkipped: number
+  }>
+  /** Recent escalations from interventions (last 30 days) */
+  recentEscalations?: Array<{
+    type: string
+    severity: string
+    title: string
+    status: string
+    source: string
+    createdAt: string
+  }>
 }
 
 // ============================================
