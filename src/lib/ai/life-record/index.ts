@@ -47,3 +47,17 @@ export {
   buildLifeRecordContext,
   buildMinimalContext,
 } from './context-builder'
+
+// Domain Prompts (The Wire → Parent)
+export type {
+  DomainPrompt,
+  PromptCondition,
+  ObservationInput,
+} from './domain-prompts'
+
+export {
+  DOMAIN_PROMPTS,
+  getPromptsForAge,
+  getAllPromptsForAge,
+  getPromptsForDomain,
+} from './domain-prompts'
