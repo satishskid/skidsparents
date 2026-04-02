@@ -63,6 +63,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     category?: string
     observationText: string
     concernLevel?: string
+    mediaUrl?: string
+    mediaType?: 'photo' | 'video'
+    source?: 'active' | 'passive' | 'chat'
   }
 
   if (!body.childId || !body.observationText) {
@@ -79,15 +82,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const id = crypto.randomUUID()
     await env.DB.prepare(
-      `INSERT INTO parent_observations (id, child_id, date, category, observation_text, concern_level, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`
+      `INSERT INTO parent_observations (id, child_id, date, category, observation_text, concern_level, media_url, media_type, source, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
     ).bind(
       id,
       body.childId,
       date,
       body.category || null,
       body.observationText,
-      body.concernLevel || 'none'
+      body.concernLevel || 'none',
+      body.mediaUrl || null,
+      body.mediaType || null,
+      body.source || 'active'
     ).run()
 
     // ═══════════════════════════════════════════════════════

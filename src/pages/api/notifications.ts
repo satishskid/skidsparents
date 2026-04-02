@@ -1,6 +1,8 @@
 /**
  * GET  /api/notifications — List notifications for authenticated parent
- * POST /api/notifications — Mark notification(s) as read
+ * POST /api/notifications — Mark as read/dismissed
+ *
+ * Combines system notifications + nudge-generated notifications.
  */
 
 import type { APIRoute } from 'astro'
@@ -21,10 +23,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   try {
     const { results } = await env.DB.prepare(
-      `SELECT id, type, title, body, data_json, read, created_at
+      `SELECT id, type, title, body, data_json, read, dismissed, expires_at, created_at
        FROM notifications
-       WHERE parent_id = ?
-       ORDER BY created_at DESC`
+       WHERE parent_id = ? AND (dismissed = 0 OR dismissed IS NULL)
+       AND (expires_at IS NULL OR expires_at > datetime('now'))
+       ORDER BY created_at DESC LIMIT 20`
     ).bind(parentId).all()
 
     const notifications = results || []
@@ -60,39 +63,41 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const body = await request.json() as { action: string; id?: string }
-    const { action, id } = body
+    const body = await request.json() as {
+      action: 'mark_read' | 'dismiss' | 'mark_all_read'
+      id?: string
+      notificationId?: string
+    }
+    const { action } = body
+    const notifId = body.id || body.notificationId
 
     if (action === 'mark_read') {
-      if (!id) {
+      if (!notifId) {
         return new Response(JSON.stringify({ error: 'id is required for mark_read' }), {
           status: 400,
           headers: { 'Content-Type': 'application/json' },
         })
       }
-
-      interface NotificationRow { parent_id: string }
-      const row = await env.DB.prepare(
-        'SELECT parent_id FROM notifications WHERE id = ?'
-      ).bind(id).first<NotificationRow>()
-
-      if (!row) {
-        return new Response(JSON.stringify({ error: 'Notification not found' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' },
-        })
-      }
-
-      if (row.parent_id !== parentId) {
-        return new Response(JSON.stringify({ error: 'Forbidden' }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' },
-        })
-      }
-
       await env.DB.prepare(
-        'UPDATE notifications SET read = 1 WHERE id = ?'
-      ).bind(id).run()
+        'UPDATE notifications SET read = 1 WHERE id = ? AND parent_id = ?'
+      ).bind(notifId, parentId).run()
+
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    if (action === 'dismiss') {
+      if (!notifId) {
+        return new Response(JSON.stringify({ error: 'id is required for dismiss' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      await env.DB.prepare(
+        'UPDATE notifications SET dismissed = 1 WHERE id = ? AND parent_id = ?'
+      ).bind(notifId, parentId).run()
 
       return new Response(JSON.stringify({ success: true }), {
         status: 200,

@@ -454,6 +454,60 @@ CREATE TABLE IF NOT EXISTS medications (
 );
 `
 
+// ── Daily Experience tables ──
+
+const CREATE_DAILY_INSIGHTS_TABLE = `
+CREATE TABLE IF NOT EXISTS daily_insights (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL,
+  date TEXT NOT NULL,
+  insights_json TEXT NOT NULL,
+  generated_at TEXT DEFAULT (datetime('now')),
+  UNIQUE(child_id, date)
+);
+`
+
+const CREATE_NOTIFICATIONS_TABLE = `
+CREATE TABLE IF NOT EXISTS notifications (
+  id TEXT PRIMARY KEY,
+  parent_id TEXT NOT NULL,
+  child_id TEXT,
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT,
+  action_url TEXT,
+  action_data TEXT,
+  read INTEGER DEFAULT 0,
+  dismissed INTEGER DEFAULT 0,
+  expires_at TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+`
+
+const CREATE_NUDGE_DISMISSALS_TABLE = `
+CREATE TABLE IF NOT EXISTS nudge_dismissals (
+  id TEXT PRIMARY KEY,
+  parent_id TEXT NOT NULL,
+  nudge_key TEXT NOT NULL,
+  dismissed_at TEXT DEFAULT (datetime('now')),
+  UNIQUE(parent_id, nudge_key)
+);
+`
+
+const CREATE_PARENT_SETTINGS_TABLE = `
+CREATE TABLE IF NOT EXISTS parent_settings (
+  parent_id TEXT PRIMARY KEY,
+  notifications_enabled INTEGER DEFAULT 1,
+  nudge_milestones INTEGER DEFAULT 1,
+  nudge_observation_gaps INTEGER DEFAULT 1,
+  nudge_patterns INTEGER DEFAULT 1,
+  nudge_celebrations INTEGER DEFAULT 1,
+  voice_notes_enabled INTEGER DEFAULT 0,
+  vernacular_language TEXT,
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+`
+
 const INDEX_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_leads_brand ON leads(brand)`,
   `CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status)`,
@@ -508,6 +562,15 @@ const INDEX_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_active_conditions_status ON active_conditions(status)`,
   `CREATE INDEX IF NOT EXISTS idx_medications_child ON medications(child_id)`,
   `CREATE INDEX IF NOT EXISTS idx_medications_status ON medications(status)`,
+  // Daily Experience indexes
+  `CREATE INDEX IF NOT EXISTS idx_daily_insights_child ON daily_insights(child_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_daily_insights_date ON daily_insights(date)`,
+  `CREATE INDEX IF NOT EXISTS idx_notifications_parent ON notifications(parent_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_notifications_child ON notifications(child_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read)`,
+  `CREATE INDEX IF NOT EXISTS idx_nudge_dismissals_parent ON nudge_dismissals(parent_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_observations_date ON parent_observations(date)`,
+  `CREATE INDEX IF NOT EXISTS idx_observations_category ON parent_observations(category)`,
 ]
 
 export const GET: APIRoute = async (ctx) => {
@@ -559,6 +622,11 @@ async function handleInit(request: Request, locals: App.Locals) {
     await db.prepare(CREATE_DIET_RECORDS_TABLE).run()
     await db.prepare(CREATE_ACTIVE_CONDITIONS_TABLE).run()
     await db.prepare(CREATE_MEDICATIONS_TABLE).run()
+    // Daily Experience tables
+    await db.prepare(CREATE_DAILY_INSIGHTS_TABLE).run()
+    await db.prepare(CREATE_NOTIFICATIONS_TABLE).run()
+    await db.prepare(CREATE_NUDGE_DISMISSALS_TABLE).run()
+    await db.prepare(CREATE_PARENT_SETTINGS_TABLE).run()
     for (const stmt of INDEX_STATEMENTS) {
       await db.prepare(stmt).run()
     }
@@ -574,8 +642,19 @@ async function handleInit(request: Request, locals: App.Locals) {
       await db.prepare(`CREATE INDEX IF NOT EXISTS idx_children_v3 ON children(v3_child_id)`).run()
     } catch { /* index already exists */ }
 
+    // ── Observation table column additions for daily experience ──
+    try {
+      await db.prepare(`ALTER TABLE parent_observations ADD COLUMN media_url TEXT`).run()
+    } catch { /* column already exists */ }
+    try {
+      await db.prepare(`ALTER TABLE parent_observations ADD COLUMN media_type TEXT`).run()
+    } catch { /* column already exists */ }
+    try {
+      await db.prepare(`ALTER TABLE parent_observations ADD COLUMN source TEXT DEFAULT 'active'`).run()
+    } catch { /* column already exists */ }
+
     return new Response(
-      JSON.stringify({ success: true, message: 'All 27 tables ready (18 core + 9 life record) + v3 bridge columns' }),
+      JSON.stringify({ success: true, message: 'All 31 tables ready (18 core + 9 life record + 4 daily experience) + columns migrated' }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
   } catch (e: unknown) {

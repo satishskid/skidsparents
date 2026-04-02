@@ -10,6 +10,9 @@ import { detectTopics, getRelevantContent } from '@/lib/ai/context'
 import { buildSystemPrompt, type ChildProfile, type ChatContext } from '@/lib/ai/prompt'
 import { isPremiumParent, checkRateLimit, routeToModel, type AIMessage } from '@/lib/ai/router'
 import { getEnv } from '@/lib/runtime/env'
+import { extractObservationFromChat } from '@/lib/ai/observation-extractor'
+import { buildLifeRecordContext } from '@/lib/ai/life-record/context-builder'
+import { projectObservation, getParentSummary } from '@/lib/ai/life-record/probability-engine'
 
 export const prerender = false
 
@@ -46,7 +49,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     )
   }
 
-  let body: { message: string; childId?: string; conversationId?: string; mode?: 'onboarding' | 'standard' }
+  let body: { message: string; childId?: string; conversationId?: string; mode?: 'onboarding' | 'standard'; insightContext?: string }
   try {
     body = await request.json()
   } catch {
@@ -177,7 +180,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       latestGrowth,
       mode: body.mode,
     }
-    const systemPrompt = buildSystemPrompt(chatContext)
+    let systemPrompt = buildSystemPrompt(chatContext)
+
+    // Enrich with insight context if parent came from a daily insight card
+    if (body.insightContext) {
+      systemPrompt += `\n\nCONTEXT: The parent just read a daily insight about their child and wants to learn more. The insight was: "${body.insightContext}". Continue this topic naturally and provide helpful, personalized guidance based on the child's life record. Answer from your knowledge, NOT from internet search.`
+    }
 
     // ── 6. Build messages array ──
     const aiMessages: AIMessage[] = [
@@ -237,13 +245,89 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
+    // ═══════════════════════════════════════════════════════
+    // PASSIVE OBSERVATION EXTRACTION
+    // If the parent's chat message contains an observation about
+    // their child, silently extract and save it to the life record.
+    // The parent never sees "observation saved" — invisible enrichment.
+    // ═══════════════════════════════════════════════════════
+    let passiveObservation = null
+    if (body.childId && childAgeMonths !== undefined && db) {
+      try {
+        const extraction = extractObservationFromChat(userMessage, childAgeMonths)
+        if (extraction && extraction.confidence >= 0.5) {
+          // Save as passive observation
+          const obsId = crypto.randomUUID()
+          await db.prepare(
+            `INSERT INTO parent_observations (id, child_id, date, category, observation_text, concern_level, source, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, 'passive', datetime('now'))`
+          ).bind(
+            obsId,
+            body.childId,
+            new Date().toISOString().split('T')[0],
+            extraction.category,
+            extraction.observationText,
+            extraction.concernLevel
+          ).run()
+
+          // Fire projection in background (non-blocking)
+          try {
+            const lifeRecord = await buildLifeRecordContext(body.childId, db)
+            const projResult = projectObservation(extraction.observationText, lifeRecord, obsId)
+
+            // Store projection result
+            const projResultId = crypto.randomUUID()
+            await db.prepare(
+              `INSERT INTO projection_results (id, observation_id, child_id, observation_text, child_age_months, projections_count, domains_detected_json, clarifying_questions_json, confidence, computed_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).bind(
+              projResultId, obsId, body.childId, extraction.observationText,
+              childAgeMonths, projResult.projections.length,
+              JSON.stringify(projResult.domainsDetected),
+              JSON.stringify(projResult.clarifyingQuestions),
+              projResult.confidence, projResult.computedAt
+            ).run()
+
+            for (const proj of projResult.projections) {
+              await db.prepare(
+                `INSERT INTO observation_projections (id, observation_id, child_id, observation_text, condition_name, icd10, domain, category, base_probability, adjusted_probability, urgency, must_not_miss, parent_explanation, modifiers_json, evidence_for_json, evidence_against_json, parent_next_steps_json, doctor_exam_points_json, rule_out_before_json, citation, doctor_status, confidence)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+              ).bind(
+                crypto.randomUUID(), obsId, body.childId, extraction.observationText,
+                proj.conditionName, proj.icd10 || null, proj.domain, proj.category,
+                proj.baseProbability, proj.adjustedProbability, proj.urgency,
+                proj.mustNotMiss ? 1 : 0, proj.parentExplanation,
+                JSON.stringify(proj.modifiersApplied), JSON.stringify(proj.evidenceFor),
+                JSON.stringify(proj.evidenceAgainst), JSON.stringify(proj.parentNextSteps),
+                JSON.stringify(proj.doctorExamPoints), JSON.stringify(proj.ruleOutBefore),
+                proj.citation || null, 'projected', projResult.confidence
+              ).run()
+            }
+          } catch (projErr) {
+            // Projection failure is non-blocking
+            console.error('[Chat] Passive projection error (non-blocking):', projErr)
+          }
+
+          passiveObservation = {
+            id: obsId,
+            domain: extraction.domain,
+            confidence: extraction.confidence,
+          }
+        }
+      } catch (extractErr) {
+        // Extraction failure is always non-blocking
+        console.error('[Chat] Passive extraction error (non-blocking):', extractErr)
+      }
+    }
+
     return new Response(
-      JSON.stringify({ 
-        response: responseText, 
-        conversationId, 
-        model: aiResult.model, 
+      JSON.stringify({
+        response: responseText,
+        conversationId,
+        model: aiResult.model,
         tier: aiResult.tier,
-        dailyLimit: tier === 'premium' ? 100 : 20
+        dailyLimit: tier === 'premium' ? 100 : 20,
+        _passiveObservation: passiveObservation,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json', 'X-RateLimit-Remaining': String(remaining) } }
     )
