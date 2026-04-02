@@ -61,3 +61,21 @@ export {
   getAllPromptsForAge,
   getPromptsForDomain,
 } from './domain-prompts'
+
+// Conversational Onboarding (Birth → Present)
+export type {
+  OnboardingPhase,
+  OnboardingQuestion,
+  OnboardingState,
+} from './onboarding'
+
+export {
+  ONBOARDING_PHASES,
+  createOnboardingState,
+  getCurrentQuestion,
+  advanceState,
+  getPhasesForChild,
+  buildOnboardingSystemPrompt,
+  parseExtractedData,
+  persistExtractedData,
+} from './onboarding'
