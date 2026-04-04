@@ -901,7 +901,7 @@ async function handleInit(request: Request, locals: App.Locals) {
     await db.prepare(CREATE_PILOT_ENGAGEMENT_LOG_TABLE).run()
     await db.prepare(CREATE_PED_APPLICATIONS_TABLE).run()
     for (const stmt of INDEX_STATEMENTS) {
-      await db.prepare(stmt).run()
+      try { await db.prepare(stmt).run() } catch { /* index or column mismatch — skip */ }
     }
 
     // ── V3 Bridge columns (safe to run multiple times) ──
