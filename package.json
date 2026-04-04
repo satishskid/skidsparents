@@ -1,9 +1,9 @@
 {
-  "name": "skids-d2c",
-  "version": "0.2.0",
+  "name": "thrive-care",
+  "version": "0.3.0",
   "type": "module",
   "private": true,
-  "description": "SKIDS D2C — Parent + Doctor co-caring platform. Twin PHR, AI-powered clinic console, regional protocols.",
+  "description": "Thrive Care by SKIDS — Pediatric Life Record Platform. Intelligence-powered co-caring for parents + pediatricians.",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",

@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 import sitemap from '@astrojs/sitemap'
 
 export default defineConfig({
-  site: 'https://parent.skids.clinic',
+  site: 'https://thrive-care.pages.dev',
   adapter: cloudflare({
     platformProxy: {
       enabled: true,
@@ -20,6 +20,11 @@ export default defineConfig({
     resolve: {
       alias: {
         '@': '/src',
+      },
+    },
+    build: {
+      rollupOptions: {
+        external: [],
       },
     },
   },

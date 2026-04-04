@@ -1,0 +1,30 @@
+---
+import PilotRegistration from '@/components/pilot/PilotRegistration'
+export const prerender = false
+const url = new URL(Astro.request.url)
+const inviteCode = url.searchParams.get('code') || ''
+const qrCode = url.searchParams.get('qr') || ''
+const dob = url.searchParams.get('dob') || ''
+const childName = url.searchParams.get('name') || ''
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Join SKIDS Pilot — Create Life Record</title>
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="theme-color" content="#16a34a" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+      @import '../../styles/global.css';
+    </style>
+  </head>
+  <body class="min-h-screen bg-white font-sans antialiased">
+    <PilotRegistration client:load inviteCode={inviteCode} qrCode={qrCode} dob={dob} childName={childName} />
+  </body>
+</html>

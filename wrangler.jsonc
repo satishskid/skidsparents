@@ -1,5 +1,5 @@
 {
-  "name": "skidsparent",
+  "name": "thrive-care",
   "compatibility_date": "2025-03-01",
   "compatibility_flags": ["nodejs_compat"],
   "pages_build_output_dir": "./dist",
@@ -29,7 +29,7 @@
   // Environment variables (non-secret)
   "vars": {
     "FIREBASE_PROJECT_ID": "skidsparent",
-    "SITE_URL": "https://skidsparent.pages.dev",
+    "SITE_URL": "https://thrive-care.pages.dev",
     "BRAND": "skids"
   },
 
@@ -53,7 +53,7 @@
   // Firebase Admin:
   //   FIREBASE_ADMIN_KEY  = (service account JSON)
   //
-  // To set: npx wrangler pages secret put BHASH_USER --project-name skidsparent
+  // To set: npx wrangler pages secret put BHASH_USER --project-name thrive-care
   // ──────────────────────────────────────────────────────
 
   // NOTE: Cloudflare Pages does not support "triggers" in wrangler.jsonc.
