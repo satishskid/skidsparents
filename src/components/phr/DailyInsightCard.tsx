@@ -2,7 +2,7 @@
  * DailyInsightCard — Instagram-story-style insight card
  *
  * Each card is a personalized insight generated from the child's life record.
- * Gradient background by type, warm text, "Ask Dr. SKIDS" button that
+ * Gradient background by type, warm text, "Ask SKIDS Guide" button that
  * opens chat pre-seeded with the deepQueryPrompt.
  */
 
@@ -57,12 +57,12 @@ export default function DailyInsightCard({ insight, onAskDrSkids }: Props) {
         {insight.body}
       </p>
 
-      {/* Ask Dr. SKIDS button */}
+      {/* Ask SKIDS Guide button */}
       <button
         onClick={handleAsk}
         className="w-full py-2.5 px-4 rounded-xl bg-white/80 hover:bg-white border border-gray-200 text-sm font-semibold text-green-700 transition-all hover:shadow-sm active:scale-[0.98]"
       >
-        Ask Dr. SKIDS →
+        Ask SKIDS Guide →
       </button>
     </div>
   )

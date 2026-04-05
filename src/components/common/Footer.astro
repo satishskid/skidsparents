@@ -7,9 +7,12 @@ const year = new Date().getFullYear()
 <footer class="border-t border-gray-100 bg-gray-50/50">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
     <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
-      <!-- Left: copyright + links -->
+      <!-- Left: logo + copyright + links -->
       <div class="flex flex-col sm:flex-row items-center gap-2 text-xs text-gray-400">
-        <p>&copy; {year} {BRAND.legalName}</p>
+        <a href="/" class="flex items-center gap-1.5">
+          <img src="/images/skids-superman-logo.svg" alt="SKIDS" class="w-6 h-6" />
+          <span>&copy; {year} {BRAND.legalName}</span>
+        </a>
         <div class="flex items-center gap-3">
           <a href="/privacy" class="hover:text-gray-600 transition-colors">Privacy</a>
           <span class="text-gray-200">|</span>

@@ -3,21 +3,22 @@ import { useAuth } from '@/lib/hooks/useAuth'
 import { trackEvent, trackMetaEvent } from '@/lib/utils/analytics'
 
 const QUICK_QUESTIONS = [
-  'My child isn\'t talking yet',
+  'How does my child\'s brain develop?',
   'Best foods for brain growth',
-  'Is this height normal?',
-  'Screen time guidelines',
-  'Sleep routine help',
+  'What is the H.A.B.I.T.S. framework?',
+  'Screen time guidelines by age',
+  'Sleep needs for toddlers',
 ]
 
-const WELCOME_MESSAGE = 'Hi! I\'m Dr. SKIDS, your child\'s health companion. Ask me anything about milestones, nutrition, sleep, habits, or development — I\'ll give you personalized guidance based on your child\'s age and profile.'
+const WELCOME_MESSAGE = 'Hi! I\'m your SKIDS Guide — here to help you explore how your child\'s body works, what daily habits matter, and what milestones to look for at every age.\n\nI can walk you through body systems, explain the H.A.B.I.T.S. framework, or help you find the right article. Ask me anything!'
 
-const ONBOARDING_WELCOME = `Hi! I'm Dr. SKIDS. To build the best health record for your child, I'd like to ask you a few quick questions. It only takes 2 minutes! 🌟\n\nLet's start: Was the pregnancy and delivery straightforward, or were there any complications I should know about?`
+const ONBOARDING_WELCOME = `Hi! I'm your SKIDS Guide. To build the best health record for your child, I'd like to ask you a few quick questions. It only takes 2 minutes!\n\nLet's start: Was the pregnancy and delivery straightforward, or were there any complications I should know about?`
 
 interface Message {
   role: 'user' | 'bot'
   text: string
   showSignInPrompt?: boolean
+  showInfoPanel?: boolean
 }
 
 interface ChatWidgetProps {
@@ -28,6 +29,80 @@ interface ChatWidgetProps {
   children?: { id: string; name: string }[]
   mode?: 'standard' | 'onboarding'
   initialMessage?: string
+}
+
+// Info panel explaining what SKIDS Guide can and can't do
+function GuideInfoPanel({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="absolute inset-0 z-10 bg-white flex flex-col overflow-hidden rounded-2xl">
+      <div className="px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white flex items-center justify-between">
+        <span className="text-sm font-bold">About SKIDS Guide</span>
+        <button onClick={onClose} className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 text-[13px] text-gray-600 leading-relaxed">
+        <div>
+          <p className="font-semibold text-gray-900 text-sm mb-1.5">What SKIDS Guide does</p>
+          <ul className="space-y-1.5">
+            <li className="flex items-start gap-2">
+              <span className="text-green-500 mt-0.5">&#10003;</span>
+              Explains how your child's body works — brain, gut, eyes, bones, hormones, and more
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-green-500 mt-0.5">&#10003;</span>
+              Walks you through the H.A.B.I.T.S. framework — nutrition, movement, stress, mindset, routine, sleep
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-green-500 mt-0.5">&#10003;</span>
+              Shares age-appropriate milestones so you know what to look for
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-green-500 mt-0.5">&#10003;</span>
+              Helps you find the right SKIDS articles and resources
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-green-500 mt-0.5">&#10003;</span>
+              Answers general child health questions with Indian context
+            </li>
+          </ul>
+        </div>
+        <div>
+          <p className="font-semibold text-gray-900 text-sm mb-1.5">What SKIDS Guide does not do</p>
+          <ul className="space-y-1.5">
+            <li className="flex items-start gap-2">
+              <span className="text-red-400 mt-0.5">&#10007;</span>
+              Does not diagnose conditions or diseases
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-red-400 mt-0.5">&#10007;</span>
+              Does not prescribe medications or treatments
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-red-400 mt-0.5">&#10007;</span>
+              Does not replace your pediatrician's clinical judgment
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-red-400 mt-0.5">&#10007;</span>
+              Does not provide emergency medical advice
+            </li>
+          </ul>
+        </div>
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+          <p className="text-amber-800 text-xs leading-relaxed">
+            <span className="font-semibold">Always consult your pediatrician</span> for medical concerns, persistent symptoms, or developmental worries. SKIDS Guide is a knowledge companion — your child's doctor is irreplaceable.
+          </p>
+        </div>
+        <div className="bg-gray-50 rounded-xl p-3">
+          <p className="text-gray-500 text-[11px] leading-relaxed">
+            SKIDS Guide uses curated child health content and AI to answer your questions. It draws from developmental milestones, body system knowledge, the H.A.B.I.T.S. framework, and peer-reviewed pediatric literature. Responses are informational and not a substitute for professional medical advice.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // Inline sign-in prompt shown after general answers for unauthenticated users
@@ -62,6 +137,7 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
   const [childrenList, setChildrenList] = useState(childrenListProp)
   const [remaining, setRemaining] = useState<number | null>(null)
   const [dailyLimit, setDailyLimit] = useState<number | null>(null)
+  const [showInfo, setShowInfo] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const clearChat = useCallback(() => {
@@ -239,9 +315,7 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
   const typingIndicator = loading ? (
     <div className="flex justify-start">
       {fullScreen && (
-        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white text-xs mr-2 mt-1 flex-shrink-0">
-          S
-        </div>
+        <img src="/images/skids-superman-logo.svg" alt="SKIDS AI" className="w-7 h-7 mr-2 mt-1 flex-shrink-0" />
       )}
       <div className="px-3.5 py-2.5 rounded-2xl rounded-bl-md bg-gray-100 text-gray-400 text-sm">
         <span className="inline-flex gap-1">
@@ -261,9 +335,7 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
           {messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {msg.role === 'bot' && (
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white text-xs mr-2 mt-1 flex-shrink-0">
-                  S
-                </div>
+                <img src="/images/skids-superman-logo.svg" alt="SKIDS AI" className="w-7 h-7 mr-2 mt-1 flex-shrink-0" />
               )}
               <div className={`max-w-[80%] ${msg.role === 'user' ? '' : 'flex-1'}`}>
                 <div
@@ -304,7 +376,7 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && send(input)}
-              placeholder={loading ? 'Dr. SKIDS is thinking...' : 'Ask anything about your child...'}
+              placeholder={loading ? 'Thinking...' : 'Ask anything about your child...'}
               disabled={loading}
               className="flex-1 px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 disabled:opacity-50"
             />
@@ -333,18 +405,18 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
     <>
       <button
         onClick={() => setOpen(!open)}
-        className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30 hover:shadow-xl hover:shadow-green-500/40 transition-all items-center justify-center flex"
-        aria-label="Chat with Dr. SKIDS"
+        className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-50 w-14 h-14 rounded-full bg-white shadow-lg shadow-black/10 hover:shadow-xl hover:shadow-black/15 hover:-translate-y-0.5 transition-all items-center justify-center flex border border-gray-100"
+        aria-label="SKIDS Guide"
       >
         {open ? (
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         ) : (
-          <span className="text-2xl">S</span>
+          <img src="/images/skids-superman-logo.svg" alt="SKIDS AI" className="w-10 h-10" />
         )}
         {!open && (
-          <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-red-500 border-2 border-white pulse-dot" />
+          <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-white pulse-dot" />
         )}
       </button>
 
@@ -352,16 +424,26 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
         <div className="fixed bottom-20 right-4 md:bottom-24 md:right-6 z-50 w-[calc(100vw-2rem)] max-w-[380px] h-[70vh] max-h-[480px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden animate-slide-up">
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white">
-            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">S</div>
+            <img src="/images/skids-superman-logo.svg" alt="SKIDS AI" className="w-8 h-8" />
             <div className="flex-1">
-              <div className="text-sm font-bold">Dr. SKIDS</div>
+              <div className="text-sm font-bold">SKIDS Guide</div>
               <div className="text-[10px] text-white/70">
                 {selectedChildId && childrenList
                   ? `Helping with ${childrenList.find((c) => c.id === selectedChildId)?.name || 'your child'}`
-                  : 'AI-powered child health companion'}
+                  : 'Your child health knowledge guide'}
               </div>
             </div>
             {childSelector}
+            <button
+              onClick={() => setShowInfo(true)}
+              title="What can SKIDS Guide do?"
+              className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+              aria-label="About SKIDS Guide"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+              </svg>
+            </button>
             <button
               onClick={clearChat}
               title="Clear conversation"
@@ -382,6 +464,9 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
               </svg>
             </button>
           </div>
+
+          {/* Info panel overlay */}
+          {showInfo && <GuideInfoPanel onClose={() => setShowInfo(false)} />}
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -428,7 +513,7 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && send(input)}
-                placeholder={loading ? 'Dr. SKIDS is thinking...' : 'Ask anything about your child...'}
+                placeholder={loading ? 'Thinking...' : 'Ask anything about your child...'}
                 disabled={loading}
                 className="flex-1 px-3.5 py-2 rounded-xl bg-gray-50 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 disabled:opacity-50"
               />
@@ -448,7 +533,7 @@ export default function ChatWidget({ fullScreen = false, token: tokenProp, child
               </p>
             )}
             <p className="mt-1.5 text-[10px] text-gray-400 text-center leading-tight">
-              For guidance only · Not a substitute for medical advice · Always consult your paediatrician
+              Knowledge guide only · Not medical advice · Always consult your paediatrician
             </p>
           </div>
         </div>

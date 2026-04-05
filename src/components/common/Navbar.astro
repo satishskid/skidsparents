@@ -5,11 +5,11 @@ import NavbarUser from '@/components/auth/NavbarUser'
 const currentPath = Astro.url.pathname
 
 const navLinks = [
-  { href: '/blog', label: 'Blog' },
-  { href: '/discover', label: 'Discover' },
-  { href: '/community', label: 'Community' },
-  { href: '/timeline', label: 'Timeline' },
-  { href: '/interventions', label: 'Interventions' },
+  { href: '/blog', label: 'Learn' },
+  { href: '/discover', label: 'Grow' },
+  { href: '/habits', label: 'Practice' },
+  { href: '/timeline', label: 'My Child' },
+  { href: '/skids', label: 'SKIDS' },
 ]
 
 function isActive(href: string): boolean {
@@ -23,13 +23,7 @@ function isActive(href: string): boolean {
     <div class="flex items-center justify-between h-14">
       <!-- Logo -->
       <a href="/" class="flex items-center gap-2 group cursor-pointer" aria-label="Go to homepage">
-        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-xs shadow-sm group-hover:shadow-md transition-shadow">
-          S
-        </div>
-        <div class="flex flex-col">
-          <span class="text-base font-display font-bold leading-tight text-gray-900">SKIDS</span>
-          <span class="text-[9px] font-medium text-gray-400 leading-none tracking-wider uppercase">Parent</span>
-        </div>
+        <img src="/images/skids-logo.svg" alt="SKIDS" class="h-6 sm:h-7 group-hover:opacity-80 transition-opacity" />
       </a>
 
       <!-- Desktop Nav -->

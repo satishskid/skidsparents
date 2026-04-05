@@ -149,7 +149,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Build the opening message
       const phases = getPhasesForChild(ageMonths)
       const totalPhases = phases.length
-      const greeting = `Hi! I'm Dr. SKIDS, and I'm going to help you set up ${childName}'s health life record. 🩺\n\nThis will take about ${totalPhases * 2} minutes — I'll ask some simple questions about ${childName}'s journey from birth to now. Your answers help us give personalized health guidance.\n\nYou can skip any question you're unsure about. Ready? Let's start!\n\n${current.phase.intro.replace(/{name}/g, childName)}`
+      const greeting = `Hi! I'm your SKIDS Guide, and I'm going to help you set up ${childName}'s health life record. 🩺\n\nThis will take about ${totalPhases * 2} minutes — I'll ask some simple questions about ${childName}'s journey from birth to now. Your answers help us give personalized health guidance.\n\nYou can skip any question you're unsure about. Ready? Let's start!\n\n${current.phase.intro.replace(/{name}/g, childName)}`
 
       state.conversationHistory = [
         { role: 'assistant', content: greeting },

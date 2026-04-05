@@ -22,338 +22,580 @@ const heroDate = heroBlog?.createdAt
   ? new Date(heroBlog.createdAt).toLocaleDateString('en-IN', { month: 'long', day: 'numeric' })
   : ''
 
+/* Pick blog thumbnails for section backgrounds (India/GCC context) */
+const bgImages = blogs.filter((b: any) => b.thumbnail).slice(5, 9)
+const wonderBg = bgImages[0]?.thumbnail || ''
+const growBg = bgImages[1]?.thumbnail || ''
+const practiceBg = bgImages[2]?.thumbnail || ''
+const coNurtureBg = bgImages[3]?.thumbnail || ''
+
 const categoryColors: Record<string, string> = {
-  'Mental Health': 'bg-purple-100 text-purple-700',
-  'Parental Guidance': 'bg-pink-100 text-pink-700',
-  'Physical Health': 'bg-green-100 text-green-700',
-  'Nutrition & Diet': 'bg-orange-100 text-orange-700',
-  'Kids Vision': 'bg-amber-100 text-amber-700',
-  'Wellness': 'bg-teal-100 text-teal-700',
-  'Child Development': 'bg-blue-100 text-blue-700',
+  'Mental Health': 'bg-purple-50 text-purple-700',
+  'Parental Guidance': 'bg-pink-50 text-pink-700',
+  'Physical Health': 'bg-green-50 text-green-700',
+  'Nutrition & Diet': 'bg-orange-50 text-orange-700',
+  'Kids Vision': 'bg-amber-50 text-amber-700',
+  'Wellness': 'bg-teal-50 text-teal-700',
+  'Child Development': 'bg-blue-50 text-blue-700',
 }
+
+/* Condition cloud — parent-language terms */
+const conditionCloudRow1 = [
+  'speech delay', 'not eating well', 'screen time', 'bedwetting',
+  'can\'t sit still', 'reading struggles', 'always tired', 'picky eater',
+  'frequent tantrums', 'not talking yet', 'toe walking', 'night terrors',
+  'won\'t make eye contact', 'teeth grinding', 'mouth breathing',
+]
+const conditionCloudRow2 = [
+  'short for age', 'squinting at TV', 'ear infections', 'stammering',
+  'iron deficiency', 'obesity', 'skin rashes', 'allergies',
+  'not walking yet', 'head banging', 'thumb sucking', 'snoring',
+  'poor handwriting', 'wetting pants at school', 'afraid of everything',
+]
+
+/* Parent confessions */
+const parentStories = [
+  { quote: "I thought Aarav was just lazy. Turns out he couldn't see the board.", condition: 'vision', color: 'text-amber-600', bgColor: 'bg-amber-50' },
+  { quote: "She wasn't being difficult at meals. She was anemic.", condition: 'anemia', color: 'text-red-500', bgColor: 'bg-red-50' },
+  { quote: "We blamed the tablet. His speech delay had nothing to do with screens.", condition: 'speech delay', color: 'text-blue-600', bgColor: 'bg-blue-50' },
+  { quote: "Everyone said he'd grow out of it. He didn't. Early therapy changed everything.", condition: 'development', color: 'text-purple-600', bgColor: 'bg-purple-50' },
+  { quote: "I confused her dyslexia for laziness. For two years.", condition: 'dyslexia', color: 'text-green-700', bgColor: 'bg-green-50' },
+]
 ---
 
 <BaseLayout
   title="SKIDS Parent"
-  description="Where parents and pediatricians care together. Daily health insights, developmental guidance, and the pediatric intelligence your child deserves."
+  description="Where parents and pediatricians care for children together. Daily insights, developmental guidance, and the intelligence your child deserves."
 >
   <Navbar />
   <main class="overflow-hidden">
     <OnboardingGateWrapper client:load />
 
-    <!-- ═══════════════════════════════════════════════════════════════
-         SECTION 1 — HERO: Daily content magazine
-         The site opens like a living health journal, not a product.
-         ═══════════════════════════════════════════════════════════════ -->
-    <section class="bg-white pt-4 pb-8 sm:pb-12">
-      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10">
-        <p class="text-xs font-semibold text-green-600 uppercase tracking-wider mb-4">Today on SKIDS</p>
 
+    <!-- ═══════════════════════════════════════════════════
+         1. ARTICLES HERO — The magazine cover.
+         ═══════════════════════════════════════════════════ -->
+    <section class="bg-white pt-6 sm:pt-10 pb-10 sm:pb-14">
+      <div class="max-w-5xl mx-auto px-5 sm:px-8">
+        <div class="flex items-end justify-between mb-6">
+          <div>
+            <p class="text-xs font-semibold text-green-600 uppercase tracking-widest mb-1">Today on SKIDS</p>
+            <h1 class="font-serif text-2xl sm:text-3xl text-gray-900 tracking-tight">
+              What every parent should know
+            </h1>
+          </div>
+          <a href="/blog" class="hidden sm:inline-flex text-sm font-medium text-green-600 hover:text-green-700 items-center gap-1">
+            All articles <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+          </a>
+        </div>
+
+        <!-- Search bar -->
+        <form action="/blog" method="get" class="relative max-w-xl mb-7">
+          <input
+            type="text"
+            name="q"
+            placeholder="Ask anything — iron deficiency, bedwetting, ADHD signs..."
+            class="w-full pl-12 pr-4 py-3.5 rounded-full border border-gray-200 bg-gray-50/60 text-[0.95rem] text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-green-400 focus:bg-white focus:ring-2 focus:ring-green-100 transition-all"
+          />
+          <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+          </svg>
+        </form>
+
+        <!-- Featured articles grid -->
         {heroBlog ? (
-          <div class="md:grid md:grid-cols-3 md:gap-5">
-            <!-- Lead story -->
-            <a href={`/blog/${heroBlog.blogId}`} class="md:col-span-2 md:row-span-3 group block">
-              <div class="relative aspect-[4/3] sm:aspect-[16/10] md:aspect-[4/3] rounded-2xl overflow-hidden mb-4 md:mb-0">
-                <img
-                  src={heroBlog.thumbnail}
-                  alt={heroBlog.title}
-                  class="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
-                  loading="eager"
-                />
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                <div class="absolute bottom-0 left-0 right-0 p-5 sm:p-8">
-                  <span class={`inline-flex text-[10px] font-semibold px-2.5 py-0.5 rounded-full uppercase tracking-wider mb-3 ${categoryColors[heroBlog.category] || 'bg-white/20 text-white'}`}>
+          <div class="grid md:grid-cols-5 gap-5">
+            <a href={`/blog/${heroBlog.blogId}`} class="md:col-span-3 group block">
+              <div class="relative aspect-[4/3] rounded-2xl overflow-hidden">
+                <img src={heroBlog.thumbnail} alt={heroBlog.title} class="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-700" loading="eager" />
+                <div class="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                <div class="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
+                  <span class={`inline-flex text-[10px] font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider mb-3 ${categoryColors[heroBlog.category] || 'bg-white/20 text-white'}`}>
                     {heroBlog.category || 'Health'}
                   </span>
-                  <h2 class="text-xl sm:text-2xl lg:text-3xl font-display font-extrabold text-white leading-tight mb-2 drop-shadow-lg">
+                  <h2 class="text-xl sm:text-2xl lg:text-[1.75rem] font-serif text-white leading-snug mb-2">
                     {heroBlog.title}
                   </h2>
-                  <p class="text-white/60 text-sm">{heroBlog.author || 'SKIDS'} &middot; {heroDate}</p>
+                  <p class="text-white/50 text-sm">{heroBlog.author || 'SKIDS'} &middot; {heroDate}</p>
                 </div>
               </div>
             </a>
-
-            <!-- Secondary stories (desktop: stacked right, mobile: horizontal scroll) -->
-            <div class="hidden md:flex md:flex-col md:gap-4">
+            <div class="md:col-span-2 flex flex-row md:flex-col gap-4 overflow-x-auto md:overflow-visible no-scrollbar -mx-5 px-5 md:mx-0 md:px-0 pb-2 md:pb-0">
               {secondaryBlogs.map((blog: any) => (
-                <a href={`/blog/${blog.blogId}`} class="group flex gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors">
-                  <div class="w-20 h-16 rounded-lg overflow-hidden flex-shrink-0">
-                    <img src={blog.thumbnail} alt="" class="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
+                <a href={`/blog/${blog.blogId}`} class="group flex-shrink-0 w-[70vw] sm:w-[45vw] md:w-full flex md:flex-row flex-col gap-3">
+                  <div class="aspect-[16/10] md:aspect-square md:w-24 rounded-xl overflow-hidden flex-shrink-0">
+                    <img src={blog.thumbnail} alt="" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                   </div>
-                  <div class="flex-1 min-w-0">
-                    <span class={`text-[9px] font-semibold uppercase tracking-wider ${(categoryColors[blog.category] || 'text-gray-500').split(' ').pop()}`}>
+                  <div class="flex-1 min-w-0 py-1">
+                    <span class={`text-[10px] font-semibold uppercase tracking-wider ${(categoryColors[blog.category] || 'text-gray-400').split(' ').pop()}`}>
                       {blog.category}
                     </span>
-                    <h3 class="text-sm font-semibold text-gray-900 leading-snug line-clamp-2 mt-0.5">{blog.title}</h3>
+                    <h3 class="text-[0.9rem] font-semibold text-gray-900 leading-snug line-clamp-2 mt-1">{blog.title}</h3>
                   </div>
-                </a>
-              ))}
-              <a href="/blog" class="text-sm font-medium text-green-600 hover:text-green-700 px-3 mt-1 inline-flex items-center gap-1">
-                All articles <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-              </a>
-            </div>
-
-            <!-- Mobile: horizontal scroll row -->
-            <div class="md:hidden flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar -mx-4 px-4 mt-4 pb-2">
-              {secondaryBlogs.map((blog: any) => (
-                <a href={`/blog/${blog.blogId}`} class="snap-start flex-shrink-0 w-[60vw] group">
-                  <div class="aspect-[16/10] rounded-xl overflow-hidden mb-2">
-                    <img src={blog.thumbnail} alt="" class="w-full h-full object-cover" loading="lazy" />
-                  </div>
-                  <span class={`text-[9px] font-semibold uppercase tracking-wider ${(categoryColors[blog.category] || 'text-gray-500').split(' ').pop()}`}>
-                    {blog.category}
-                  </span>
-                  <h3 class="text-sm font-semibold text-gray-900 leading-snug line-clamp-2 mt-0.5">{blog.title}</h3>
                 </a>
               ))}
             </div>
           </div>
         ) : (
-          <div class="text-center py-20">
-            <h2 class="text-2xl font-display font-bold text-gray-900 mb-3">Your child's health, every day.</h2>
-            <p class="text-gray-500 mb-6">Evidence-based articles on child health, development, and parenting.</p>
+          <div class="text-center py-16">
+            <h2 class="text-2xl font-serif text-gray-900 mb-3">New articles every day.</h2>
+            <p class="text-gray-400 mb-6">Evidence-based guidance on child health, nutrition, and development.</p>
             <a href="/blog" class="text-green-600 font-semibold text-sm hover:text-green-700">Browse articles &rarr;</a>
           </div>
         )}
       </div>
     </section>
 
-    <!-- ═══════════════════════════════════════════════════════════════
-         SECTION 2 — EMOTIONAL HOOK: The quiet signals
-         Recognition, not fear. The parent reads this and thinks "that's me."
-         ═══════════════════════════════════════════════════════════════ -->
-    <section class="py-20 sm:py-28 section-warm">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-10">
-        <div class="max-w-3xl">
-          <h2 class="text-3xl sm:text-4xl font-display font-bold text-gray-900 leading-tight mb-4">
-            Every childhood has quiet signals.
-          </h2>
-          <p class="text-lg sm:text-xl text-gray-500 italic mb-14">
-            You're not paranoid. You're paying attention. And that matters more than you know.
-          </p>
-        </div>
 
-        <div class="grid sm:grid-cols-3 gap-6">
-          <div class="bg-white rounded-2xl p-6 border border-gray-100">
-            <div class="text-4xl font-display font-extrabold text-green-600 mb-3">80%</div>
-            <p class="text-sm text-gray-500 leading-relaxed">
-              of brain development happens before age 3.
-              Most developmental screenings don't happen until after age 5.
+    <!-- ═══════════════════════════════════════════════════
+         2. THE WONDER — Full-bleed image + awakening copy.
+         "Your child's body is doing incredible things."
+         ═══════════════════════════════════════════════════ -->
+    <section class="relative overflow-hidden">
+      <div class="absolute inset-0">
+        <img
+          src={wonderBg}
+          alt=""
+          class="w-full h-full object-cover img-reveal"
+          loading="lazy"
+        />
+        <div class="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/30"></div>
+      </div>
+
+      <div class="relative max-w-5xl mx-auto px-5 sm:px-8 py-24 sm:py-36">
+        <div class="max-w-xl">
+          <h2 class="reveal font-serif text-[clamp(1.8rem,4.5vw,3rem)] leading-[1.1] tracking-tight text-white">
+            Your child's body is doing<br />
+            incredible things right now.
+          </h2>
+          <div class="mt-8 space-y-4 reveal reveal-delay-1">
+            <p class="text-white/80 text-lg leading-relaxed">
+              Their brain is forming one million new connections every second.
+              Their gut is building an immune system that will protect them for life.
+              Their eyes are learning to track, focus, and make sense of the world.
+            </p>
+            <p class="text-white/60 text-lg leading-relaxed">
+              Most parents never learn this. Not because they don't care
+              &mdash; because nobody tells them.
             </p>
           </div>
-          <div class="bg-white rounded-2xl p-6 border border-gray-100">
-            <div class="text-4xl font-display font-extrabold text-amber-600 mb-3">4 in 10</div>
-            <p class="text-sm text-gray-500 leading-relaxed">
-              Indian children are anemic. A child can look perfectly healthy
-              and be missing the iron their brain needs to develop.
-            </p>
-          </div>
-          <div class="bg-white rounded-2xl p-6 border border-gray-100">
-            <div class="text-4xl font-display font-extrabold text-purple-600 mb-3">1 in 4</div>
-            <p class="text-sm text-gray-500 leading-relaxed">
-              children have an undetected vision problem.
-              The signs often look like "not paying attention" or "being shy."
-            </p>
-          </div>
+          <a href="/discover" class="reveal reveal-delay-2 inline-flex items-center gap-2 mt-10 px-7 py-3.5 rounded-full bg-white text-gray-900 font-semibold text-sm hover:bg-green-50 transition-colors">
+            Explore how your child grows
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+          </a>
         </div>
       </div>
     </section>
 
-    <!-- ═══════════════════════════════════════════════════════════════
-         SECTION 3 — CO-NURTURING: The 6,000 hours insight
-         Reframe parent as expert observer. Introduce SKIDS concept.
-         ═══════════════════════════════════════════════════════════════ -->
-    <section class="py-20 sm:py-28 bg-white">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-10">
-        <div class="max-w-3xl mb-14">
-          <p class="text-sm text-gray-400 mb-4">A different kind of care</p>
-          <h2 class="text-3xl sm:text-4xl font-display font-bold text-gray-900 leading-tight mb-5">
-            Your pediatrician sees your child 6 hours a year.<br class="hidden sm:block" />
-            You see them 6,000.
-          </h2>
-          <p class="text-lg text-gray-500 leading-relaxed">
-            You notice how they hold a crayon, what makes them go quiet, whether they're
-            eating less this week. That isn't worry — that's intelligence.
-            SKIDS turns what you already see into something your doctor can act on.
-          </p>
-        </div>
 
-        <div class="grid sm:grid-cols-3 gap-5">
-          <div class="rounded-2xl p-6 border border-gray-100 bg-white">
-            <div class="text-2xl mb-3">You</div>
-            <div class="text-3xl font-display font-extrabold text-gray-900 mb-2">6,000 hrs</div>
-            <p class="text-sm text-gray-500 leading-relaxed">
-              You see the daily patterns — sleep, appetite, mood, energy.
-              The things no test can capture. The things only a parent knows.
-            </p>
-          </div>
-          <div class="rounded-2xl p-6 border border-gray-100 bg-white">
-            <div class="text-2xl mb-3">Your pediatrician</div>
-            <div class="text-3xl font-display font-extrabold text-gray-900 mb-2">6 hrs</div>
-            <p class="text-sm text-gray-500 leading-relaxed">
-              Clinical training, diagnostic instinct, treatment expertise.
-              Deep knowledge in short windows. Every minute counts.
-            </p>
-          </div>
-          <div class="rounded-2xl p-6 border border-green-200 bg-green-50">
-            <div class="text-2xl mb-3">SKIDS</div>
-            <div class="text-3xl font-display font-extrabold text-green-700 mb-2">The bridge</div>
-            <p class="text-sm text-gray-600 leading-relaxed">
-              Connects your daily observations to your doctor's clinical picture.
-              So nothing falls between the cracks. So no signal goes unread.
-            </p>
-          </div>
-        </div>
-
-        <p class="text-center mt-10 text-xl font-display font-semibold text-gray-900">
-          We call this co-nurturing.
-        </p>
-      </div>
-    </section>
-
-    <!-- ═══════════════════════════════════════════════════════════════
-         SECTION 4 — WHAT HAPPENS: The experience in parent words
-         ═══════════════════════════════════════════════════════════════ -->
-    <section class="py-20 sm:py-28 section-warm">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-10">
-        <p class="text-sm text-gray-400 mb-4">How it works</p>
-        <h2 class="text-3xl sm:text-4xl font-display font-bold text-gray-900 leading-tight mb-16">
-          What happens when you bring your child to SKIDS.
+    <!-- ═══════════════════════════════════════════════════
+         3. CONDITION CLOUD — What hides in plain sight.
+         ═══════════════════════════════════════════════════ -->
+    <section class="py-14 sm:py-20 section-warm overflow-hidden">
+      <div class="max-w-5xl mx-auto px-5 sm:px-8 mb-8">
+        <h2 class="reveal font-serif text-[clamp(2rem,4.5vw,3rem)] leading-[1.08] tracking-tight text-gray-900">
+          But some things hide<br class="hidden sm:block" />
+          in plain sight.
         </h2>
-
-        <div class="space-y-12 sm:space-y-0 sm:grid sm:grid-cols-3 sm:gap-12">
-          <div class="relative">
-            <div class="text-7xl font-display font-extrabold text-gray-200/60 absolute -top-4 -left-1 select-none">1</div>
-            <div class="relative pt-12">
-              <h3 class="text-lg font-bold text-gray-900 mb-3">Your child gets a health picture</h3>
-              <p class="text-gray-500 leading-relaxed">
-                A 30-minute screening across vision, hearing, development, nutrition, and more.
-                Not a test with pass or fail — a picture of where your child is right now.
-              </p>
-            </div>
-          </div>
-
-          <div class="relative">
-            <div class="text-7xl font-display font-extrabold text-gray-200/60 absolute -top-4 -left-1 select-none">2</div>
-            <div class="relative pt-12">
-              <h3 class="text-lg font-bold text-gray-900 mb-3">You see what matters</h3>
-              <p class="text-gray-500 leading-relaxed">
-                What's thriving, what to keep an eye on, what needs a conversation with
-                your doctor. Clear, simple, personal to your child — not generic advice.
-              </p>
-            </div>
-          </div>
-
-          <div class="relative">
-            <div class="text-7xl font-display font-extrabold text-gray-200/60 absolute -top-4 -left-1 select-none">3</div>
-            <div class="relative pt-12">
-              <h3 class="text-lg font-bold text-gray-900 mb-3">You and your doctor act together</h3>
-              <p class="text-gray-500 leading-relaxed">
-                Your pediatrician sees the full picture. You get daily guidance that fits your
-                child. Not a prescription and a prayer — a plan that grows with them.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══════════════════════════════════════════════════════════════
-         SECTION 5 — CREDIBILITY: Woven, not dumped
-         ═══════════════════════════════════════════════════════════════ -->
-    <section class="py-20 sm:py-24 bg-white">
-      <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-10 text-center">
-        <p class="text-2xl sm:text-3xl font-display font-bold text-gray-900 leading-snug">
-          SKIDS has screened <span class="text-green-600">15,000 children</span>
-          across <span class="text-green-600">150+ health conditions</span>.
-          Every day, families and pediatricians use it to catch what routine checkups miss.
-        </p>
-        <p class="mt-6 text-base text-gray-400 max-w-xl mx-auto">
-          Born from a multi-specialty pediatric screening program in Hyderabad.
-          Now a platform that turns one moment of screening into a lifetime of informed care.
+        <p class="reveal reveal-delay-1 mt-3 text-lg text-gray-400 max-w-lg">
+          They look like laziness, shyness, fussiness, or "just a phase."
         </p>
       </div>
-    </section>
 
-    <!-- ═══════════════════════════════════════════════════════════════
-         SECTION 6 — FOR PEDIATRICIANS: Brief, professional
-         ═══════════════════════════════════════════════════════════════ -->
-    <section class="py-16 sm:py-20 section-warm border-t border-gray-200/60">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-10">
-        <div class="md:grid md:grid-cols-2 md:gap-14 items-center">
-          <div>
-            <p class="text-sm font-semibold text-blue-600 tracking-widest uppercase mb-4">For pediatricians</p>
-            <h2 class="text-2xl sm:text-3xl font-display font-bold text-gray-900 leading-tight mb-5">
-              Your patients, between visits.
-            </h2>
-            <p class="text-gray-500 leading-relaxed mb-6">
-              A clinical dashboard with every patient's health record, parent observations,
-              growth trajectories, and flagged concerns — so you walk into every
-              appointment already informed.
-            </p>
-            <a href="/ped/register" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-900 text-white font-semibold text-sm hover:bg-gray-800 transition-colors">
-              See how it works for clinicians
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+      <div class="relative">
+        <div class="cloud-track cloud-track-left flex gap-3 py-2">
+          {[...conditionCloudRow1, ...conditionCloudRow1].map((term) => (
+            <a href={`/blog?q=${encodeURIComponent(term)}`} class="flex-shrink-0 px-4 py-2 rounded-full border border-gray-200 bg-white text-sm text-gray-600 hover:border-green-400 hover:text-green-700 hover:bg-green-50 transition-all cursor-pointer whitespace-nowrap">
+              {term}
             </a>
-          </div>
+          ))}
+        </div>
+        <div class="cloud-track cloud-track-right flex gap-3 py-2 mt-2">
+          {[...conditionCloudRow2, ...conditionCloudRow2].map((term) => (
+            <a href={`/blog?q=${encodeURIComponent(term)}`} class="flex-shrink-0 px-4 py-2 rounded-full border border-gray-200 bg-white text-sm text-gray-600 hover:border-green-400 hover:text-green-700 hover:bg-green-50 transition-all cursor-pointer whitespace-nowrap">
+              {term}
+            </a>
+          ))}
+        </div>
+        <div class="absolute inset-y-0 left-0 w-16 sm:w-24 bg-gradient-to-r from-[var(--color-warm-bg)] to-transparent z-10 pointer-events-none"></div>
+        <div class="absolute inset-y-0 right-0 w-16 sm:w-24 bg-gradient-to-l from-[var(--color-warm-bg)] to-transparent z-10 pointer-events-none"></div>
+      </div>
+    </section>
 
-          <div class="mt-10 md:mt-0">
-            <div class="bg-white rounded-2xl border border-gray-200/80 p-5 space-y-3">
-              <div class="flex items-center gap-3 pb-3 border-b border-gray-100">
-                <div class="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <svg class="w-3.5 h-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
-                </div>
-                <span class="text-sm font-semibold text-gray-900">Doctor Dashboard</span>
+
+    <!-- ═══════════════════════════════════════════════════
+         4. PARENT CONFESSIONS — Real voices, real moments.
+         ═══════════════════════════════════════════════════ -->
+    <section class="py-14 sm:py-20 bg-white">
+      <div class="max-w-5xl mx-auto px-5 sm:px-8">
+        <p class="reveal text-xs font-semibold text-gray-400 uppercase tracking-widest mb-8">What parents told us</p>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+          {parentStories.map((story, i) => (
+            <a href={`/blog?q=${encodeURIComponent(story.condition)}`} class={`reveal reveal-delay-${Math.min(i, 3)} group block rounded-2xl p-6 bg-gray-50/80 border border-gray-100 hover:border-gray-200 hover:shadow-md transition-all`}>
+              <div class={`w-8 h-8 rounded-full ${story.bgColor} flex items-center justify-center mb-4`}>
+                <svg class={`w-4 h-4 ${story.color}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                </svg>
               </div>
-              <div class="flex items-start gap-3 py-1.5">
-                <div class="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 shrink-0"></div>
-                <div>
-                  <div class="text-sm font-medium text-gray-900">Daily patient brief</div>
-                  <div class="text-xs text-gray-400">Summary of your panel's health changes</div>
-                </div>
-              </div>
-              <div class="flex items-start gap-3 py-1.5">
-                <div class="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0"></div>
-                <div>
-                  <div class="text-sm font-medium text-gray-900">Flagged concerns</div>
-                  <div class="text-xs text-gray-400">Conditions needing attention, ranked by urgency</div>
-                </div>
-              </div>
-              <div class="flex items-start gap-3 py-1.5">
-                <div class="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0"></div>
-                <div>
-                  <div class="text-sm font-medium text-gray-900">Intervention tracking</div>
-                  <div class="text-xs text-gray-400">Compliance, streaks, and escalation alerts</div>
-                </div>
-              </div>
-              <div class="flex items-start gap-3 py-1.5">
-                <div class="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0"></div>
-                <div>
-                  <div class="text-sm font-medium text-gray-900">Clinical protocols</div>
-                  <div class="text-xs text-gray-400">Evidence-based, region-aware pathways</div>
-                </div>
-              </div>
-            </div>
+              <p class="text-gray-900 text-[0.95rem] leading-snug font-medium italic">
+                "{story.quote}"
+              </p>
+              <p class={`text-xs font-semibold mt-3 ${story.color} uppercase tracking-wider group-hover:underline`}>
+                Read more &rarr;
+              </p>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════════════
+         5. THE NUMBERS — Conditions that hide in childhood.
+         ═══════════════════════════════════════════════════ -->
+    <section class="py-24 sm:py-32 section-warm">
+      <div class="max-w-5xl mx-auto px-5 sm:px-8">
+        <h2 class="reveal font-serif text-[clamp(1.8rem,4vw,2.75rem)] leading-[1.1] tracking-tight text-gray-900 mb-16 sm:mb-24 max-w-3xl">
+          These are the things that get missed.
+        </h2>
+
+        <div class="reveal md:grid md:grid-cols-2 md:gap-16 items-start mb-20 sm:mb-28">
+          <div>
+            <span class="font-serif text-[clamp(3.5rem,8vw,6rem)] leading-none text-amber-500/20 block">1 in 4</span>
+          </div>
+          <div class="mt-4 md:mt-6">
+            <p class="text-xl sm:text-2xl font-serif text-gray-900 leading-snug mb-4">
+              children have an undetected vision problem.
+            </p>
+            <p class="text-gray-500 leading-relaxed">
+              The teacher says "not paying attention." The parent thinks "shy."
+              A 5-minute screening would have caught it.
+              The child just needed glasses.
+            </p>
+          </div>
+        </div>
+
+        <div class="reveal md:grid md:grid-cols-2 md:gap-16 items-start mb-20 sm:mb-28">
+          <div>
+            <span class="font-serif text-[clamp(3.5rem,8vw,6rem)] leading-none text-red-400/20 block">4 in 10</span>
+          </div>
+          <div class="mt-4 md:mt-6">
+            <p class="text-xl sm:text-2xl font-serif text-gray-900 leading-snug mb-4">
+              Indian children are anemic. Most look perfectly healthy.
+            </p>
+            <p class="text-gray-500 leading-relaxed">
+              No visible symptoms. No complaints. Just a child whose brain
+              is quietly missing the iron it needs to develop.
+              A blood test at the right age catches it every time.
+            </p>
+          </div>
+        </div>
+
+        <div class="reveal md:grid md:grid-cols-2 md:gap-16 items-start">
+          <div>
+            <span class="font-serif text-[clamp(3.5rem,8vw,6rem)] leading-none text-green-500/20 block">80%</span>
+          </div>
+          <div class="mt-4 md:mt-6">
+            <p class="text-xl sm:text-2xl font-serif text-gray-900 leading-snug mb-4">
+              of brain development happens before age three.
+            </p>
+            <p class="text-gray-500 leading-relaxed">
+              Most developmental screenings start after five.
+              Two years of critical window, gone.
+              The children who get early support aren't luckier &mdash;
+              their parents just knew sooner.
+            </p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ═══════════════════════════════════════════════════════════════
-         SECTION 7 — CTA: Warm, human, inviting
-         ═══════════════════════════════════════════════════════════════ -->
-    <section class="py-20 sm:py-28 bg-gradient-to-br from-green-50 via-emerald-50/50 to-teal-50/30">
-      <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-10 text-center">
-        <h2 class="text-3xl sm:text-4xl font-display font-bold text-gray-900 leading-tight mb-4">
-          See what your child's health<br class="hidden sm:block" />
-          is telling you.
+
+    <!-- ═══════════════════════════════════════════════════
+         6. KNOW + DO — The brand bridge.
+         Two paths: understand the body, then put it into practice.
+         ═══════════════════════════════════════════════════ -->
+    <section class="py-24 sm:py-32 bg-white">
+      <div class="max-w-5xl mx-auto px-5 sm:px-8">
+        <div class="reveal text-center max-w-2xl mx-auto mb-16 sm:mb-20">
+          <h2 class="font-serif text-[clamp(2rem,5vw,3.25rem)] leading-[1.08] tracking-tight text-gray-900">
+            Knowing is the first step.<br />
+            Doing is everything.
+          </h2>
+          <p class="mt-5 text-lg text-gray-400 leading-relaxed">
+            SKIDS gives you both. Understand what's happening inside your child's body,
+            then practice six daily habits backed by neuroscience.
+          </p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6 sm:gap-8">
+          <!-- GROW card -->
+          <a href="/discover" class="reveal group relative block rounded-3xl overflow-hidden aspect-[4/3] sm:aspect-[3/2]">
+            <img
+              src={growBg}
+              alt=""
+              class="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700"
+              loading="lazy"
+            />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+            <div class="absolute bottom-0 left-0 right-0 p-7 sm:p-9">
+              <p class="text-green-300 text-xs font-semibold uppercase tracking-widest mb-2">Grow</p>
+              <h3 class="font-serif text-2xl sm:text-3xl text-white leading-tight mb-2">
+                How your child's<br />body actually works
+              </h3>
+              <p class="text-white/60 text-sm leading-relaxed max-w-xs">
+                16 systems. From the brain wiring itself to the gut building immunity. Interactive, visual, made for parents.
+              </p>
+              <span class="inline-flex items-center gap-1.5 mt-4 text-white text-sm font-medium group-hover:gap-2.5 transition-all">
+                Explore
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+              </span>
+            </div>
+          </a>
+
+          <!-- PRACTICE card -->
+          <a href="/habits" class="reveal reveal-delay-1 group relative block rounded-3xl overflow-hidden aspect-[4/3] sm:aspect-[3/2]">
+            <img
+              src={practiceBg}
+              alt=""
+              class="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700"
+              loading="lazy"
+            />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+            <div class="absolute bottom-0 left-0 right-0 p-7 sm:p-9">
+              <p class="text-amber-300 text-xs font-semibold uppercase tracking-widest mb-2">Practice</p>
+              <h3 class="font-serif text-2xl sm:text-3xl text-white leading-tight mb-2">
+                Six daily habits that<br />shape everything
+              </h3>
+              <p class="text-white/60 text-sm leading-relaxed max-w-xs">
+                H.A.B.I.T.S. Nutrition, movement, stress, mindset, routine, sleep. Plus 6 workshop programs for parents and students.
+              </p>
+              <span class="inline-flex items-center gap-1.5 mt-4 text-white text-sm font-medium group-hover:gap-2.5 transition-all">
+                Start practicing
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+              </span>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════════════
+         7. CO-NURTURING — The philosophy, with image.
+         ═══════════════════════════════════════════════════ -->
+    <section class="relative overflow-hidden">
+      <div class="md:grid md:grid-cols-2 min-h-[480px] sm:min-h-[560px]">
+        <!-- Image half -->
+        <div class="relative h-64 sm:h-80 md:h-auto">
+          <img
+            src={coNurtureBg}
+            alt=""
+            class="absolute inset-0 w-full h-full object-cover img-reveal"
+            loading="lazy"
+          />
+        </div>
+
+        <!-- Copy half -->
+        <div class="bg-white flex items-center">
+          <div class="px-8 sm:px-12 lg:px-16 py-16 sm:py-20 max-w-lg">
+            <h2 class="reveal font-serif text-[clamp(1.8rem,3.5vw,2.75rem)] leading-[1.08] tracking-tight text-gray-900">
+              Between checkups,<br />
+              childhood happens.
+            </h2>
+            <div class="reveal reveal-delay-1 mt-6 space-y-4">
+              <p class="text-gray-500 text-lg leading-relaxed">
+                The way she holds her spoon. How he squints at the TV from close.
+                Whether she's been more tired this month. These aren't symptoms.
+                They're signals &mdash; and only a parent sees them every day.
+              </p>
+              <p class="text-gray-500 text-lg leading-relaxed">
+                Your pediatrician has the training to know what they mean.
+                But they need to see what you see.
+              </p>
+              <p class="text-gray-900 text-lg leading-relaxed font-medium">
+                SKIDS connects every parent observation to your child's clinical picture &mdash;
+                so your pediatrician walks in prepared, and nothing gets missed.
+              </p>
+            </div>
+            <p class="reveal reveal-delay-2 mt-10 font-serif text-xl sm:text-2xl text-gray-900 tracking-tight">
+              We call this co-nurturing.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════════════
+         8. PERSONA — Meera's story, with emotion.
+         ═══════════════════════════════════════════════════ -->
+    <section class="py-24 sm:py-32 section-warm">
+      <div class="max-w-4xl mx-auto px-5 sm:px-8">
+        <p class="reveal text-sm font-medium text-gray-400 uppercase tracking-widest mb-4">A real story</p>
+        <h2 class="reveal font-serif text-2xl sm:text-3xl text-gray-900 tracking-tight mb-12 sm:mb-16">
+          Meera almost waited too long.
         </h2>
-        <p class="text-lg text-gray-500 mb-8">
-          It takes 5 minutes. It's free. And it might change everything.
+
+        <div class="space-y-8 sm:space-y-12 border-l-2 border-gray-200 pl-8 sm:pl-12 relative">
+          <div class="reveal relative">
+            <div class="absolute -left-[calc(2rem+5px)] sm:-left-[calc(3rem+5px)] w-3 h-3 rounded-full bg-green-500 border-2 border-white"></div>
+            <p class="text-xs font-semibold text-green-600 uppercase tracking-wider mb-2">Morning</p>
+            <p class="text-gray-900 font-medium text-lg">Her 2-year-old isn't babbling as much as her older one did.</p>
+            <p class="text-gray-400 mt-1.5 leading-relaxed">She logs it on SKIDS in 10 seconds. Not a clinic visit. Just a note.</p>
+          </div>
+
+          <div class="reveal relative">
+            <div class="absolute -left-[calc(2rem+5px)] sm:-left-[calc(3rem+5px)] w-3 h-3 rounded-full bg-amber-500 border-2 border-white"></div>
+            <p class="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">That evening</p>
+            <p class="text-gray-900 font-medium text-lg">SKIDS connects the note with two earlier observations she'd forgotten.</p>
+            <p class="text-gray-400 mt-1.5 leading-relaxed">Reduced eye contact at 14 months. No pointing at 18 months. Three dots, connected.</p>
+          </div>
+
+          <div class="reveal relative">
+            <div class="absolute -left-[calc(2rem+5px)] sm:-left-[calc(3rem+5px)] w-3 h-3 rounded-full bg-blue-500 border-2 border-white"></div>
+            <p class="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-2">Next ped visit</p>
+            <p class="text-gray-900 font-medium text-lg">Dr. Sharma opens the record before Meera sits down.</p>
+            <p class="text-gray-400 mt-1.5 leading-relaxed">Six months of context, structured. The conversation starts where it matters.</p>
+          </div>
+
+          <div class="reveal relative">
+            <div class="absolute -left-[calc(2rem+5px)] sm:-left-[calc(3rem+5px)] w-3 h-3 rounded-full bg-purple-500 border-2 border-white"></div>
+            <p class="text-xs font-semibold text-purple-600 uppercase tracking-wider mb-2">Three months later</p>
+            <p class="text-gray-900 font-medium text-lg">Speech therapy started at 24 months, not 42.</p>
+            <p class="text-gray-400 mt-1.5 leading-relaxed">The window of neuroplasticity was still wide open. Because one observation was connected to the right context at the right time.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════════════
+         9. P² — The SKIDS equation. Parent + Pediatrician = one system.
+         ═══════════════════════════════════════════════════ -->
+    <section class="py-24 sm:py-36 bg-gray-950 text-white">
+      <div class="max-w-4xl mx-auto px-5 sm:px-8">
+        <div class="reveal text-center">
+          <div class="inline-flex items-center gap-3 px-5 py-2.5 rounded-2xl bg-white/5 border border-white/10 mb-10">
+            <span class="text-3xl sm:text-4xl font-serif text-green-400 tracking-tight">P<sup class="text-xl sm:text-2xl">2</sup></span>
+            <span class="text-white/25 text-xl">=</span>
+            <span class="text-white/60 text-sm leading-tight text-left">
+              <span class="text-white font-medium">Parent + Pediatrician</span><br />
+              One system. Nothing missed.
+            </span>
+          </div>
+          <h2 class="font-serif text-[clamp(2rem,5vw,3.5rem)] leading-[1.08] tracking-tight">
+            Your pediatrician doesn't work<br class="hidden sm:block" />
+            outside SKIDS. They work inside it.
+          </h2>
+          <p class="mt-6 text-lg text-white/40 max-w-xl mx-auto leading-relaxed">
+            Every observation you log at home becomes intelligence
+            your pediatrician sees before your child sits down.
+            Every flag your ped raises becomes guidance you act on between visits.
+            That's P&sup2;.
+          </p>
+        </div>
+
+        <div class="reveal reveal-delay-1 mt-16 sm:mt-20 grid md:grid-cols-2 gap-6">
+          <!-- What you do -->
+          <div class="rounded-2xl bg-white/5 border border-white/10 p-7 sm:p-8">
+            <div class="w-10 h-10 rounded-xl bg-green-500/15 flex items-center justify-center mb-4">
+              <span class="text-green-400 font-serif text-lg font-bold">P</span>
+            </div>
+            <h3 class="text-white font-semibold mb-3">What you do at home</h3>
+            <ul class="space-y-2.5 text-sm text-white/50">
+              <li class="flex items-start gap-2.5">
+                <div class="w-1.5 h-1.5 rounded-full bg-green-400/60 mt-1.5 shrink-0"></div>
+                Log observations in 10 seconds
+              </li>
+              <li class="flex items-start gap-2.5">
+                <div class="w-1.5 h-1.5 rounded-full bg-green-400/60 mt-1.5 shrink-0"></div>
+                Practice H.A.B.I.T.S. daily
+              </li>
+              <li class="flex items-start gap-2.5">
+                <div class="w-1.5 h-1.5 rounded-full bg-green-400/60 mt-1.5 shrink-0"></div>
+                Get instant guidance from SKIDS AI
+              </li>
+              <li class="flex items-start gap-2.5">
+                <div class="w-1.5 h-1.5 rounded-full bg-green-400/60 mt-1.5 shrink-0"></div>
+                Track growth, milestones, concerns
+              </li>
+            </ul>
+          </div>
+
+          <!-- What your ped sees -->
+          <div class="rounded-2xl bg-white/5 border border-white/10 p-7 sm:p-8">
+            <div class="w-10 h-10 rounded-xl bg-blue-500/15 flex items-center justify-center mb-4">
+              <span class="text-blue-400 font-serif text-lg font-bold">P</span>
+            </div>
+            <h3 class="text-white font-semibold mb-3">What your ped sees at the clinic</h3>
+            <ul class="space-y-2.5 text-sm text-white/50">
+              <li class="flex items-start gap-2.5">
+                <div class="w-1.5 h-1.5 rounded-full bg-blue-400/60 mt-1.5 shrink-0"></div>
+                Pre-visit summary, ready before you sit down
+              </li>
+              <li class="flex items-start gap-2.5">
+                <div class="w-1.5 h-1.5 rounded-full bg-blue-400/60 mt-1.5 shrink-0"></div>
+                Developmental flags from your observations
+              </li>
+              <li class="flex items-start gap-2.5">
+                <div class="w-1.5 h-1.5 rounded-full bg-blue-400/60 mt-1.5 shrink-0"></div>
+                Intervention compliance &amp; progress
+              </li>
+              <li class="flex items-start gap-2.5">
+                <div class="w-1.5 h-1.5 rounded-full bg-blue-400/60 mt-1.5 shrink-0"></div>
+                Evidence-based clinical pathways
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="reveal reveal-delay-2 mt-10 text-center">
+          <a href="/skids" class="inline-flex items-center gap-2 text-sm text-green-400 font-medium hover:text-green-300 transition-colors">
+            Learn more about SKIDS
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+          </a>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════════════
+         10. CREDIBILITY — Humble, qualitative.
+         ═══════════════════════════════════════════════════ -->
+    <section class="py-16 sm:py-24 bg-white">
+      <div class="max-w-4xl mx-auto px-5 sm:px-8">
+        <p class="reveal font-serif text-[clamp(1.4rem,2.5vw,2rem)] leading-[1.25] tracking-tight text-gray-900 text-center max-w-3xl mx-auto">
+          Born in India's pediatric clinics. Shaped by
+          <span class="text-green-600">thousands of real screenings</span>,
+          hundreds of health conditions, and the everyday concerns
+          of parents who just wanted to know their child was okay.
         </p>
-        <a href="/login" class="inline-flex px-8 py-4 rounded-xl bg-green-600 text-white font-semibold text-base hover:bg-green-500 transition-colors shadow-lg shadow-green-600/20">
-          Start your child's health picture
-        </a>
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════════════
+         12. CTA
+         ═══════════════════════════════════════════════════ -->
+    <section class="py-24 sm:py-36 bg-gradient-to-b from-green-50/60 to-white">
+      <div class="max-w-3xl mx-auto px-5 sm:px-8 text-center">
+        <h2 class="reveal font-serif text-[clamp(2rem,5vw,3.5rem)] leading-[1.1] tracking-tight text-gray-900">
+          See what your child's<br class="hidden sm:block" />
+          health is telling you.
+        </h2>
+        <p class="reveal reveal-delay-1 mt-6 text-lg text-gray-400 max-w-md mx-auto leading-relaxed">
+          5 minutes. Free. And it might be the most important
+          thing you do this year.
+        </p>
+        <div class="reveal reveal-delay-2 mt-10">
+          <a href="/login" class="inline-flex px-10 py-4 rounded-full bg-green-600 text-white font-semibold text-base hover:bg-green-500 transition-all shadow-lg shadow-green-600/20 hover:shadow-xl hover:shadow-green-600/30 hover:-translate-y-0.5">
+            Start your child's health picture
+          </a>
+        </div>
+        <p class="reveal reveal-delay-3 mt-5 text-sm text-gray-300">
+          No credit card. No commitment. Just clarity.
+        </p>
       </div>
     </section>
 
@@ -362,3 +604,38 @@ const categoryColors: Record<string, string> = {
   <Footer />
   <MobileTabBar />
 </BaseLayout>
+
+<style>
+  .font-serif {
+    font-family: 'DM Serif Display', Georgia, 'Times New Roman', serif;
+  }
+
+  @keyframes scroll-left {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  @keyframes scroll-right {
+    0% { transform: translateX(-50%); }
+    100% { transform: translateX(0); }
+  }
+  .cloud-track { width: max-content; }
+  .cloud-track-left { animation: scroll-left 45s linear infinite; }
+  .cloud-track-right { animation: scroll-right 50s linear infinite; }
+  .cloud-track:hover { animation-play-state: paused; }
+</style>
+
+<script>
+  /* Scroll-triggered reveal animations */
+  const io = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) {
+          e.target.classList.add('is-visible')
+          io.unobserve(e.target)
+        }
+      })
+    },
+    { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
+  )
+  document.querySelectorAll('.reveal, .img-reveal').forEach((el) => io.observe(el))
+</script>

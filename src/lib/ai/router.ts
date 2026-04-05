@@ -1,5 +1,5 @@
 /**
- * AI model router for Dr. SKIDS chat.
+ * AI model router for SKIDS Guide chat.
  *
  * Tier logic:
  *   free    → Workers AI (llama-3.1-8b) — 20 req/min

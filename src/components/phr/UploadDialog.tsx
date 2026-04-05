@@ -224,7 +224,7 @@ export default function UploadDialog({ childId, token, onClose, onUploaded }: Up
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-50 flex items-center justify-center">
                 <div className="w-8 h-8 border-3 border-green-200 border-t-green-600 rounded-full animate-spin" />
               </div>
-              <p className="text-sm font-medium text-gray-700">Dr. SKIDS is reading your document...</p>
+              <p className="text-sm font-medium text-gray-700">SKIDS Guide is reading your document...</p>
               <p className="text-xs text-gray-400 mt-1">This usually takes a few seconds</p>
             </div>
           )}

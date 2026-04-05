@@ -1,5 +1,5 @@
 /**
- * Unified AI provider interface for Dr. SKIDS chat.
+ * Unified AI provider interface for SKIDS Guide chat.
  * Supports: Cloudflare Workers AI (free), Google Gemini (premium), Anthropic Claude (premium)
  */
 

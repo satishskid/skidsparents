@@ -1,0 +1,314 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import Navbar from '@/components/common/Navbar.astro'
+import Footer from '@/components/common/Footer.astro'
+import MobileTabBar from '@/components/common/MobileTabBar.astro'
+import ChatWidget from '@/components/chat/ChatWidget'
+
+export const prerender = true
+---
+
+<BaseLayout
+  title="SKIDS — Smart Kids, Incredible Development System"
+  description="SKIDS is the co-nurturing intelligence platform where parents and pediatricians come together. P\u00b2 — Parent + Pediatrician, raising every child to be Smart & Super."
+>
+  <Navbar />
+
+  <main class="min-h-screen overflow-hidden">
+
+    <!-- ═══════════════════════════════════════════════════
+         HERO — The declaration.
+         ═══════════════════════════════════════════════════ -->
+    <section class="relative bg-gray-950 overflow-hidden">
+      <div class="absolute inset-0 bg-gradient-to-br from-green-900/30 via-gray-950 to-emerald-900/20"></div>
+      <div class="relative max-w-4xl mx-auto px-5 sm:px-8 py-24 sm:py-36 text-center">
+        <img src="/images/skids-superman-logo.svg" alt="SKIDS" class="reveal w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-8" />
+        <h1 class="reveal font-serif text-[clamp(2.2rem,6vw,4rem)] leading-[1.05] tracking-tight text-white">
+          Every child is born<br />
+          Smart & Super.
+        </h1>
+        <p class="reveal reveal-delay-1 mt-6 text-xl sm:text-2xl text-white/50 font-serif tracking-tight">
+          SKIDS makes sure the world sees it too.
+        </p>
+        <div class="reveal reveal-delay-2 mt-10 inline-flex items-center gap-3 px-6 py-3 rounded-2xl bg-white/5 border border-white/10">
+          <span class="text-4xl sm:text-5xl font-serif text-green-400 tracking-tight">P<sup class="text-2xl sm:text-3xl">2</sup></span>
+          <span class="text-white/30 text-2xl">=</span>
+          <span class="text-white/70 text-sm sm:text-base leading-tight text-left">
+            <span class="text-white font-medium">Parent + Pediatrician</span><br />
+            The co-nurturing equation
+          </span>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════════════
+         THE BELIEF — What SKIDS stands for.
+         ═══════════════════════════════════════════════════ -->
+    <section class="py-20 sm:py-28 bg-white">
+      <div class="max-w-3xl mx-auto px-5 sm:px-8">
+        <div class="reveal">
+          <p class="text-sm font-semibold text-green-600 uppercase tracking-widest mb-6">What we believe</p>
+          <h2 class="font-serif text-[clamp(1.8rem,4vw,2.75rem)] leading-[1.1] tracking-tight text-gray-900">
+            No child should fall behind because<br class="hidden sm:block" />
+            a signal was missed.
+          </h2>
+        </div>
+        <div class="reveal reveal-delay-1 mt-8 space-y-5 text-lg text-gray-500 leading-relaxed">
+          <p>
+            A child's brain forms one million neural connections every second.
+            Their gut builds immunity that will protect them for decades.
+            Their eyes are learning to track, focus, and interpret a world of motion.
+          </p>
+          <p>
+            But most of this happens invisibly. Between checkups. At home.
+            In moments that look ordinary but are anything but.
+          </p>
+          <p class="text-gray-900 font-medium">
+            SKIDS exists because the two people who matter most in a child's health
+            &mdash; the parent who observes every day, and the pediatrician who knows what it means
+            &mdash; should never work in isolation.
+          </p>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════════════
+         P² — The co-nurturing equation explained.
+         ═══════════════════════════════════════════════════ -->
+    <section class="py-20 sm:py-28 section-warm">
+      <div class="max-w-5xl mx-auto px-5 sm:px-8">
+        <div class="reveal text-center mb-16 sm:mb-20">
+          <span class="font-serif text-[clamp(4rem,10vw,7rem)] leading-none text-green-500/15 block">P<sup class="text-[0.6em]">2</sup></span>
+          <h2 class="font-serif text-[clamp(1.8rem,4vw,2.5rem)] leading-[1.1] tracking-tight text-gray-900 -mt-6 sm:-mt-8">
+            Parent + Pediatrician.<br />
+            Together, they're unstoppable.
+          </h2>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-8 sm:gap-12">
+          <!-- Parent side -->
+          <div class="reveal rounded-3xl bg-white border border-gray-100 p-8 sm:p-10 shadow-sm">
+            <div class="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center mb-5">
+              <span class="text-green-600 font-serif text-2xl font-bold">P</span>
+            </div>
+            <h3 class="font-serif text-xl text-gray-900 tracking-tight mb-3">The Parent</h3>
+            <p class="text-gray-500 leading-relaxed mb-5">
+              You see your child 6,000+ hours a year. You notice when they squint,
+              when they're quieter than usual, when they stop eating what they used to love.
+              These observations are clinical gold &mdash; if someone connects the dots.
+            </p>
+            <ul class="space-y-3 text-sm text-gray-600">
+              <li class="flex items-start gap-2.5">
+                <div class="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 shrink-0"></div>
+                <span>Logs observations in 10 seconds</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <div class="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 shrink-0"></div>
+                <span>Learns how each body system grows</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <div class="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 shrink-0"></div>
+                <span>Practices H.A.B.I.T.S. every day</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <div class="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 shrink-0"></div>
+                <span>Gets personalized guidance from SKIDS AI</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Pediatrician side -->
+          <div class="reveal reveal-delay-1 rounded-3xl bg-white border border-gray-100 p-8 sm:p-10 shadow-sm">
+            <div class="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mb-5">
+              <span class="text-blue-600 font-serif text-2xl font-bold">P</span>
+            </div>
+            <h3 class="font-serif text-xl text-gray-900 tracking-tight mb-3">The Pediatrician</h3>
+            <p class="text-gray-500 leading-relaxed mb-5">
+              You see the child 6 hours a year. But with SKIDS, you walk into every
+              appointment with six months of structured observations, growth trends,
+              and developmental flags &mdash; organized and ready.
+            </p>
+            <ul class="space-y-3 text-sm text-gray-600">
+              <li class="flex items-start gap-2.5">
+                <div class="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0"></div>
+                <span>Pre-visit summaries with parent observations</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <div class="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0"></div>
+                <span>Developmental milestone flagging</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <div class="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0"></div>
+                <span>Evidence-based protocols, peer-reviewed sources</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <div class="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0"></div>
+                <span>Intervention tracking with compliance data</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- The = sign -->
+        <div class="reveal mt-12 sm:mt-16 text-center">
+          <div class="inline-flex items-center gap-4 px-8 py-5 rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg shadow-green-600/20">
+            <span class="font-serif text-3xl tracking-tight">P<sup class="text-lg">2</sup></span>
+            <span class="text-white/40 text-xl">=</span>
+            <span class="text-sm sm:text-base leading-tight text-left">
+              <span class="font-semibold">Nothing gets missed.</span><br />
+              <span class="text-white/70">Every signal connects to the right care, at the right time.</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════════════
+         THE SYSTEM — Learn, Grow, Practice, Record.
+         ═══════════════════════════════════════════════════ -->
+    <section class="py-20 sm:py-28 bg-white">
+      <div class="max-w-5xl mx-auto px-5 sm:px-8">
+        <div class="reveal text-center max-w-2xl mx-auto mb-16">
+          <h2 class="font-serif text-[clamp(1.8rem,4vw,2.5rem)] leading-[1.1] tracking-tight text-gray-900">
+            The SKIDS system
+          </h2>
+          <p class="mt-4 text-gray-400 text-lg">
+            Four pillars. One intelligent platform. Built from real clinics, real families.
+          </p>
+        </div>
+
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <a href="/blog" class="reveal group text-center p-6 rounded-2xl border border-gray-100 hover:border-green-200 hover:shadow-md transition-all">
+            <div class="w-14 h-14 mx-auto rounded-2xl bg-green-50 flex items-center justify-center mb-4 group-hover:bg-green-100 transition-colors">
+              <svg class="w-7 h-7 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+              </svg>
+            </div>
+            <h3 class="font-serif text-lg text-gray-900 mb-1">Learn</h3>
+            <p class="text-sm text-gray-400">Daily articles. Evidence-based insights. Written for parents, backed by science.</p>
+          </a>
+
+          <a href="/discover" class="reveal reveal-delay-1 group text-center p-6 rounded-2xl border border-gray-100 hover:border-purple-200 hover:shadow-md transition-all">
+            <div class="w-14 h-14 mx-auto rounded-2xl bg-purple-50 flex items-center justify-center mb-4 group-hover:bg-purple-100 transition-colors">
+              <svg class="w-7 h-7 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+              </svg>
+            </div>
+            <h3 class="font-serif text-lg text-gray-900 mb-1">Grow</h3>
+            <p class="text-sm text-gray-400">16 body systems. Interactive journeys. Understand what's happening inside your child.</p>
+          </a>
+
+          <a href="/habits" class="reveal reveal-delay-2 group text-center p-6 rounded-2xl border border-gray-100 hover:border-amber-200 hover:shadow-md transition-all">
+            <div class="w-14 h-14 mx-auto rounded-2xl bg-amber-50 flex items-center justify-center mb-4 group-hover:bg-amber-100 transition-colors">
+              <svg class="w-7 h-7 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+              </svg>
+            </div>
+            <h3 class="font-serif text-lg text-gray-900 mb-1">Practice</h3>
+            <p class="text-sm text-gray-400">H.A.B.I.T.S. daily habits. 6 workshop programs. Knowledge becomes action.</p>
+          </a>
+
+          <a href="/timeline" class="reveal reveal-delay-3 group text-center p-6 rounded-2xl border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all">
+            <div class="w-14 h-14 mx-auto rounded-2xl bg-blue-50 flex items-center justify-center mb-4 group-hover:bg-blue-100 transition-colors">
+              <svg class="w-7 h-7 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+              </svg>
+            </div>
+            <h3 class="font-serif text-lg text-gray-900 mb-1">My Child</h3>
+            <p class="text-sm text-gray-400">Your child's life record. Observations, milestones, growth &mdash; shared with your ped.</p>
+          </a>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════════════
+         BORN FROM — Credibility.
+         ═══════════════════════════════════════════════════ -->
+    <section class="py-20 sm:py-28 section-warm">
+      <div class="max-w-4xl mx-auto px-5 sm:px-8 text-center">
+        <div class="reveal">
+          <img src="/images/skids-logo.svg" alt="SKIDS" class="h-8 mx-auto mb-8 opacity-60" />
+          <p class="font-serif text-[clamp(1.4rem,2.5vw,2rem)] leading-[1.25] tracking-tight text-gray-900 max-w-3xl mx-auto">
+            We started in clinics, screening children one at a time.
+            Listening to parents. Learning from pediatricians.
+            That's still how we build &mdash; one family, one insight,
+            one condition at a time.
+          </p>
+        </div>
+
+        <div class="reveal reveal-delay-1 mt-12 grid sm:grid-cols-3 gap-8 max-w-2xl mx-auto text-center">
+          <div>
+            <p class="font-serif text-xl text-gray-900 tracking-tight">Thousands of children</p>
+            <p class="text-sm text-gray-400 mt-1">screened across India's clinics</p>
+          </div>
+          <div>
+            <p class="font-serif text-xl text-gray-900 tracking-tight">Hundreds of conditions</p>
+            <p class="text-sm text-gray-400 mt-1">tracked, studied, understood</p>
+          </div>
+          <div>
+            <p class="font-serif text-xl text-gray-900 tracking-tight">Peer-reviewed evidence</p>
+            <p class="text-sm text-gray-400 mt-1">behind every protocol</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════════════
+         SMART & SUPER — What SKIDS stands for.
+         ═══════════════════════════════════════════════════ -->
+    <section class="py-20 sm:py-28 bg-white">
+      <div class="max-w-3xl mx-auto px-5 sm:px-8 text-center">
+        <div class="reveal">
+          <h2 class="font-serif text-[clamp(2rem,5vw,3.5rem)] leading-[1.08] tracking-tight text-gray-900">
+            <span class="text-green-600">S</span>mart
+            <span class="text-green-600">K</span>ids.
+            <span class="text-green-600">I</span>ncredible
+            <span class="text-green-600">D</span>evelopment
+            <span class="text-green-600">S</span>ystem.
+          </h2>
+          <p class="mt-6 text-lg text-gray-400 max-w-xl mx-auto leading-relaxed">
+            Every child has the potential to be smart and super.
+            What they need is the right support at the right time &mdash;
+            from the two people who matter most.
+          </p>
+        </div>
+        <div class="reveal reveal-delay-1 mt-10">
+          <a href="/login" class="inline-flex px-10 py-4 rounded-full bg-green-600 text-white font-semibold text-base hover:bg-green-500 transition-all shadow-lg shadow-green-600/20 hover:shadow-xl hover:shadow-green-600/30 hover:-translate-y-0.5">
+            Start your child's health picture
+          </a>
+          <p class="mt-4 text-sm text-gray-300">Free. No credit card. Just clarity.</p>
+        </div>
+      </div>
+    </section>
+
+    <ChatWidget client:load />
+  </main>
+  <Footer />
+  <MobileTabBar />
+</BaseLayout>
+
+<style>
+  .font-serif {
+    font-family: 'DM Serif Display', Georgia, 'Times New Roman', serif;
+  }
+</style>
+
+<script>
+  const io = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) {
+          e.target.classList.add('is-visible')
+          io.unobserve(e.target)
+        }
+      })
+    },
+    { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
+  )
+  document.querySelectorAll('.reveal, .img-reveal').forEach((el) => io.observe(el))
+</script>

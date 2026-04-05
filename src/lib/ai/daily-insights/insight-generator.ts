@@ -473,7 +473,7 @@ async function enhanceWithAI(
     `Insight ${idx + 1} (${i.type}): Title: "${i.title}" Body: "${i.body}"`
   ).join('\n')
 
-  const systemPrompt = `You are Dr. SKIDS, a warm and knowledgeable pediatric health companion for parents.
+  const systemPrompt = `You are the SKIDS Guide, a warm and knowledgeable child health knowledge companion for parents.
 You are rewriting daily insight cards for ${ctx.childName} (${formatAge(ctx.ageMonths)}, ${ctx.gender}).
 
 RULES:

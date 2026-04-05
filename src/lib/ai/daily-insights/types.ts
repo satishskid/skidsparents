@@ -24,7 +24,7 @@ export interface DailyInsight {
   title: string
   /** Body text (2-3 sentences, warm and parent-friendly) */
   body: string
-  /** The question to seed into chat when parent taps "Ask Dr. SKIDS" */
+  /** The question to seed into chat when parent taps "Ask SKIDS Guide" */
   deepQueryPrompt: string
   /** Which body system domain this relates to */
   domain: string

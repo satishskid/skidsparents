@@ -1,5 +1,33 @@
 /**
- * POST /api/chat — AI chatbot endpoint
+ * POST /api/chat — SKIDS Guide — Chat Companion endpoint
+ *
+ * ┌─────────────────────────────────────────────────────────────┐
+ * │  FEATURE NAMING & SEPARATION                                │
+ * │                                                             │
+ * │  1. SKIDS GUIDE (Knowledge Companion) — THIS FILE             │
+ * │     What it does: Friendly knowledge companion for parents.  │
+ * │     What it uses: LLM + static content (milestones, habits,  │
+ * │       organs, services). Safe for public release.            │
+ * │     What parents see: Chat responses with guidance.          │
+ * │     What it is NOT: A doctor. Never diagnoses or prescribes. │
+ * │                                                             │
+ * │  2. SKIDS COMPANION (Core Intelligence) — GATED, PILOT ONLY │
+ * │     What it is: Bayesian projection engine, 150+ condition   │
+ * │       knowledge graph, probability engine with 12 modifier   │
+ * │       sources, 5,924 evidence citations.                     │
+ * │     Status: Core IP. Requires controlled clinical testing    │
+ * │       before any parent-facing exposure.                     │
+ * │     Gate: ENABLE_SKIDS_COMPANION env flag (default: off)     │
+ * │     Pilot: /pilot/companion (separate URL for testing)       │
+ * │                                                             │
+ * │  3. PASSIVE OBSERVATION LOGGING — ALWAYS ON                  │
+ * │     What it does: Extracts observations from chat messages   │
+ * │       and saves to life record (parent never sees this).     │
+ * │     What it uses: Pattern matching + domain detection.       │
+ * │     Safe: Yes — just structured data logging, no projections │
+ * │       unless SKIDS Companion is enabled.                     │
+ * └─────────────────────────────────────────────────────────────┘
+ *
  * Accepts: { message, childId?, conversationId? }
  * Returns: { response, conversationId }
  */
@@ -11,6 +39,10 @@ import { buildSystemPrompt, type ChildProfile, type ChatContext } from '@/lib/ai
 import { isPremiumParent, checkRateLimit, routeToModel, type AIMessage } from '@/lib/ai/router'
 import { getEnv } from '@/lib/runtime/env'
 import { extractObservationFromChat } from '@/lib/ai/observation-extractor'
+
+// ── SKIDS Intelligence Engine (gated behind feature flag) ──
+// These imports are only used when ENABLE_INTELLIGENCE_ENGINE=true.
+// Without the flag, observations are logged but NO Bayesian projections run.
 import { buildLifeRecordContext } from '@/lib/ai/life-record/context-builder'
 import { projectObservation, getParentSummary } from '@/lib/ai/life-record/probability-engine'
 
@@ -201,7 +233,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     } catch (modelErr) {
       console.error('[Chat] Model routing failed:', modelErr)
       const errorMsg = modelErr instanceof Error && modelErr.message === 'No AI runtime available'
-        ? "Dr. SKIDS AI service is temporarily unavailable. Please try again shortly or contact support."
+        ? "SKIDS Guide service is temporarily unavailable. Please try again shortly or contact support."
         : "I'm having a moment — please try again in a few seconds. If this keeps happening, you can reach us on WhatsApp."
       return new Response(
         JSON.stringify({ response: errorMsg, conversationId }),
@@ -247,16 +279,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // ═══════════════════════════════════════════════════════
     // PASSIVE OBSERVATION EXTRACTION
+    // ═══════════════════════════════════════════════════════
+    // PASSIVE OBSERVATION LOGGING (always on)
     // If the parent's chat message contains an observation about
     // their child, silently extract and save it to the life record.
     // The parent never sees "observation saved" — invisible enrichment.
+    //
+    // SKIDS INTELLIGENCE ENGINE (gated — off by default)
+    // Bayesian projection engine only runs if ENABLE_INTELLIGENCE_ENGINE=true.
+    // Until controlled clinical testing is complete, observations are
+    // logged but NOT projected. This protects the core IP from
+    // premature exposure and ensures accuracy before parent-facing use.
     // ═══════════════════════════════════════════════════════
+    const companionEnabled = (env as Record<string, unknown>).ENABLE_SKIDS_COMPANION === 'true'
     let passiveObservation = null
     if (body.childId && childAgeMonths !== undefined && db) {
       try {
         const extraction = extractObservationFromChat(userMessage, childAgeMonths)
         if (extraction && extraction.confidence >= 0.5) {
-          // Save as passive observation
+          // Save as passive observation (always — this is just structured data logging)
           const obsId = crypto.randomUUID()
           await db.prepare(
             `INSERT INTO parent_observations (id, child_id, date, category, observation_text, concern_level, source, created_at)
@@ -270,42 +311,46 @@ export const POST: APIRoute = async ({ request, locals }) => {
             extraction.concernLevel
           ).run()
 
-          // Fire projection in background (non-blocking)
-          try {
-            const lifeRecord = await buildLifeRecordContext(body.childId, db)
-            const projResult = projectObservation(extraction.observationText, lifeRecord, obsId)
+          // ── SKIDS Companion: Bayesian Projections (gated — pilot only) ──
+          // Only runs when ENABLE_SKIDS_COMPANION=true in Cloudflare env.
+          // To enable: wrangler pages secret put ENABLE_SKIDS_COMPANION --project-name thrive-care
+          if (companionEnabled) {
+            try {
+              const lifeRecord = await buildLifeRecordContext(body.childId, db)
+              const projResult = projectObservation(extraction.observationText, lifeRecord, obsId)
 
-            // Store projection result
-            const projResultId = crypto.randomUUID()
-            await db.prepare(
-              `INSERT INTO projection_results (id, observation_id, child_id, observation_text, child_age_months, projections_count, domains_detected_json, clarifying_questions_json, confidence, computed_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-            ).bind(
-              projResultId, obsId, body.childId, extraction.observationText,
-              childAgeMonths, projResult.projections.length,
-              JSON.stringify(projResult.domainsDetected),
-              JSON.stringify(projResult.clarifyingQuestions),
-              projResult.confidence, projResult.computedAt
-            ).run()
-
-            for (const proj of projResult.projections) {
+              // Store projection result
+              const projResultId = crypto.randomUUID()
               await db.prepare(
-                `INSERT INTO observation_projections (id, observation_id, child_id, observation_text, condition_name, icd10, domain, category, base_probability, adjusted_probability, urgency, must_not_miss, parent_explanation, modifiers_json, evidence_for_json, evidence_against_json, parent_next_steps_json, doctor_exam_points_json, rule_out_before_json, citation, doctor_status, confidence)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                `INSERT INTO projection_results (id, observation_id, child_id, observation_text, child_age_months, projections_count, domains_detected_json, clarifying_questions_json, confidence, computed_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
               ).bind(
-                crypto.randomUUID(), obsId, body.childId, extraction.observationText,
-                proj.conditionName, proj.icd10 || null, proj.domain, proj.category,
-                proj.baseProbability, proj.adjustedProbability, proj.urgency,
-                proj.mustNotMiss ? 1 : 0, proj.parentExplanation,
-                JSON.stringify(proj.modifiersApplied), JSON.stringify(proj.evidenceFor),
-                JSON.stringify(proj.evidenceAgainst), JSON.stringify(proj.parentNextSteps),
-                JSON.stringify(proj.doctorExamPoints), JSON.stringify(proj.ruleOutBefore),
-                proj.citation || null, 'projected', projResult.confidence
+                projResultId, obsId, body.childId, extraction.observationText,
+                childAgeMonths, projResult.projections.length,
+                JSON.stringify(projResult.domainsDetected),
+                JSON.stringify(projResult.clarifyingQuestions),
+                projResult.confidence, projResult.computedAt
               ).run()
+
+              for (const proj of projResult.projections) {
+                await db.prepare(
+                  `INSERT INTO observation_projections (id, observation_id, child_id, observation_text, condition_name, icd10, domain, category, base_probability, adjusted_probability, urgency, must_not_miss, parent_explanation, modifiers_json, evidence_for_json, evidence_against_json, parent_next_steps_json, doctor_exam_points_json, rule_out_before_json, citation, doctor_status, confidence)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                ).bind(
+                  crypto.randomUUID(), obsId, body.childId, extraction.observationText,
+                  proj.conditionName, proj.icd10 || null, proj.domain, proj.category,
+                  proj.baseProbability, proj.adjustedProbability, proj.urgency,
+                  proj.mustNotMiss ? 1 : 0, proj.parentExplanation,
+                  JSON.stringify(proj.modifiersApplied), JSON.stringify(proj.evidenceFor),
+                  JSON.stringify(proj.evidenceAgainst), JSON.stringify(proj.parentNextSteps),
+                  JSON.stringify(proj.doctorExamPoints), JSON.stringify(proj.ruleOutBefore),
+                  proj.citation || null, 'projected', projResult.confidence
+                ).run()
+              }
+            } catch (projErr) {
+              // Projection failure is non-blocking — never breaks chat
+              console.error('[SKIDS Companion] Projection error (non-blocking):', projErr)
             }
-          } catch (projErr) {
-            // Projection failure is non-blocking
-            console.error('[Chat] Passive projection error (non-blocking):', projErr)
           }
 
           passiveObservation = {

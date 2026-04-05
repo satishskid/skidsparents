@@ -139,7 +139,7 @@ export default function NudgeStrip({ childId, token, onAction }: Props) {
             >
               {nudge.actionType === 'add_observation' ? 'Log observation' :
                nudge.actionType === 'view_milestone' ? 'View milestones' :
-               nudge.actionType === 'open_chat' ? 'Ask Dr. SKIDS' :
+               nudge.actionType === 'open_chat' ? 'Ask SKIDS Guide' :
                nudge.actionType === 'view_vaccination' ? 'View vaccines' :
                'View'}
             </button>

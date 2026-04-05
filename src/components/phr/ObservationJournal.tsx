@@ -199,7 +199,7 @@ export default function ObservationJournal({ childId, token }: Props) {
                   className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-green-700 hover:text-green-800 transition-colors"
                 >
                   <span className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center text-[10px] font-bold">S</span>
-                  Ask Dr. SKIDS
+                  Ask SKIDS Guide
                 </button>
               )}
             </div>
@@ -214,7 +214,7 @@ export default function ObservationJournal({ childId, token }: Props) {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors"
           >
             <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">S</span>
-            Ask Dr. SKIDS
+            Ask SKIDS Guide
           </button>
         </div>
       )}

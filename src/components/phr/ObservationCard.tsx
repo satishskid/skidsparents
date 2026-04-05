@@ -167,7 +167,7 @@ export default function ObservationCard({
 
               {clarifyingQuestions && clarifyingQuestions.length > 0 && (
                 <div className="mt-2 pt-2 border-t border-green-100">
-                  <p className="text-[10px] font-semibold text-green-700 mb-1">Dr. SKIDS wants to know:</p>
+                  <p className="text-[10px] font-semibold text-green-700 mb-1">SKIDS Guide wants to know:</p>
                   {clarifyingQuestions.slice(0, 2).map((q, i) => (
                     <p key={i} className="text-xs text-gray-600 leading-relaxed">• {q}</p>
                   ))}

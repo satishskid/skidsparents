@@ -256,7 +256,7 @@ export default function UserProfile() {
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">S</div>
                 <div>
-                  <div className="text-sm font-bold">Dr. SKIDS</div>
+                  <div className="text-sm font-bold">SKIDS Guide</div>
                   <div className="text-[10px] text-white/70">Building your child's health record</div>
                 </div>
               </div>
@@ -287,7 +287,7 @@ export default function UserProfile() {
 
 function MenuItems() {
   const items = [
-    { href: '/timeline', icon: 'chat', color: 'green', label: 'Health Timeline', desc: 'Chat with Dr. SKIDS & view records' },
+    { href: '/timeline', icon: 'chat', color: 'green', label: 'Health Timeline', desc: 'Chat with SKIDS Guide & view records' },
     { href: '/discover', icon: 'book', color: 'blue', label: 'Discover', desc: 'Explore organs, habits & guides' },
     { href: '/interventions', icon: 'store', color: 'purple', label: 'Interventions', desc: 'Vision, nutrition, therapy & more' },
     { href: '/about', icon: 'info', color: 'amber', label: 'About SKIDS', desc: 'Our mission & approach' },

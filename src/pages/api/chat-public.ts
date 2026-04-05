@@ -99,7 +99,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return new Response(
         JSON.stringify({
           response:
-            "Dr. SKIDS AI service is temporarily unavailable. Please try again shortly.",
+            "SKIDS Guide AI service is temporarily unavailable. Please try again shortly.",
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       )

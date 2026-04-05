@@ -9,22 +9,22 @@ const tabs = [
     match: (p: string) => p === '/',
   },
   {
-    href: '/discover',
-    label: 'Discover',
+    href: '/blog',
+    label: 'Learn',
     icon: 'compass',
+    match: (p: string) => p.startsWith('/blog'),
+  },
+  {
+    href: '/discover',
+    label: 'Grow',
+    icon: 'timeline',
     match: (p: string) => p.startsWith('/discover'),
   },
   {
-    href: '/timeline',
-    label: 'Timeline',
-    icon: 'timeline',
-    match: (p: string) => p.startsWith('/timeline'),
-  },
-  {
-    href: '/dashboard/reports',
-    label: 'Reports',
+    href: '/habits',
+    label: 'Practice',
     icon: 'reports',
-    match: (p: string) => p.startsWith('/dashboard/reports'),
+    match: (p: string) => p.startsWith('/habits'),
   },
   {
     href: '/me',
