@@ -725,16 +725,27 @@ export function projectObservation(
   // Layer 1: Knowledge Graph — find matching conditions from population data
   const matchedEntries = matchObservationToConditions(observationText, ageMonths)
 
-  // Also pull in must-not-miss conditions for this age even if not pattern-matched
-  const mustNotMiss = getMustNotMissConditions(ageMonths)
-  const mustNotMissIds = new Set(matchedEntries.map((e) => e.id))
-  const additionalMustNotMiss = mustNotMiss.filter((m) => !mustNotMissIds.has(m.id))
+  // Determine which domains were actually matched by the observation
+  const matchedDomains = new Set(matchedEntries.map((e) => e.domain))
 
-  // Combine: matched entries + must-not-miss conditions that weren't already matched
-  // Must-not-miss get a lower base probability when added by safety net (not pattern-matched)
+  // Also pull in must-not-miss conditions — but ONLY from domains that the
+  // observation actually relates to. This prevents "speech delay" from surfacing
+  // unrelated must-not-miss conditions like septic arthritis or Kawasaki disease.
+  const mustNotMiss = getMustNotMissConditions(ageMonths)
+  const matchedIds = new Set(matchedEntries.map((e) => e.id))
+  const additionalMustNotMiss = mustNotMiss.filter(
+    (m) => !matchedIds.has(m.id) && matchedDomains.has(m.domain)
+  )
+
+  // Tag entries with match source for sorting: pattern-matched entries are
+  // more relevant than safety-net must-not-miss additions
   const allEntries = [
-    ...matchedEntries,
-    ...additionalMustNotMiss.map((e) => ({ ...e, baseProbability: e.baseProbability * 0.3 })),
+    ...matchedEntries.map((e) => ({ ...e, _matchSource: 'pattern' as const })),
+    ...additionalMustNotMiss.map((e) => ({
+      ...e,
+      baseProbability: e.baseProbability * 0.3,
+      _matchSource: 'safety-net' as const,
+    })),
   ]
 
   // Layer 2: Life Record Prior — apply Bayesian modifiers from child's history
@@ -792,26 +803,37 @@ export function projectObservation(
       parentExplanation: entry.parentExplanation,
       citation: entry.citation,
       doctorStatus: 'projected',
+      _sourceId: entry.id,
+      _matchSource: entry._matchSource || 'pattern',
     }
   })
 
-  // Sort: must-not-miss first, then by adjusted probability descending
+  // Sort by clinical relevance:
+  // 1. Pattern-matched conditions first (directly relevant to observation)
+  // 2. Within each group, higher probability first
+  // 3. Must-not-miss gets a boost within its relevance group, not a global override
   projections.sort((a, b) => {
-    // Must-not-miss conditions always surface first
+    // Primary: pattern-matched (relevant) conditions before safety-net additions
+    const aRelevant = matchedIds.has(a._sourceId) ? 1 : 0
+    const bRelevant = matchedIds.has(b._sourceId) ? 1 : 0
+    if (aRelevant !== bRelevant) return bRelevant - aRelevant
+
+    // Secondary: must-not-miss conditions surface higher within their relevance group
     if (a.mustNotMiss && !b.mustNotMiss) return -1
     if (!a.mustNotMiss && b.mustNotMiss) return 1
 
-    // Then by urgency (emergency > urgent > soon > routine)
+    // Tertiary: urgency (emergency > urgent > soon > routine)
     const urgencyOrder: Record<string, number> = { emergency: 4, urgent: 3, soon: 2, routine: 1 }
     const urgDiff = (urgencyOrder[b.urgency] || 0) - (urgencyOrder[a.urgency] || 0)
     if (urgDiff !== 0) return urgDiff
 
-    // Then by adjusted probability
+    // Finally: by adjusted probability
     return b.adjustedProbability - a.adjustedProbability
   })
 
-  // Generate clarifying questions
-  const clarifyingQuestions = generateClarifyingQuestions(projections, context, observationText)
+  // Generate clarifying questions from the TOP relevant projections only
+  const topProjections = projections.slice(0, 8)
+  const clarifyingQuestions = generateClarifyingQuestions(topProjections, context, observationText)
 
   // Compute confidence based on life record completeness
   const confidence = computeConfidence(context)
@@ -819,12 +841,18 @@ export function projectObservation(
   // Detect domains involved
   const domainsDetected = detectDomains(observationText, ageMonths) as BodySystem[]
 
+  // Clean internal tracking fields from output
+  const cleanProjections = projections.map(({ _sourceId, _matchSource, ...rest }) => ({
+    ...rest,
+    matchSource: _matchSource, // expose as proper field for UI
+  }))
+
   return {
     observationId: observationId || crypto.randomUUID(),
     observationText,
     childAge: formatAge(ageMonths),
     childName: context.child.name,
-    projections,
+    projections: cleanProjections as ObservationProjection[],
     clarifyingQuestions,
     confidence,
     computedAt: new Date().toISOString(),

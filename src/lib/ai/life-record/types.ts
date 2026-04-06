@@ -101,6 +101,7 @@ export type ConditionCategory =
   | 'functional'
   | 'environmental'
   | 'psychosocial'
+  | 'endocrine'
 
 export type Urgency = 'routine' | 'soon' | 'urgent' | 'emergency'
 

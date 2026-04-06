@@ -88,8 +88,8 @@ export const POST: APIRoute = async ({ request }) => {
     // Run the Bayesian projection engine
     const result = projectObservation(observation.trim(), lifeRecord, pilotId)
 
-    // Also detect domains for display
-    const domains = detectDomains(observation.trim())
+    // Also detect domains for display (pass age for accurate filtering)
+    const domains = detectDomains(observation.trim(), childAgeMonths)
 
     return new Response(
       JSON.stringify({
@@ -102,7 +102,7 @@ export const POST: APIRoute = async ({ request }) => {
         confidence: result.confidence,
         computedAt: result.computedAt,
         clarifyingQuestions: result.clarifyingQuestions || [],
-        projections: result.projections.map((p) => ({
+        projections: result.projections.map((p: any) => ({
           conditionName: p.conditionName,
           icd10: p.icd10,
           domain: p.domain,
@@ -119,6 +119,7 @@ export const POST: APIRoute = async ({ request }) => {
           doctorExamPoints: p.doctorExamPoints,
           ruleOutBefore: p.ruleOutBefore,
           citation: p.citation,
+          matchSource: p.matchSource || 'pattern',
         })),
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
