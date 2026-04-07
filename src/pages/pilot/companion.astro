@@ -440,7 +440,7 @@ export const prerender = false
           <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">What would you like to do?</p>
 
           ${!needsDoctor ? `
-            <button class="w-full text-left p-4 rounded-xl border border-green-200 bg-green-50/50 hover:bg-green-50 transition-colors group">
+            <button class="care-action w-full text-left p-4 rounded-xl border border-green-200 bg-green-50/50 hover:bg-green-50 transition-colors group" data-pathway="1_observe">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                   <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
@@ -454,21 +454,21 @@ export const prerender = false
           ` : ''}
 
           ${showEconsult ? `
-            <button class="w-full text-left p-4 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-50 transition-colors group">
+            <button class="care-action w-full text-left p-4 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-50 transition-colors group" data-pathway="3_econsult">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                   <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                 </div>
                 <div>
                   <p class="text-sm font-medium text-gray-900">Send to doctor for review</p>
-                  <p class="text-xs text-gray-500">Your doctor gets your child's full record and responds via email</p>
+                  <p class="text-xs text-gray-500">Your doctor gets your child's full record and responds via message</p>
                 </div>
               </div>
             </button>
           ` : ''}
 
           ${showTelemedicine ? `
-            <button class="w-full text-left p-4 rounded-xl border border-purple-200 bg-purple-50/50 hover:bg-purple-50 transition-colors group">
+            <button class="care-action w-full text-left p-4 rounded-xl border border-purple-200 bg-purple-50/50 hover:bg-purple-50 transition-colors group" data-pathway="4_tele">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
                   <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
@@ -482,7 +482,7 @@ export const prerender = false
           ` : ''}
 
           ${showInPerson ? `
-            <button class="w-full text-left p-4 rounded-xl border border-red-200 bg-red-50/50 hover:bg-red-50 transition-colors group">
+            <button class="care-action w-full text-left p-4 rounded-xl border border-red-200 bg-red-50/50 hover:bg-red-50 transition-colors group" data-pathway="5_inperson">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
                   <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
@@ -754,12 +754,113 @@ export const prerender = false
       viewToggle.classList.remove('hidden')
       setView(currentView)
 
+      // ── Care Episode persistence (if authenticated) ──
+      // In pilot mode this is a secondary, non-blocking call.
+      // When wired to real child records, this creates the twin-record episode.
+      persistCareEpisode(data, observation).catch(() => {/* non-blocking */})
+
     } catch (err: any) {
       loadingState.classList.add('hidden')
       errorState.classList.remove('hidden')
       errorMsg.textContent = err.message || 'Unknown error'
     } finally {
       runBtn.disabled = false
+    }
+  })
+
+  // ── Care Episode Persistence ──
+  let lastEpisodeId: string | null = null
+
+  async function persistCareEpisode(data: any, observation: string) {
+    // For now, only persist if we have a token (authenticated parent)
+    if (!token) return
+
+    try {
+      // Try to get the parent's first child (simplified for pilot)
+      const childrenRes = await fetch('/api/children', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!childrenRes.ok) return
+      const childrenData = await childrenRes.json() as any
+      const firstChild = childrenData?.children?.[0]
+      if (!firstChild) return
+
+      const episodeRes = await fetch('/api/care/episodes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          childId: firstChild.id,
+          observationText: observation,
+        }),
+      })
+
+      if (episodeRes.ok) {
+        const episodeData = await episodeRes.json() as any
+        lastEpisodeId = episodeData.episodeId
+        console.log(`[Care Episode] Created: ${episodeData.episodeId}, pathway: ${episodeData.pathway}`)
+      }
+    } catch (e) {
+      console.log('[Care Episode] Persistence skipped (pilot mode):', e)
+    }
+  }
+
+  // ── Care Action Button Handlers ──
+  // Delegate click events on the parent results container
+  parentResults.addEventListener('click', async (e) => {
+    const btn = (e.target as HTMLElement).closest('.care-action') as HTMLElement | null
+    if (!btn) return
+
+    const pathway = btn.dataset.pathway
+    if (!pathway) return
+
+    // Visual feedback
+    btn.classList.add('ring-2', 'ring-offset-2')
+    if (pathway === '1_observe') btn.classList.add('ring-green-400')
+    else if (pathway === '3_econsult') btn.classList.add('ring-blue-400')
+    else if (pathway === '4_tele') btn.classList.add('ring-purple-400')
+    else if (pathway === '5_inperson') btn.classList.add('ring-red-400')
+
+    // Disable all action buttons
+    parentResults.querySelectorAll('.care-action').forEach((b) => {
+      (b as HTMLButtonElement).disabled = true
+      b.classList.add('opacity-60')
+    })
+    btn.classList.remove('opacity-60')
+
+    // Show confirmation message
+    const confirmMsg = document.createElement('div')
+    confirmMsg.className = 'mt-3 p-3 rounded-lg bg-gray-50 border border-gray-200 text-center'
+
+    const messages: Record<string, string> = {
+      '1_observe': '✓ Got it — keep following the activities above. We\'ll check in with you soon.',
+      '3_econsult': '✓ Sent to your pediatrician for review. They\'ll respond with guidance soon.',
+      '4_tele': '✓ We\'ll connect you with your pediatrician for a video consultation.',
+      '5_inperson': '✓ Please visit your pediatrician as soon as possible.',
+    }
+    confirmMsg.innerHTML = `<p class="text-sm text-gray-700">${messages[pathway] || 'Action confirmed.'}</p>`
+    btn.closest('.space-y-3')?.appendChild(confirmMsg)
+
+    // If authenticated and episode exists, update it
+    if (lastEpisodeId && token) {
+      try {
+        await fetch(`/api/care/episodes/${lastEpisodeId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            action: 'confirm_pathway',
+            pathway,
+          }),
+        })
+        console.log(`[Care Episode] Pathway confirmed: ${pathway}`)
+      } catch {
+        console.log('[Care Episode] Pathway update skipped (pilot mode)')
+      }
     }
   })
 </script>

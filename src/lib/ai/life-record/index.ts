@@ -62,6 +62,20 @@ export {
   getPromptsForDomain,
 } from './domain-prompts'
 
+// Care Continuity Engine (Observation → Pathway)
+export type {
+  CarePathway,
+  PedAlertLevel,
+  CareRouterInput,
+  CareRouterOutput,
+} from './care-router'
+
+export {
+  routeCarePathway,
+  PATHWAY_LABELS,
+  ALERT_LEVEL_LABELS,
+} from './care-router'
+
 // Conversational Onboarding (Birth → Present)
 export type {
   OnboardingPhase,

@@ -458,6 +458,40 @@ export const parentSubscriptions = sqliteTable('parent_subscriptions', {
   createdAt: text('created_at').default(sql`(datetime('now'))`),
 })
 
+// ─── Care Continuity Engine ────────────────────────────
+
+export const careEpisodes = sqliteTable('care_episodes', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  childId: text('child_id').notNull().references(() => children.id),
+  parentId: text('parent_id').notNull().references(() => parents.id),
+  doctorId: text('doctor_id'),
+  observationText: text('observation_text').notNull(),
+  observationStructured: text('observation_structured').default('{}'),
+  pathway: text('pathway', {
+    enum: ['1_observe', '2_ped_initiated', '3_econsult', '4_tele', '5_inperson'],
+  }).notNull().default('1_observe'),
+  status: text('status', {
+    enum: ['open', 'awaiting_ped', 'ped_reviewing', 'resolved', 'escalated'],
+  }).notNull().default('open'),
+  parentSummaryShown: text('parent_summary_shown'),
+  parentGuidanceShown: text('parent_guidance_shown'),
+  pedAlertLevel: text('ped_alert_level', {
+    enum: ['none', 'info', 'review', 'urgent', 'emergency'],
+  }).default('none'),
+  pedResponseText: text('ped_response_text'),
+  pedResponseAt: text('ped_response_at'),
+  linkedOrderId: text('linked_order_id').references(() => serviceOrders.id),
+  escalatedFromEpisodeId: text('escalated_from_episode_id'),
+  projectionSnapshot: text('projection_snapshot').default('{}'),
+  followUpAt: text('follow_up_at'),
+  followUpSent: integer('follow_up_sent', { mode: 'boolean' }).default(false),
+  resolvedAt: text('resolved_at'),
+  resolutionNote: text('resolution_note'),
+  resolvedBy: text('resolved_by'),
+  createdAt: text('created_at').default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at').default(sql`(datetime('now'))`),
+})
+
 // ─── Derived Types ─────────────────────────────────────
 
 export type NotificationType = typeof notifications.type.enumValues[number]
