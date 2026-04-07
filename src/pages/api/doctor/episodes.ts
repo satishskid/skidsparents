@@ -229,33 +229,62 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (body.action === 'schedule') {
-      // Doctor initiates appointment booking
-      // For now, update the pathway — actual booking integration comes in Phase 4
+      // Doctor initiates appointment booking → create service_order + link to episode
+      const bookingType = body.scheduleType === 'inperson' ? 'inperson' : 'tele'
+
+      try {
+        // Call the booking endpoint internally
+        const bookRes = await fetch(new URL('/api/care/episodes/book', request.url).toString(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            episodeId: body.episodeId,
+            bookingType,
+            initiatedBy: 'doctor',
+            doctorId,
+          }),
+        })
+
+        if (bookRes.ok) {
+          const bookData = await bookRes.json() as { orderId: string; pathway: string; scheduledAt: string }
+          return new Response(JSON.stringify({
+            updated: true,
+            pathway: bookData.pathway,
+            orderId: bookData.orderId,
+            scheduledAt: bookData.scheduledAt,
+            status: 'awaiting_ped',
+          }), {
+            headers: { 'Content-Type': 'application/json' },
+          })
+        }
+
+        // Fallback if internal call fails — just update pathway
+        const fallbackData = await bookRes.json() as { error?: string }
+        console.error('[Doctor Episodes] Booking fallback:', fallbackData)
+      } catch (bookErr) {
+        console.error('[Doctor Episodes] Booking call failed:', bookErr)
+      }
+
+      // Fallback: update pathway manually if booking API not available
       const newPathway = body.scheduleType === 'inperson' ? '5_inperson' : '4_tele'
       await env.DB.prepare(
-        `UPDATE care_episodes
-         SET pathway = ?, status = 'awaiting_ped',
-             updated_at = datetime('now')
-         WHERE id = ?`
+        `UPDATE care_episodes SET pathway = ?, status = 'awaiting_ped', updated_at = datetime('now') WHERE id = ?`
       ).bind(newPathway, body.episodeId).run()
 
-      // Notify parent of scheduling
+      // Notify parent
       try {
-        const msg = body.scheduleType === 'inperson'
-          ? 'Your pediatrician has requested an in-person visit. Tap to book your appointment.'
-          : 'Your pediatrician has requested a video consultation. Tap to book a time.'
         await createNotification(env.DB, {
           parentId: episode.parent_id,
           childId: episode.child_id,
           type: 'service_update',
           title: body.scheduleType === 'inperson' ? 'In-person visit requested' : 'Video consultation requested',
-          body: msg,
+          body: body.scheduleType === 'inperson'
+            ? 'Your pediatrician has requested an in-person visit. Tap to book your appointment.'
+            : 'Your pediatrician has requested a video consultation. Tap to book a time.',
           actionUrl: `/care/episode/${body.episodeId}`,
           dataJson: { episodeId: body.episodeId, action: 'ped_schedule', scheduleType: body.scheduleType },
         })
       } catch { /* non-blocking */ }
-
-      // TODO: Phase 4 — Create service_order and link via linked_order_id
 
       return new Response(JSON.stringify({ updated: true, pathway: newPathway, status: 'awaiting_ped' }), {
         headers: { 'Content-Type': 'application/json' },

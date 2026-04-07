@@ -837,29 +837,53 @@ export const prerender = false
     const messages: Record<string, string> = {
       '1_observe': '✓ Got it — keep following the activities above. We\'ll check in with you soon.',
       '3_econsult': '✓ Sent to your pediatrician for review. They\'ll respond with guidance soon.',
-      '4_tele': '✓ We\'ll connect you with your pediatrician for a video consultation.',
-      '5_inperson': '✓ Please visit your pediatrician as soon as possible.',
+      '4_tele': '✓ Scheduling a video consultation with your pediatrician...',
+      '5_inperson': '✓ Scheduling an in-person visit with your pediatrician...',
     }
     confirmMsg.innerHTML = `<p class="text-sm text-gray-700">${messages[pathway] || 'Action confirmed.'}</p>`
     btn.closest('.space-y-3')?.appendChild(confirmMsg)
 
-    // If authenticated and episode exists, update it
+    // If authenticated and episode exists, take action
     if (lastEpisodeId && token) {
       try {
-        await fetch(`/api/care/episodes/${lastEpisodeId}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            action: 'confirm_pathway',
-            pathway,
-          }),
-        })
-        console.log(`[Care Episode] Pathway confirmed: ${pathway}`)
+        if (pathway === '4_tele' || pathway === '5_inperson') {
+          // Create actual booking
+          const bookRes = await fetch('/api/care/episodes/book', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              episodeId: lastEpisodeId,
+              bookingType: pathway === '4_tele' ? 'tele' : 'inperson',
+              initiatedBy: 'parent',
+            }),
+          })
+          if (bookRes.ok) {
+            const bookData = await bookRes.json() as any
+            confirmMsg.innerHTML = pathway === '4_tele'
+              ? `<p class="text-sm text-gray-700">✓ Video consultation scheduled. Your pediatrician will start the session when ready.</p>`
+              : `<p class="text-sm text-gray-700">✓ In-person visit booked. Your pediatrician has your full record.</p>`
+            console.log(`[Care Episode] Booking created: ${bookData.orderId}`)
+          }
+        } else {
+          // Just confirm the pathway
+          await fetch(`/api/care/episodes/${lastEpisodeId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              action: 'confirm_pathway',
+              pathway,
+            }),
+          })
+          console.log(`[Care Episode] Pathway confirmed: ${pathway}`)
+        }
       } catch {
-        console.log('[Care Episode] Pathway update skipped (pilot mode)')
+        console.log('[Care Episode] Action skipped (pilot mode)')
       }
     }
   })

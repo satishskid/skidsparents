@@ -123,6 +123,9 @@ export default function CareQueue({ token }: CareQueueProps) {
   const [respondingId, setRespondingId] = useState<string | null>(null)
   const [responseText, setResponseText] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
+  const [bookingConfirm, setBookingConfirm] = useState<{
+    episodeId: string; orderId: string; scheduledAt: string; type: string
+  } | null>(null)
 
   useEffect(() => {
     fetchEpisodes()
@@ -155,10 +158,20 @@ export default function CareQueue({ token }: CareQueueProps) {
         body: JSON.stringify({ episodeId, action, ...extra }),
       })
       if (res.ok) {
+        const data = await res.json() as Record<string, unknown>
+        // Show booking confirmation if an order was created
+        if (data.orderId) {
+          setBookingConfirm({
+            episodeId,
+            orderId: data.orderId as string,
+            scheduledAt: data.scheduledAt as string,
+            type: extra?.scheduleType || 'tele',
+          })
+        }
         await fetchEpisodes()
         setRespondingId(null)
         setResponseText('')
-        setExpandedId(null)
+        if (!data.orderId) setExpandedId(null)
       }
     } catch { /* ignore */ }
     setActionLoading(false)
@@ -452,6 +465,28 @@ export default function CareQueue({ token }: CareQueueProps) {
           </button>
         </div>
       </div>
+
+      {/* Booking confirmation banner */}
+      {bookingConfirm && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-green-800">
+              {bookingConfirm.type === 'tele' ? 'Video consultation' : 'In-person visit'} scheduled
+            </p>
+            <p className="text-xs text-green-600 mt-0.5">
+              Order {bookingConfirm.orderId.slice(0, 8)}... · Parent has been notified
+            </p>
+          </div>
+          <button
+            onClick={() => setBookingConfirm(null)}
+            className="text-green-400 hover:text-green-600 p-1"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* Episode list */}
       {loading ? (
