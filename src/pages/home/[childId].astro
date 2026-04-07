@@ -1,0 +1,34 @@
+---
+/**
+ * /home/[childId] — The parent's focused home screen
+ *
+ * This is the primary post-registration experience.
+ * Single child, focused view — observation-first design.
+ * Replaces the busy ChildDashboard for daily use.
+ *
+ * The full record (/child/[id]) remains accessible via a link
+ * for deep dives into growth, milestones, vaccines, etc.
+ */
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import Navbar from '@/components/common/Navbar.astro'
+import MobileTabBar from '@/components/common/MobileTabBar.astro'
+import ParentHome from '@/components/phr/ParentHome'
+
+export const prerender = false
+
+const { childId } = Astro.params
+---
+
+<BaseLayout
+  title="Home"
+  description="Your child's daily health companion"
+  noIndex
+>
+  <Navbar />
+
+  <main class="min-h-screen bg-gray-50/50">
+    <ParentHome client:load childId={childId!} />
+  </main>
+
+  <MobileTabBar />
+</BaseLayout>
