@@ -14,6 +14,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/lib/hooks/useAuth'
 import ObservationCapture from './ObservationCapture'
+import LifeDialDrawer from './LifeDialDrawer'
 
 interface Child {
   id: string
@@ -49,6 +50,9 @@ export default function ParentHome({ childId }: { childId: string }) {
   const [dailyFocus, setDailyFocus] = useState<DailyFocus | null>(null)
   const [showMore, setShowMore] = useState(false)
   const [expandedEpisodeId, setExpandedEpisodeId] = useState<string | null>(null)
+  const [dialOpen, setDialOpen] = useState(false)
+  const [peekTrigger, setPeekTrigger] = useState(0)
+  const [completeness, setCompleteness] = useState<number | null>(null)
 
   // Fetch child data
   const fetchChild = useCallback(async () => {
@@ -102,6 +106,23 @@ export default function ParentHome({ childId }: { childId: string }) {
     } catch {}
   }, [token, childId])
 
+  // Fetch milestone completeness for progress bar
+  const fetchCompleteness = useCallback(async () => {
+    if (!token || !child) return
+    try {
+      const res = await fetch(`/api/milestones?childId=${childId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json() as { milestones: Array<{ status: string }> }
+        const achieved = (data.milestones || []).filter(m => m.status === 'achieved').length
+        const total = Math.max(achieved, 1)
+        // Rough completeness — actual calc is in LifeDial
+        setCompleteness(Math.min(Math.round((achieved / Math.max(total, 4)) * 100), 100))
+      }
+    } catch {}
+  }, [token, childId, child])
+
   useEffect(() => {
     if (token) {
       fetchChild()
@@ -110,8 +131,14 @@ export default function ParentHome({ childId }: { childId: string }) {
     }
   }, [token, fetchChild, fetchEpisodes, fetchDailyFocus])
 
+  useEffect(() => {
+    if (token && child) fetchCompleteness()
+  }, [token, child, fetchCompleteness])
+
   function handleObservationComplete() {
     fetchEpisodes()
+    fetchCompleteness()
+    setPeekTrigger(prev => prev + 1) // trigger auto-peek on life dial
   }
 
   // ── Helpers ──
@@ -215,21 +242,35 @@ export default function ParentHome({ childId }: { childId: string }) {
             {child.gender === 'male' ? '\uD83D\uDC66' : child.gender === 'female' ? '\uD83D\uDC67' : '\uD83E\uDDD2'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-gray-500">{getGreeting()}</p>
-            <h1 className="text-xl font-bold text-gray-900 truncate">{child.name}</h1>
-            <p className="text-sm text-gray-400">{getAgeLabel(child.dob)}</p>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-bold text-gray-900 truncate">{child.name}</h1>
+              <span className="text-xs text-gray-400">{getAgeLabel(child.dob)}</span>
+            </div>
+            <p className="text-xs text-gray-500 mt-0.5">{getGreeting()}</p>
+            {/* Life record progress bar */}
+            {completeness !== null && (
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-green-400 to-emerald-500 transition-all duration-700"
+                    style={{ width: `${completeness}%` }}
+                  />
+                </div>
+                <span className="text-[10px] font-semibold text-green-600">{completeness}%</span>
+              </div>
+            )}
           </div>
-          {/* Quick links */}
+          {/* Timeline toggle + Full record */}
           <div className="flex items-center gap-1">
-            <a
-              href={`/child/${childId}`}
-              className="p-2 rounded-xl hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition-colors"
-              title="Full record"
+            <button
+              onClick={() => setDialOpen(true)}
+              className="p-2 rounded-xl bg-green-50 border border-green-100 text-green-600 hover:bg-green-100 transition-colors"
+              title="Life timeline"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-            </a>
+            </button>
           </div>
         </div>
 
@@ -428,6 +469,21 @@ export default function ParentHome({ childId }: { childId: string }) {
         <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">S</span>
         Ask SKIDS
       </button>
+
+      {/* ─────────────────────────────────────────────
+          Life Dial Drawer — collapsible left drawer
+      ───────────────────────────────────────────── */}
+      {token && child && (
+        <LifeDialDrawer
+          childId={childId}
+          childDob={child.dob}
+          childName={firstName}
+          token={token}
+          isOpen={dialOpen}
+          onToggle={() => setDialOpen(prev => !prev)}
+          peekTrigger={peekTrigger}
+        />
+      )}
     </div>
   )
 }
