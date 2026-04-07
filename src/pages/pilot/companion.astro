@@ -244,7 +244,8 @@ export const prerender = false
       projections
         .sort((a: any, b: any) => b.adjustedProbability - a.adjustedProbability)
         .forEach((proj: any) => {
-          const urgencyColor = proj.urgency === 'urgent' ? 'text-red-600 bg-red-50' :
+          const urgencyColor = proj.urgency === 'emergency' ? 'text-red-700 bg-red-100 font-bold' :
+                              proj.urgency === 'urgent' ? 'text-red-600 bg-red-50' :
                               proj.urgency === 'soon' ? 'text-amber-600 bg-amber-50' :
                               'text-gray-600 bg-gray-50'
           const probPct = (proj.adjustedProbability * 100).toFixed(1)
@@ -307,7 +308,7 @@ export const prerender = false
                       <span class="font-semibold text-blue-700">Modifiers applied:</span>
                       <ul class="mt-1 space-y-0.5 text-gray-600">
                         ${proj.modifiersApplied.map((m: any) =>
-                          `<li>${m.source}: ${m.description} (×${m.multiplier})</li>`
+                          `<li>${m.source}: ${m.explanation} (×${m.multiplier})</li>`
                         ).join('')}
                       </ul>
                     </div>
