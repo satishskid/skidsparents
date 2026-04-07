@@ -245,190 +245,266 @@ export const prerender = false
     }
   }
 
-  // ── Render Parent View ──
+  // ── Render Parent View — conversational, empathetic guide ──
   function renderParentView(data: any, observation: string, ageMonths: number) {
     parentResults.innerHTML = ''
     const projections = data.projections || []
     if (projections.length === 0) {
       parentResults.innerHTML = `
-        <div class="bg-white rounded-2xl border border-gray-200 p-6 text-center">
-          <p class="text-gray-500">We couldn't find specific guidance for this observation. Please try describing it differently, or consult your paediatrician.</p>
+        <div class="bg-white rounded-2xl border border-gray-200 p-6">
+          <p class="text-sm text-gray-700 leading-relaxed">Hmm, I wasn't able to find specific guidance for what you described. Could you try telling me a bit more about what you're noticing? Or if you're worried, it's always a good idea to check in with your paediatrician.</p>
         </div>`
       return
     }
 
-    // Separate into: normal variants (reassurance), things to watch, urgent alerts
+    // Classify projections
     const normals = projections.filter((p: any) => p.category === 'normal_variant' && p.adjustedProbability > 0.3)
-    const urgents = projections.filter((p: any) => (p.urgency === 'emergency' || p.urgency === 'urgent') && p.mustNotMiss && p.matchSource === 'pattern')
-    const watchItems = projections.filter((p: any) =>
+    const emergencies = projections.filter((p: any) => p.urgency === 'emergency' && p.mustNotMiss && p.matchSource === 'pattern')
+    const urgents = projections.filter((p: any) => p.urgency === 'urgent' && p.mustNotMiss && p.matchSource === 'pattern' && !emergencies.includes(p))
+    const manageable = projections.filter((p: any) =>
       p.category !== 'normal_variant' && p.matchSource === 'pattern' && p.adjustedProbability >= 0.03 &&
-      !urgents.includes(p)
+      !emergencies.includes(p) && !urgents.includes(p) &&
+      ['routine', 'soon'].includes(p.urgency)
     ).slice(0, 3)
 
-    // Domains
-    const domainNames = (data.domainsDetected || []).map((d: string) => domainToPlain(d))
-
-    // 1. Summary — warm, supportive
     const topNormal = normals[0]
-    const summaryHtml = `
-      <div class="bg-white rounded-2xl border border-gray-200 p-6">
-        <div class="flex items-start gap-3 mb-4">
-          <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-            </svg>
-          </div>
-          <div>
-            <h2 class="font-semibold text-gray-900 text-lg">Here's what we found</h2>
-            <p class="text-sm text-gray-500 mt-0.5">Based on your observation about your ${formatAge(ageMonths)} child</p>
-          </div>
-        </div>
+    const hasEmergency = emergencies.length > 0
+    const hasUrgent = urgents.length > 0
+    const needsDoctor = hasEmergency || hasUrgent
+    const domainNames = (data.domainsDetected || []).map((d: string) => domainToPlain(d))
+    const ageStr = formatAge(ageMonths)
 
-        <div class="bg-gray-50 rounded-xl p-4 mb-4">
-          <p class="text-sm text-gray-600 italic">"${observation}"</p>
-        </div>
+    // ── Step 1: Empathetic acknowledgment ──
+    const openingPhrases = [
+      `I see — so your ${ageStr} little one`,
+      `Okay, so you've noticed that your ${ageStr}`,
+      `Ah, I understand — your ${ageStr} child`,
+    ]
+    const opener = openingPhrases[Math.floor(Math.random() * openingPhrases.length)]
 
-        <p class="text-sm text-gray-500">
-          We looked at <strong class="text-gray-700">${domainNames.join(', ')}</strong> based on what you described.
-          ${topNormal ? `<span class="text-green-700 font-medium">The most likely explanation is completely normal for this age.</span>` : ''}
-        </p>
+    const step1 = document.createElement('div')
+    step1.className = 'bg-white rounded-2xl border border-gray-200 p-6 space-y-4'
+    step1.innerHTML = `
+      <div class="flex items-start gap-3">
+        <div class="w-9 h-9 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <svg class="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+          </svg>
+        </div>
+        <div class="space-y-3 flex-1">
+          <p class="text-[15px] text-gray-800 leading-relaxed">
+            ${opener} — <em class="text-gray-500">"${observation}"</em>
+          </p>
+          <p class="text-[15px] text-gray-700 leading-relaxed">
+            Thank you for sharing that. I looked into <strong>${domainNames.join(' and ')}</strong> for a child this age, and here's what I can tell you.
+          </p>
+        </div>
       </div>
     `
-    parentResults.innerHTML = summaryHtml
+    parentResults.appendChild(step1)
 
-    // 2. Reassurance card (if normal variant is top)
+    // ── Step 2: Reassurance (if normal variant is top) ──
     if (topNormal) {
-      const reassureCard = document.createElement('div')
-      reassureCard.className = 'bg-green-50 rounded-2xl border border-green-200 p-6'
-      reassureCard.innerHTML = `
-        <div class="flex items-start gap-3 mb-3">
-          <div class="w-8 h-8 rounded-full bg-green-200 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <svg class="w-4 h-4 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-          </div>
-          <h3 class="font-semibold text-green-900">Most likely: This is normal</h3>
+      const step2 = document.createElement('div')
+      step2.className = 'bg-green-50/70 rounded-2xl border border-green-200/60 p-6'
+      step2.innerHTML = `
+        <div class="space-y-3">
+          <p class="text-[15px] text-gray-800 leading-relaxed">
+            <strong class="text-green-800">Good news</strong> — what you're describing is actually very common at this age, and in most cases it's perfectly normal.
+          </p>
+          <p class="text-sm text-gray-700 leading-relaxed">${topNormal.parentExplanation}</p>
+          ${topNormal.parentNextSteps?.length ? `
+            <div class="mt-4 bg-white/70 rounded-xl p-4 space-y-2.5">
+              <p class="text-xs font-semibold text-green-700 uppercase tracking-wider">Things you can try at home</p>
+              ${topNormal.parentNextSteps.map((s: string) =>
+                `<div class="flex items-start gap-2.5">
+                  <span class="text-green-400 mt-0.5 flex-shrink-0 text-sm">&#9679;</span>
+                  <p class="text-sm text-gray-700">${s}</p>
+                </div>`
+              ).join('')}
+            </div>
+          ` : ''}
         </div>
-        <p class="text-sm text-green-800 leading-relaxed mb-4">${topNormal.parentExplanation}</p>
-        ${topNormal.parentNextSteps?.length ? `
-          <div class="space-y-2">
-            <p class="text-xs font-semibold text-green-700 uppercase tracking-wider">What you can do</p>
-            ${topNormal.parentNextSteps.map((s: string) =>
-              `<div class="flex items-start gap-2">
-                <span class="text-green-500 mt-0.5 flex-shrink-0">&#10140;</span>
-                <p class="text-sm text-green-800">${s}</p>
+      `
+      parentResults.appendChild(step2)
+    }
+
+    // ── Step 3: Clarifying questions (conversational) ──
+    if (data.clarifyingQuestions?.length) {
+      const step3 = document.createElement('div')
+      step3.className = 'bg-white rounded-2xl border border-gray-200 p-6'
+      step3.innerHTML = `
+        <div class="space-y-3">
+          <p class="text-[15px] text-gray-800 leading-relaxed">
+            To understand things a bit better, I'd love to know:
+          </p>
+          <div class="space-y-3 ml-1">
+            ${data.clarifyingQuestions.slice(0, 4).map((q: string) =>
+              `<div class="flex items-start gap-2.5">
+                <span class="text-teal-400 mt-1 flex-shrink-0">&#10148;</span>
+                <p class="text-sm text-gray-700">${q}</p>
               </div>`
             ).join('')}
           </div>
-        ` : ''}
+        </div>
       `
-      parentResults.appendChild(reassureCard)
+      parentResults.appendChild(step3)
     }
 
-    // 3. Urgent alerts (if any pattern-matched must-not-miss)
-    if (urgents.length > 0) {
-      const alertCard = document.createElement('div')
-      alertCard.className = 'bg-red-50 rounded-2xl border border-red-200 p-6'
-      const urgentItems = urgents.slice(0, 3).map((u: any) => {
-        const msg = urgencyToParentMessage(u.urgency)
-        return `
-          <div class="mb-4 last:mb-0">
-            <div class="flex items-start gap-2 mb-2">
-              <span class="text-red-500 mt-0.5 flex-shrink-0">&#9888;</span>
-              <p class="text-sm text-red-900 font-medium">${msg?.text || 'See a doctor'}</p>
+    // ── Step 4: Manageable things to keep an eye on ──
+    if (manageable.length > 0) {
+      const step4 = document.createElement('div')
+      step4.className = 'bg-amber-50/50 rounded-2xl border border-amber-200/60 p-6'
+      const items = manageable.map((w: any) =>
+        `<div class="pb-4 last:pb-0 border-b last:border-b-0 border-amber-200/40">
+          <p class="text-sm text-gray-700 leading-relaxed">${w.parentExplanation}</p>
+          ${w.parentNextSteps?.length ? `
+            <div class="mt-2 space-y-1.5">
+              ${w.parentNextSteps.slice(0, 2).map((s: string) =>
+                `<p class="text-xs text-gray-600 ml-1">&#9679; ${s}</p>`
+              ).join('')}
             </div>
-            <p class="text-sm text-red-800 leading-relaxed ml-5">${u.parentExplanation}</p>
-            ${u.parentNextSteps?.length ? `
-              <div class="ml-5 mt-2 space-y-1">
-                ${u.parentNextSteps.slice(0, 3).map((s: string) =>
-                  `<p class="text-xs text-red-700">&#10140; ${s}</p>`
-                ).join('')}
+          ` : ''}
+        </div>`
+      ).join('')
+
+      step4.innerHTML = `
+        <div class="space-y-3">
+          <p class="text-[15px] text-gray-800 leading-relaxed">
+            There are also a couple of things that are <strong>worth keeping an eye on</strong>, though they're usually easy to manage with a bit of guidance:
+          </p>
+          <div class="space-y-4 mt-2">
+            ${items}
+          </div>
+        </div>
+      `
+      parentResults.appendChild(step4)
+    }
+
+    // ── Step 5: Urgent / needs-doctor recommendation ──
+    if (needsDoctor) {
+      const allUrgent = [...emergencies, ...urgents].slice(0, 3)
+      const isEmergency = emergencies.length > 0
+
+      const step5 = document.createElement('div')
+      step5.className = isEmergency
+        ? 'bg-red-50 rounded-2xl border border-red-200 p-6'
+        : 'bg-orange-50 rounded-2xl border border-orange-200 p-6'
+
+      const urgentExplanations = allUrgent.map((u: any) =>
+        `<p class="text-sm ${isEmergency ? 'text-red-800' : 'text-orange-800'} leading-relaxed">${u.parentExplanation}</p>
+        ${u.parentNextSteps?.length ? `
+          <div class="mt-1.5 space-y-1">
+            ${u.parentNextSteps.slice(0, 2).map((s: string) =>
+              `<p class="text-xs ${isEmergency ? 'text-red-700' : 'text-orange-700'}">&#9679; ${s}</p>`
+            ).join('')}
+          </div>
+        ` : ''}`
+      ).join('<div class="my-3"></div>')
+
+      step5.innerHTML = `
+        <div class="space-y-3">
+          <p class="text-[15px] ${isEmergency ? 'text-red-900' : 'text-orange-900'} leading-relaxed font-medium">
+            ${isEmergency
+              ? 'I do want to flag something important — in rare cases, what you described could need prompt medical attention.'
+              : 'I also want to mention — while unlikely, there are a couple of things your doctor may want to check, just to be thorough.'
+            }
+          </p>
+          ${urgentExplanations}
+        </div>
+      `
+      parentResults.appendChild(step5)
+    }
+
+    // ── Step 6: What to do next — action options ──
+    const step6 = document.createElement('div')
+    step6.className = 'bg-white rounded-2xl border border-gray-200 p-6'
+
+    const summaryLine = topNormal && !needsDoctor
+      ? `Based on everything, this looks like it's within the range of normal for your child's age. You're doing great by paying attention.`
+      : topNormal && needsDoctor
+        ? `While the most likely explanation is normal, I'd recommend having your doctor take a quick look to be sure.`
+        : needsDoctor
+          ? `I'd recommend connecting with your doctor about this. The good news is, you don't necessarily need to rush in — there are easy ways to get guidance.`
+          : `It's worth keeping an eye on this. If things don't improve or you're still worried, your doctor can help.`
+
+    const showEconsult = !hasEmergency
+    const showTelemedicine = needsDoctor && !hasEmergency
+    const showInPerson = hasEmergency
+
+    step6.innerHTML = `
+      <div class="space-y-4">
+        <p class="text-[15px] text-gray-800 leading-relaxed">${summaryLine}</p>
+
+        <div class="space-y-3">
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">What would you like to do?</p>
+
+          ${!needsDoctor ? `
+            <button class="w-full text-left p-4 rounded-xl border border-green-200 bg-green-50/50 hover:bg-green-50 transition-colors group">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                </div>
+                <div>
+                  <p class="text-sm font-medium text-gray-900">Continue at home</p>
+                  <p class="text-xs text-gray-500">Follow the activities above and keep observing</p>
+                </div>
               </div>
-            ` : ''}
-          </div>
-        `
-      }).join('<hr class="border-red-200 my-3">')
+            </button>
+          ` : ''}
 
-      alertCard.innerHTML = `
-        <div class="flex items-start gap-3 mb-4">
-          <div class="w-8 h-8 rounded-full bg-red-200 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <svg class="w-4 h-4 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.27 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-            </svg>
-          </div>
-          <h3 class="font-semibold text-red-900">Important: Please watch for these</h3>
-        </div>
-        ${urgentItems}
-      `
-      parentResults.appendChild(alertCard)
-    }
-
-    // 4. Things to watch (non-normal, moderate probability)
-    if (watchItems.length > 0) {
-      const watchCard = document.createElement('div')
-      watchCard.className = 'bg-white rounded-2xl border border-gray-200 p-6'
-      const items = watchItems.map((w: any) => {
-        const urgMsg = urgencyToParentMessage(w.urgency)
-        return `
-          <div class="mb-4 last:mb-0 pb-4 last:pb-0 border-b last:border-b-0 border-gray-100">
-            <p class="text-sm text-gray-800 leading-relaxed mb-2">${w.parentExplanation}</p>
-            ${urgMsg ? `<p class="text-xs font-medium ${urgMsg.className} inline-block px-2.5 py-1 rounded-full mb-2">${urgMsg.text}</p>` : ''}
-            ${w.parentNextSteps?.length ? `
-              <div class="space-y-1 mt-2">
-                ${w.parentNextSteps.slice(0, 2).map((s: string) =>
-                  `<p class="text-xs text-gray-600">&#10140; ${s}</p>`
-                ).join('')}
+          ${showEconsult ? `
+            <button class="w-full text-left p-4 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-50 transition-colors group">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                </div>
+                <div>
+                  <p class="text-sm font-medium text-gray-900">Send to doctor for review</p>
+                  <p class="text-xs text-gray-500">Your doctor gets your child's full record and responds via email</p>
+                </div>
               </div>
-            ` : ''}
-          </div>
-        `
-      }).join('')
+            </button>
+          ` : ''}
 
-      watchCard.innerHTML = `
-        <div class="flex items-start gap-3 mb-4">
-          <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-            </svg>
-          </div>
-          <h3 class="font-semibold text-gray-900">Other things worth knowing</h3>
-        </div>
-        ${items}
-      `
-      parentResults.appendChild(watchCard)
-    }
+          ${showTelemedicine ? `
+            <button class="w-full text-left p-4 rounded-xl border border-purple-200 bg-purple-50/50 hover:bg-purple-50 transition-colors group">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                </div>
+                <div>
+                  <p class="text-sm font-medium text-gray-900">Book a video consultation</p>
+                  <p class="text-xs text-gray-500">Talk to your doctor face-to-face from home</p>
+                </div>
+              </div>
+            </button>
+          ` : ''}
 
-    // 5. Clarifying questions
-    if (data.clarifyingQuestions?.length) {
-      const qCard = document.createElement('div')
-      qCard.className = 'bg-blue-50 rounded-2xl border border-blue-200 p-6'
-      qCard.innerHTML = `
-        <div class="flex items-start gap-3 mb-3">
-          <div class="w-8 h-8 rounded-full bg-blue-200 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <svg class="w-4 h-4 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-          <h3 class="font-semibold text-blue-900">Can you help us understand better?</h3>
+          ${showInPerson ? `
+            <button class="w-full text-left p-4 rounded-xl border border-red-200 bg-red-50/50 hover:bg-red-50 transition-colors group">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                </div>
+                <div>
+                  <p class="text-sm font-medium text-red-900">Visit your doctor in person</p>
+                  <p class="text-xs text-red-600">We recommend an in-person visit for this</p>
+                </div>
+              </div>
+            </button>
+          ` : ''}
         </div>
-        <div class="space-y-2 ml-11">
-          ${data.clarifyingQuestions.slice(0, 5).map((q: string) =>
-            `<p class="text-sm text-blue-800">&#8226; ${q}</p>`
-          ).join('')}
-        </div>
-      `
-      parentResults.appendChild(qCard)
-    }
+      </div>
+    `
+    parentResults.appendChild(step6)
 
-    // 6. Footer
+    // ── Footer ──
     const footer = document.createElement('div')
-    footer.className = 'bg-gray-100 rounded-2xl p-5 text-center'
+    footer.className = 'rounded-2xl p-4 text-center'
     footer.innerHTML = `
-      <p class="text-xs text-gray-500 leading-relaxed">
-        SKIDS Companion provides educational guidance based on population-level health data.
-        It does <strong>not</strong> diagnose conditions. Always consult your paediatrician
-        for medical advice specific to your child.
+      <p class="text-[11px] text-gray-400 leading-relaxed">
+        SKIDS Companion is an educational guide, not a diagnostic tool. Your doctor knows your child best.
       </p>
     `
     parentResults.appendChild(footer)
