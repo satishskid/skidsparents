@@ -277,6 +277,8 @@ export interface ObservationProjection {
   doctorStatus?: 'projected' | 'confirmed' | 'ruled_out' | 'investigating'
   /** Doctor's notes on this projection */
   doctorNotes?: string
+  /** How this projection was matched */
+  matchSource?: 'pattern' | 'safety-net'
 }
 
 export interface ProjectionResult {

@@ -29,6 +29,12 @@ import {
   getMustNotMissConditions,
 } from './knowledge-graph'
 
+/** Internal projection type with tracking fields for sorting before cleanup */
+type InternalProjection = ObservationProjection & {
+  _sourceId: string
+  _matchSource: 'pattern' | 'safety-net'
+}
+
 // ============================================
 // MODIFIER EVALUATION — Layer 2
 // ============================================
@@ -516,13 +522,13 @@ function evaluateRecentIllness(
 function gatherEvidenceFor(
   entry: ConditionObservationEntry,
   context: LifeRecordContext,
-  modifierResults: Array<{ applies: boolean; multiplier: number; explanation: string; source: ModifierSource; key: string }>
+  modifierResults: Array<{ applies: boolean; multiplier: number; explanation: string; source: ModifierSource; key: string; kgMultiplier: number }>
 ): string[] {
   const evidence: string[] = []
 
-  // Modifiers that increased probability
+  // Modifiers that increased probability (use KG multiplier, not eval result which is always 1.0)
   for (const mr of modifierResults) {
-    if (mr.applies && mr.multiplier > 1) {
+    if (mr.applies && mr.kgMultiplier > 1) {
       evidence.push(mr.explanation)
     }
   }
@@ -559,13 +565,13 @@ function gatherEvidenceFor(
 function gatherEvidenceAgainst(
   entry: ConditionObservationEntry,
   context: LifeRecordContext,
-  modifierResults: Array<{ applies: boolean; multiplier: number; explanation: string; source: ModifierSource; key: string }>
+  modifierResults: Array<{ applies: boolean; multiplier: number; explanation: string; source: ModifierSource; key: string; kgMultiplier: number }>
 ): string[] {
   const evidence: string[] = []
 
-  // Modifiers that decreased probability
+  // Modifiers that decreased probability (use KG multiplier, not eval result which is always 1.0)
   for (const mr of modifierResults) {
-    if (mr.applies && mr.multiplier < 1) {
+    if (mr.applies && mr.kgMultiplier < 1) {
       evidence.push(mr.explanation)
     }
   }
@@ -749,7 +755,7 @@ export function projectObservation(
   ]
 
   // Layer 2: Life Record Prior — apply Bayesian modifiers from child's history
-  const projections: ObservationProjection[] = allEntries.map((entry) => {
+  const projections: InternalProjection[] = allEntries.map((entry) => {
     let adjustedProb = entry.baseProbability
 
     const appliedModifiers: ObservationProjection['modifiersApplied'] = []
@@ -780,6 +786,7 @@ export function projectObservation(
       ...evaluateModifier(m, context),
       source: m.source,
       key: m.key,
+      kgMultiplier: m.multiplier,
     }))
 
     const evidenceFor = gatherEvidenceFor(entry, context, modifierResults)
