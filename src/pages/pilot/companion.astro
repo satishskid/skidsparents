@@ -2,18 +2,17 @@
 /**
  * /pilot/companion — SKIDS Companion Pilot
  *
- * Controlled testing environment for the Bayesian projection engine.
- * This page is NOT linked from the main navigation.
- * Access: /pilot/companion (direct URL only)
+ * Twin-record testing: Parent View + Doctor View
  *
- * What this tests:
- * - Parent enters an observation about their child
- * - The Bayesian engine projects probable conditions
- * - Results show: condition name, probability, urgency, evidence, next steps
- * - Doctor can then refine/confirm/dismiss each projection
+ * Parent View: Supportive, guiding, educative — like a caring companion.
+ *   No probabilities, no ICD codes, no condition names that scare.
+ *   Summarizes what was observed, educates, guides next steps.
  *
- * This is the core SKIDS IP — the intelligence that makes SKIDS
- * different from every other child health app.
+ * Doctor View: Full clinical output — probabilities, modifiers, evidence,
+ *   ICD codes, exam points, citations. Plus: what the parent saw and
+ *   what guidance they received (the parent interaction record).
+ *
+ * Same engine, same data — two lenses.
  */
 
 import BaseLayout from '@/layouts/BaseLayout.astro'
@@ -41,9 +40,8 @@ export const prerender = false
           SKIDS Companion
         </h1>
         <p class="mt-3 text-white/40 leading-relaxed max-w-xl">
-          Bayesian projection engine. Enter a parent observation, provide child context,
-          and see what the intelligence engine projects. This is NOT for parents &mdash;
-          this is for controlled clinical validation.
+          Twin-record pilot. Toggle between <strong class="text-white/60">Parent View</strong> (supportive companion)
+          and <strong class="text-white/60">Doctor View</strong> (full clinical projection).
         </p>
       </div>
     </section>
@@ -99,9 +97,11 @@ export const prerender = false
               <button class="sample-obs px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 text-xs hover:bg-gray-200 transition-colors" data-obs="he doesn't respond when I call his name and avoids eye contact">behavioral</button>
               <button class="sample-obs px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 text-xs hover:bg-gray-200 transition-colors" data-obs="she refuses to eat anything except rice and milk">nutrition</button>
               <button class="sample-obs px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 text-xs hover:bg-gray-200 transition-colors" data-obs="my 18-month-old isn't walking yet and seems unsteady">motor delay</button>
+              <button class="sample-obs px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 text-xs hover:bg-gray-200 transition-colors" data-obs="sudden high fever for 3 days with body aches and rash">fever + rash</button>
+              <button class="sample-obs px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 text-xs hover:bg-gray-200 transition-colors" data-obs="my baby cries and turns blue and passes out when angry">breath holding</button>
             </div>
-            <button id="run-projection" class="px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 flex-shrink-0">
-              Run Projection
+            <button id="run-projection" class="px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 flex-shrink-0 ml-3">
+              Run
             </button>
           </div>
         </div>
@@ -114,18 +114,33 @@ export const prerender = false
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              Running Bayesian projection engine...
+              Analysing observation...
             </div>
           </div>
         </div>
 
-        <!-- Results -->
-        <div id="projection-results" class="hidden space-y-4"></div>
+        <!-- View toggle (shown after results) -->
+        <div id="view-toggle" class="hidden">
+          <div class="flex items-center justify-center gap-1 bg-gray-200 rounded-xl p-1 max-w-xs mx-auto">
+            <button id="btn-parent-view" class="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white text-gray-900 shadow-sm">
+              Parent View
+            </button>
+            <button id="btn-doctor-view" class="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-500 hover:text-gray-700">
+              Doctor View
+            </button>
+          </div>
+        </div>
+
+        <!-- Parent View Results -->
+        <div id="parent-results" class="hidden space-y-4"></div>
+
+        <!-- Doctor View Results -->
+        <div id="doctor-results" class="hidden space-y-4"></div>
 
         <!-- Error -->
         <div id="error-state" class="hidden">
           <div class="bg-red-50 rounded-2xl border border-red-200 p-6">
-            <p class="text-red-700 text-sm font-medium">Projection failed</p>
+            <p class="text-red-700 text-sm font-medium">Something went wrong</p>
             <p id="error-message" class="text-red-600 text-sm mt-1"></p>
           </div>
         </div>
@@ -143,8 +158,8 @@ export const prerender = false
 </style>
 
 <script>
-  // ── No auth required for pilot — direct access ──
-  const token = localStorage.getItem('firebase_token') // optional, passed to API if available
+  // ── Init ──
+  const token = localStorage.getItem('firebase_token')
   const pilotInterface = document.getElementById('pilot-interface')!
   pilotInterface.classList.remove('hidden')
 
@@ -156,10 +171,460 @@ export const prerender = false
     })
   })
 
+  // ── View toggle ──
+  let currentView: 'parent' | 'doctor' = 'parent'
+  const viewToggle = document.getElementById('view-toggle')!
+  const btnParent = document.getElementById('btn-parent-view')!
+  const btnDoctor = document.getElementById('btn-doctor-view')!
+  const parentResults = document.getElementById('parent-results')!
+  const doctorResults = document.getElementById('doctor-results')!
+
+  function setView(view: 'parent' | 'doctor') {
+    currentView = view
+    if (view === 'parent') {
+      btnParent.className = 'flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white text-gray-900 shadow-sm'
+      btnDoctor.className = 'flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-500 hover:text-gray-700'
+      parentResults.classList.remove('hidden')
+      doctorResults.classList.add('hidden')
+    } else {
+      btnDoctor.className = 'flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white text-gray-900 shadow-sm'
+      btnParent.className = 'flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-500 hover:text-gray-700'
+      doctorResults.classList.remove('hidden')
+      parentResults.classList.add('hidden')
+    }
+  }
+
+  btnParent.addEventListener('click', () => setView('parent'))
+  btnDoctor.addEventListener('click', () => setView('doctor'))
+
+  // ── Helpers ──
+  function formatAge(months: number): string {
+    if (months < 1) return 'newborn'
+    if (months < 12) return `${months} month${months === 1 ? '' : 's'} old`
+    const years = Math.floor(months / 12)
+    const rem = months % 12
+    if (rem === 0) return `${years} year${years === 1 ? '' : 's'} old`
+    return `${years} year${years === 1 ? '' : 's'} ${rem} month${rem === 1 ? '' : 's'} old`
+  }
+
+  function domainToPlain(domain: string): string {
+    const map: Record<string, string> = {
+      motor: 'Movement & Physical Development',
+      language: 'Speech & Language',
+      hearing: 'Hearing',
+      vision: 'Vision & Eyes',
+      dental: 'Teeth & Oral Health',
+      behavioral: 'Behaviour & Emotions',
+      emotional: 'Emotional Development',
+      cognitive: 'Learning & Thinking',
+      gi_nutrition: 'Feeding & Digestion',
+      growth: 'Growth & Weight',
+      skin: 'Skin & Hair',
+      cardiac: 'Heart & Circulation',
+      respiratory: 'Breathing',
+      neurological: 'Brain & Nerves',
+      musculoskeletal: 'Bones & Joints',
+      endocrine: 'Hormones & Metabolism',
+      urogenital: 'Kidneys & Private Parts',
+      immunological: 'Immunity & Infections',
+      general: 'General Health',
+    }
+    return map[domain] || domain
+  }
+
+  function urgencyToParentMessage(urgency: string): { text: string; className: string } | null {
+    switch (urgency) {
+      case 'emergency':
+        return { text: 'Please see a doctor immediately', className: 'bg-red-50 border-red-200 text-red-800' }
+      case 'urgent':
+        return { text: 'We recommend seeing a doctor soon', className: 'bg-amber-50 border-amber-200 text-amber-800' }
+      case 'soon':
+        return { text: 'Worth discussing at your next doctor visit', className: 'bg-blue-50 border-blue-200 text-blue-700' }
+      default:
+        return null
+    }
+  }
+
+  // ── Render Parent View ──
+  function renderParentView(data: any, observation: string, ageMonths: number) {
+    parentResults.innerHTML = ''
+    const projections = data.projections || []
+    if (projections.length === 0) {
+      parentResults.innerHTML = `
+        <div class="bg-white rounded-2xl border border-gray-200 p-6 text-center">
+          <p class="text-gray-500">We couldn't find specific guidance for this observation. Please try describing it differently, or consult your paediatrician.</p>
+        </div>`
+      return
+    }
+
+    // Separate into: normal variants (reassurance), things to watch, urgent alerts
+    const normals = projections.filter((p: any) => p.category === 'normal_variant' && p.adjustedProbability > 0.3)
+    const urgents = projections.filter((p: any) => (p.urgency === 'emergency' || p.urgency === 'urgent') && p.mustNotMiss && p.matchSource === 'pattern')
+    const watchItems = projections.filter((p: any) =>
+      p.category !== 'normal_variant' && p.matchSource === 'pattern' && p.adjustedProbability >= 0.03 &&
+      !urgents.includes(p)
+    ).slice(0, 3)
+
+    // Domains
+    const domainNames = (data.domainsDetected || []).map((d: string) => domainToPlain(d))
+
+    // 1. Summary — warm, supportive
+    const topNormal = normals[0]
+    const summaryHtml = `
+      <div class="bg-white rounded-2xl border border-gray-200 p-6">
+        <div class="flex items-start gap-3 mb-4">
+          <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+            </svg>
+          </div>
+          <div>
+            <h2 class="font-semibold text-gray-900 text-lg">Here's what we found</h2>
+            <p class="text-sm text-gray-500 mt-0.5">Based on your observation about your ${formatAge(ageMonths)} child</p>
+          </div>
+        </div>
+
+        <div class="bg-gray-50 rounded-xl p-4 mb-4">
+          <p class="text-sm text-gray-600 italic">"${observation}"</p>
+        </div>
+
+        <p class="text-sm text-gray-500">
+          We looked at <strong class="text-gray-700">${domainNames.join(', ')}</strong> based on what you described.
+          ${topNormal ? `<span class="text-green-700 font-medium">The most likely explanation is completely normal for this age.</span>` : ''}
+        </p>
+      </div>
+    `
+    parentResults.innerHTML = summaryHtml
+
+    // 2. Reassurance card (if normal variant is top)
+    if (topNormal) {
+      const reassureCard = document.createElement('div')
+      reassureCard.className = 'bg-green-50 rounded-2xl border border-green-200 p-6'
+      reassureCard.innerHTML = `
+        <div class="flex items-start gap-3 mb-3">
+          <div class="w-8 h-8 rounded-full bg-green-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <svg class="w-4 h-4 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </div>
+          <h3 class="font-semibold text-green-900">Most likely: This is normal</h3>
+        </div>
+        <p class="text-sm text-green-800 leading-relaxed mb-4">${topNormal.parentExplanation}</p>
+        ${topNormal.parentNextSteps?.length ? `
+          <div class="space-y-2">
+            <p class="text-xs font-semibold text-green-700 uppercase tracking-wider">What you can do</p>
+            ${topNormal.parentNextSteps.map((s: string) =>
+              `<div class="flex items-start gap-2">
+                <span class="text-green-500 mt-0.5 flex-shrink-0">&#10140;</span>
+                <p class="text-sm text-green-800">${s}</p>
+              </div>`
+            ).join('')}
+          </div>
+        ` : ''}
+      `
+      parentResults.appendChild(reassureCard)
+    }
+
+    // 3. Urgent alerts (if any pattern-matched must-not-miss)
+    if (urgents.length > 0) {
+      const alertCard = document.createElement('div')
+      alertCard.className = 'bg-red-50 rounded-2xl border border-red-200 p-6'
+      const urgentItems = urgents.slice(0, 3).map((u: any) => {
+        const msg = urgencyToParentMessage(u.urgency)
+        return `
+          <div class="mb-4 last:mb-0">
+            <div class="flex items-start gap-2 mb-2">
+              <span class="text-red-500 mt-0.5 flex-shrink-0">&#9888;</span>
+              <p class="text-sm text-red-900 font-medium">${msg?.text || 'See a doctor'}</p>
+            </div>
+            <p class="text-sm text-red-800 leading-relaxed ml-5">${u.parentExplanation}</p>
+            ${u.parentNextSteps?.length ? `
+              <div class="ml-5 mt-2 space-y-1">
+                ${u.parentNextSteps.slice(0, 3).map((s: string) =>
+                  `<p class="text-xs text-red-700">&#10140; ${s}</p>`
+                ).join('')}
+              </div>
+            ` : ''}
+          </div>
+        `
+      }).join('<hr class="border-red-200 my-3">')
+
+      alertCard.innerHTML = `
+        <div class="flex items-start gap-3 mb-4">
+          <div class="w-8 h-8 rounded-full bg-red-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <svg class="w-4 h-4 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.27 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+            </svg>
+          </div>
+          <h3 class="font-semibold text-red-900">Important: Please watch for these</h3>
+        </div>
+        ${urgentItems}
+      `
+      parentResults.appendChild(alertCard)
+    }
+
+    // 4. Things to watch (non-normal, moderate probability)
+    if (watchItems.length > 0) {
+      const watchCard = document.createElement('div')
+      watchCard.className = 'bg-white rounded-2xl border border-gray-200 p-6'
+      const items = watchItems.map((w: any) => {
+        const urgMsg = urgencyToParentMessage(w.urgency)
+        return `
+          <div class="mb-4 last:mb-0 pb-4 last:pb-0 border-b last:border-b-0 border-gray-100">
+            <p class="text-sm text-gray-800 leading-relaxed mb-2">${w.parentExplanation}</p>
+            ${urgMsg ? `<p class="text-xs font-medium ${urgMsg.className} inline-block px-2.5 py-1 rounded-full mb-2">${urgMsg.text}</p>` : ''}
+            ${w.parentNextSteps?.length ? `
+              <div class="space-y-1 mt-2">
+                ${w.parentNextSteps.slice(0, 2).map((s: string) =>
+                  `<p class="text-xs text-gray-600">&#10140; ${s}</p>`
+                ).join('')}
+              </div>
+            ` : ''}
+          </div>
+        `
+      }).join('')
+
+      watchCard.innerHTML = `
+        <div class="flex items-start gap-3 mb-4">
+          <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+            </svg>
+          </div>
+          <h3 class="font-semibold text-gray-900">Other things worth knowing</h3>
+        </div>
+        ${items}
+      `
+      parentResults.appendChild(watchCard)
+    }
+
+    // 5. Clarifying questions
+    if (data.clarifyingQuestions?.length) {
+      const qCard = document.createElement('div')
+      qCard.className = 'bg-blue-50 rounded-2xl border border-blue-200 p-6'
+      qCard.innerHTML = `
+        <div class="flex items-start gap-3 mb-3">
+          <div class="w-8 h-8 rounded-full bg-blue-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <svg class="w-4 h-4 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <h3 class="font-semibold text-blue-900">Can you help us understand better?</h3>
+        </div>
+        <div class="space-y-2 ml-11">
+          ${data.clarifyingQuestions.slice(0, 5).map((q: string) =>
+            `<p class="text-sm text-blue-800">&#8226; ${q}</p>`
+          ).join('')}
+        </div>
+      `
+      parentResults.appendChild(qCard)
+    }
+
+    // 6. Footer
+    const footer = document.createElement('div')
+    footer.className = 'bg-gray-100 rounded-2xl p-5 text-center'
+    footer.innerHTML = `
+      <p class="text-xs text-gray-500 leading-relaxed">
+        SKIDS Companion provides educational guidance based on population-level health data.
+        It does <strong>not</strong> diagnose conditions. Always consult your paediatrician
+        for medical advice specific to your child.
+      </p>
+    `
+    parentResults.appendChild(footer)
+  }
+
+  // ── Render Doctor View ──
+  function renderDoctorView(data: any, observation: string, ageMonths: number) {
+    doctorResults.innerHTML = ''
+    const projections = data.projections || []
+
+    // Parent interaction record (what the doctor sees about parent's journey)
+    const interactionHtml = `
+      <div class="bg-indigo-50 rounded-2xl border border-indigo-200 p-6">
+        <h2 class="text-sm font-semibold text-indigo-400 uppercase tracking-wider mb-3">Parent Interaction Record</h2>
+        <div class="space-y-2 text-sm">
+          <div class="flex gap-2">
+            <span class="text-indigo-400 font-medium min-w-[100px]">Observation:</span>
+            <span class="text-indigo-900 italic">"${observation}"</span>
+          </div>
+          <div class="flex gap-2">
+            <span class="text-indigo-400 font-medium min-w-[100px]">Child age:</span>
+            <span class="text-indigo-900">${formatAge(ageMonths)}</span>
+          </div>
+          <div class="flex gap-2">
+            <span class="text-indigo-400 font-medium min-w-[100px]">Domains:</span>
+            <span class="text-indigo-900">${(data.domainsDetected || []).join(', ')}</span>
+          </div>
+          <div class="flex gap-2">
+            <span class="text-indigo-400 font-medium min-w-[100px]">Guidance given:</span>
+            <span class="text-indigo-900">${
+              projections.filter((p: any) => p.category === 'normal_variant' && p.adjustedProbability > 0.3).length > 0
+                ? 'Reassured (normal variant likely). '
+                : ''
+            }${
+              projections.filter((p: any) => (p.urgency === 'emergency' || p.urgency === 'urgent') && p.mustNotMiss && p.matchSource === 'pattern').length > 0
+                ? 'Alerted to seek medical attention. '
+                : ''
+            }Parent next steps provided.</span>
+          </div>
+        </div>
+      </div>
+    `
+    doctorResults.innerHTML = interactionHtml
+
+    // Clinical meta
+    const metaHtml = `
+      <div class="bg-white rounded-2xl border border-gray-200 p-6">
+        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Projection Summary</h2>
+        <div class="grid sm:grid-cols-4 gap-4 text-sm">
+          <div>
+            <span class="text-gray-400 text-xs">Domains</span>
+            <p class="font-medium text-gray-900">${(data.domainsDetected || []).join(', ') || 'None'}</p>
+          </div>
+          <div>
+            <span class="text-gray-400 text-xs">Conditions</span>
+            <p class="font-medium text-gray-900">${data.projectionsCount || 0}</p>
+          </div>
+          <div>
+            <span class="text-gray-400 text-xs">Confidence</span>
+            <p class="font-medium text-gray-900">${data.confidence ? (data.confidence * 100).toFixed(0) + '%' : 'N/A'}</p>
+          </div>
+          <div>
+            <span class="text-gray-400 text-xs">Computed</span>
+            <p class="font-medium text-gray-900">${data.computedAt ? new Date(data.computedAt).toLocaleTimeString() : 'N/A'}</p>
+          </div>
+        </div>
+        ${data.clarifyingQuestions?.length ? `
+          <div class="mt-4 pt-4 border-t border-gray-100">
+            <span class="text-gray-400 text-xs">Clarifying questions sent to parent</span>
+            <ul class="mt-1 space-y-1">
+              ${data.clarifyingQuestions.map((q: string) => `<li class="text-sm text-gray-600">&#8226; ${q}</li>`).join('')}
+            </ul>
+          </div>
+        ` : ''}
+      </div>
+    `
+    doctorResults.innerHTML += metaHtml
+
+    // Each projection — full clinical detail
+    projections.forEach((proj: any) => {
+      const urgencyColor = proj.urgency === 'emergency' ? 'text-red-700 bg-red-100 font-bold' :
+                          proj.urgency === 'urgent' ? 'text-red-600 bg-red-50' :
+                          proj.urgency === 'soon' ? 'text-amber-600 bg-amber-50' :
+                          'text-gray-600 bg-gray-50'
+      const probPct = (proj.adjustedProbability * 100).toFixed(1)
+      const basePct = (proj.baseProbability * 100).toFixed(1)
+      const mustNotMiss = proj.mustNotMiss
+        ? '<span class="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold uppercase">Must not miss</span>'
+        : ''
+      const matchBadge = proj.matchSource === 'safety-net'
+        ? '<span class="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-bold uppercase">Safety net</span>'
+        : '<span class="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold uppercase">Pattern match</span>'
+
+      const card = document.createElement('div')
+      card.className = 'bg-white rounded-2xl border border-gray-200 overflow-hidden'
+      card.innerHTML = `
+        <div class="p-6">
+          <div class="flex items-start justify-between gap-3 mb-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1 flex-wrap">
+                <h3 class="font-semibold text-gray-900">${proj.conditionName}</h3>
+                ${matchBadge}
+                ${mustNotMiss}
+              </div>
+              <p class="text-xs text-gray-400">${proj.domain} &#183; ${proj.category} ${proj.icd10 ? '&#183; ' + proj.icd10 : ''}</p>
+            </div>
+            <div class="text-right flex-shrink-0">
+              <div class="text-2xl font-bold text-gray-900">${probPct}%</div>
+              <div class="text-[10px] text-gray-400">base: ${basePct}%</div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 mb-4">
+            <span class="px-2 py-0.5 rounded-full ${urgencyColor} text-[10px] font-semibold uppercase">${proj.urgency}</span>
+          </div>
+
+          <p class="text-sm text-gray-600 leading-relaxed mb-4">${proj.parentExplanation || ''}</p>
+
+          <details class="group">
+            <summary class="text-xs font-medium text-gray-400 cursor-pointer hover:text-gray-600 transition-colors">
+              Clinical details
+            </summary>
+            <div class="mt-3 space-y-3 text-xs">
+              ${proj.evidenceFor?.length ? `
+                <div>
+                  <span class="font-semibold text-green-700">Evidence for:</span>
+                  <ul class="mt-1 space-y-0.5 text-gray-600">
+                    ${proj.evidenceFor.map((e: string) => `<li>+ ${e}</li>`).join('')}
+                  </ul>
+                </div>
+              ` : ''}
+              ${proj.evidenceAgainst?.length ? `
+                <div>
+                  <span class="font-semibold text-red-700">Evidence against:</span>
+                  <ul class="mt-1 space-y-0.5 text-gray-600">
+                    ${proj.evidenceAgainst.map((e: string) => `<li>- ${e}</li>`).join('')}
+                  </ul>
+                </div>
+              ` : ''}
+              ${proj.modifiersApplied?.length ? `
+                <div>
+                  <span class="font-semibold text-blue-700">Modifiers applied:</span>
+                  <ul class="mt-1 space-y-0.5 text-gray-600">
+                    ${proj.modifiersApplied.map((m: any) =>
+                      `<li>${m.source}: ${m.explanation} (&times;${m.multiplier})</li>`
+                    ).join('')}
+                  </ul>
+                </div>
+              ` : ''}
+              ${proj.ruleOutBefore?.length ? `
+                <div>
+                  <span class="font-semibold text-orange-700">Rule out first:</span>
+                  <p class="mt-1 text-gray-600">${proj.ruleOutBefore.join(', ')}</p>
+                </div>
+              ` : ''}
+              ${proj.doctorExamPoints?.length ? `
+                <div>
+                  <span class="font-semibold text-gray-700">Examination points:</span>
+                  <ul class="mt-1 space-y-0.5 text-gray-600">
+                    ${proj.doctorExamPoints.map((s: string) => `<li>&#10140; ${s}</li>`).join('')}
+                  </ul>
+                </div>
+              ` : ''}
+              ${proj.parentNextSteps?.length ? `
+                <div>
+                  <span class="font-semibold text-gray-700">Guidance sent to parent:</span>
+                  <ul class="mt-1 space-y-0.5 text-gray-500 italic">
+                    ${proj.parentNextSteps.map((s: string) => `<li>&#10140; ${s}</li>`).join('')}
+                  </ul>
+                </div>
+              ` : ''}
+              ${proj.citation ? `
+                <div>
+                  <span class="font-semibold text-gray-700">Citation:</span>
+                  <p class="text-gray-500 mt-0.5">${proj.citation}</p>
+                </div>
+              ` : ''}
+            </div>
+          </details>
+        </div>
+      `
+      doctorResults.appendChild(card)
+    })
+
+    if (projections.length === 0) {
+      doctorResults.innerHTML += `
+        <div class="bg-white rounded-2xl border border-gray-200 p-6 text-center">
+          <p class="text-gray-500">No conditions projected for this observation.</p>
+        </div>
+      `
+    }
+  }
+
   // ── Run projection ──
   const runBtn = document.getElementById('run-projection') as HTMLButtonElement
   const loadingState = document.getElementById('loading-state')!
-  const resultsDiv = document.getElementById('projection-results')!
   const errorState = document.getElementById('error-state')!
   const errorMsg = document.getElementById('error-message')!
 
@@ -175,8 +640,11 @@ export const prerender = false
     // Show loading
     runBtn.disabled = true
     loadingState.classList.remove('hidden')
-    resultsDiv.classList.add('hidden')
-    resultsDiv.innerHTML = ''
+    viewToggle.classList.add('hidden')
+    parentResults.classList.add('hidden')
+    doctorResults.classList.add('hidden')
+    parentResults.innerHTML = ''
+    doctorResults.innerHTML = ''
     errorState.classList.add('hidden')
 
     try {
@@ -201,154 +669,14 @@ export const prerender = false
         throw new Error(data.error || `HTTP ${res.status}`)
       }
 
-      // Render results
+      // Render both views
       loadingState.classList.add('hidden')
-      resultsDiv.classList.remove('hidden')
+      renderParentView(data, observation, ageMonths)
+      renderDoctorView(data, observation, ageMonths)
 
-      // Meta info
-      const metaHtml = `
-        <div class="bg-white rounded-2xl border border-gray-200 p-6">
-          <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Projection Summary</h2>
-          <div class="grid sm:grid-cols-4 gap-4 text-sm">
-            <div>
-              <span class="text-gray-400 text-xs">Domains detected</span>
-              <p class="font-medium text-gray-900">${(data.domainsDetected || []).join(', ') || 'None'}</p>
-            </div>
-            <div>
-              <span class="text-gray-400 text-xs">Conditions projected</span>
-              <p class="font-medium text-gray-900">${data.projectionsCount || 0}</p>
-            </div>
-            <div>
-              <span class="text-gray-400 text-xs">Confidence</span>
-              <p class="font-medium text-gray-900">${data.confidence ? (data.confidence * 100).toFixed(0) + '%' : 'N/A'}</p>
-            </div>
-            <div>
-              <span class="text-gray-400 text-xs">Computed at</span>
-              <p class="font-medium text-gray-900">${data.computedAt ? new Date(data.computedAt).toLocaleTimeString() : 'N/A'}</p>
-            </div>
-          </div>
-          ${data.clarifyingQuestions?.length ? `
-            <div class="mt-4 pt-4 border-t border-gray-100">
-              <span class="text-gray-400 text-xs">Clarifying questions for parent</span>
-              <ul class="mt-1 space-y-1">
-                ${data.clarifyingQuestions.map((q: string) => `<li class="text-sm text-gray-600">• ${q}</li>`).join('')}
-              </ul>
-            </div>
-          ` : ''}
-        </div>
-      `
-      resultsDiv.innerHTML = metaHtml
-
-      // Each projection
-      const projections = data.projections || []
-      projections
-        .sort((a: any, b: any) => b.adjustedProbability - a.adjustedProbability)
-        .forEach((proj: any) => {
-          const urgencyColor = proj.urgency === 'emergency' ? 'text-red-700 bg-red-100 font-bold' :
-                              proj.urgency === 'urgent' ? 'text-red-600 bg-red-50' :
-                              proj.urgency === 'soon' ? 'text-amber-600 bg-amber-50' :
-                              'text-gray-600 bg-gray-50'
-          const probPct = (proj.adjustedProbability * 100).toFixed(1)
-          const basePct = (proj.baseProbability * 100).toFixed(1)
-          const mustNotMiss = proj.mustNotMiss
-            ? '<span class="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold uppercase">Must not miss</span>'
-            : ''
-          const matchBadge = proj.matchSource === 'safety-net'
-            ? '<span class="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-bold uppercase">Safety net</span>'
-            : '<span class="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold uppercase">Pattern match</span>'
-
-          const card = document.createElement('div')
-          card.className = 'bg-white rounded-2xl border border-gray-200 overflow-hidden'
-          card.innerHTML = `
-            <div class="p-6">
-              <div class="flex items-start justify-between gap-3 mb-3">
-                <div>
-                  <div class="flex items-center gap-2 mb-1">
-                    <h3 class="font-semibold text-gray-900">${proj.conditionName}</h3>
-                    ${matchBadge}
-                    ${mustNotMiss}
-                  </div>
-                  <p class="text-xs text-gray-400">${proj.domain} · ${proj.category} ${proj.icd10 ? '· ' + proj.icd10 : ''}</p>
-                </div>
-                <div class="text-right flex-shrink-0">
-                  <div class="text-2xl font-bold text-gray-900">${probPct}%</div>
-                  <div class="text-[10px] text-gray-400">base: ${basePct}%</div>
-                </div>
-              </div>
-
-              <div class="flex items-center gap-2 mb-4">
-                <span class="px-2 py-0.5 rounded-full ${urgencyColor} text-[10px] font-semibold uppercase">${proj.urgency}</span>
-              </div>
-
-              <p class="text-sm text-gray-600 leading-relaxed mb-4">${proj.parentExplanation || ''}</p>
-
-              <details class="group">
-                <summary class="text-xs font-medium text-gray-400 cursor-pointer hover:text-gray-600 transition-colors">
-                  Show evidence & details
-                </summary>
-                <div class="mt-3 space-y-3 text-xs">
-                  ${proj.evidenceFor?.length ? `
-                    <div>
-                      <span class="font-semibold text-green-700">Evidence for:</span>
-                      <ul class="mt-1 space-y-0.5 text-gray-600">
-                        ${proj.evidenceFor.map((e: string) => `<li>+ ${e}</li>`).join('')}
-                      </ul>
-                    </div>
-                  ` : ''}
-                  ${proj.evidenceAgainst?.length ? `
-                    <div>
-                      <span class="font-semibold text-red-700">Evidence against:</span>
-                      <ul class="mt-1 space-y-0.5 text-gray-600">
-                        ${proj.evidenceAgainst.map((e: string) => `<li>- ${e}</li>`).join('')}
-                      </ul>
-                    </div>
-                  ` : ''}
-                  ${proj.modifiersApplied?.length ? `
-                    <div>
-                      <span class="font-semibold text-blue-700">Modifiers applied:</span>
-                      <ul class="mt-1 space-y-0.5 text-gray-600">
-                        ${proj.modifiersApplied.map((m: any) =>
-                          `<li>${m.source}: ${m.explanation} (×${m.multiplier})</li>`
-                        ).join('')}
-                      </ul>
-                    </div>
-                  ` : ''}
-                  ${proj.parentNextSteps?.length ? `
-                    <div>
-                      <span class="font-semibold text-gray-700">Parent next steps:</span>
-                      <ul class="mt-1 space-y-0.5 text-gray-600">
-                        ${proj.parentNextSteps.map((s: string) => `<li>→ ${s}</li>`).join('')}
-                      </ul>
-                    </div>
-                  ` : ''}
-                  ${proj.doctorExamPoints?.length ? `
-                    <div>
-                      <span class="font-semibold text-gray-700">Doctor exam points:</span>
-                      <ul class="mt-1 space-y-0.5 text-gray-600">
-                        ${proj.doctorExamPoints.map((s: string) => `<li>→ ${s}</li>`).join('')}
-                      </ul>
-                    </div>
-                  ` : ''}
-                  ${proj.citation ? `
-                    <div>
-                      <span class="font-semibold text-gray-700">Citation:</span>
-                      <p class="text-gray-500 mt-0.5">${proj.citation}</p>
-                    </div>
-                  ` : ''}
-                </div>
-              </details>
-            </div>
-          `
-          resultsDiv.appendChild(card)
-        })
-
-      if (projections.length === 0) {
-        resultsDiv.innerHTML += `
-          <div class="bg-white rounded-2xl border border-gray-200 p-6 text-center">
-            <p class="text-gray-500">No conditions projected for this observation.</p>
-          </div>
-        `
-      }
+      // Show toggle and current view
+      viewToggle.classList.remove('hidden')
+      setView(currentView)
 
     } catch (err: any) {
       loadingState.classList.add('hidden')
