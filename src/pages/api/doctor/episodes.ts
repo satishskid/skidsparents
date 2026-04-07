@@ -10,6 +10,7 @@
 
 import type { APIRoute } from 'astro'
 import { getEnv } from '@/lib/runtime/env'
+import { createNotification } from '@/lib/notifications/service'
 
 export const prerender = false
 
@@ -142,8 +143,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     // Verify doctor owns this episode
     const episode = await env.DB.prepare(
-      `SELECT id, pathway, status FROM care_episodes WHERE id = ? AND doctor_id = ?`
-    ).bind(body.episodeId, doctorId).first()
+      `SELECT id, pathway, status, parent_id, child_id FROM care_episodes WHERE id = ? AND doctor_id = ?`
+    ).bind(body.episodeId, doctorId).first() as { id: string; pathway: string; status: string; parent_id: string; child_id: string } | null
 
     if (!episode) {
       return new Response(JSON.stringify({ error: 'Episode not found or not assigned to you' }), { status: 404 })
@@ -164,7 +165,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
          WHERE id = ?`
       ).bind(body.responseText.trim(), body.episodeId).run()
 
-      // TODO: Trigger push notification to parent: "Your doctor reviewed [child]'s record"
+      // Notify parent that doctor responded
+      try {
+        await createNotification(env.DB, {
+          parentId: episode.parent_id,
+          childId: episode.child_id,
+          type: 'service_update',
+          title: 'Your doctor reviewed your concern',
+          body: 'Your pediatrician has reviewed your child\'s record and sent you guidance. Tap to read.',
+          actionUrl: `/care/episode/${body.episodeId}`,
+          dataJson: { episodeId: body.episodeId, action: 'ped_response' },
+        })
+      } catch { /* notification failure is non-blocking */ }
 
       return new Response(JSON.stringify({ updated: true, status: 'resolved' }), {
         headers: { 'Content-Type': 'application/json' },
@@ -195,7 +207,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
          WHERE id = ?`
       ).bind(newPathway, body.episodeId).run()
 
-      // TODO: Notify parent of escalation
+      // Notify parent of escalation
+      try {
+        const msg = newPathway === '5_inperson'
+          ? 'Your pediatrician would like to see your child in person. Please book a visit.'
+          : 'Your pediatrician would like to schedule a consultation. Tap for details.'
+        await createNotification(env.DB, {
+          parentId: episode.parent_id,
+          childId: episode.child_id,
+          type: 'service_update',
+          title: 'Your doctor wants to connect',
+          body: msg,
+          actionUrl: `/care/episode/${body.episodeId}`,
+          dataJson: { episodeId: body.episodeId, action: 'ped_escalation', pathway: newPathway },
+        })
+      } catch { /* non-blocking */ }
 
       return new Response(JSON.stringify({ updated: true, pathway: newPathway }), {
         headers: { 'Content-Type': 'application/json' },
@@ -213,7 +239,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
          WHERE id = ?`
       ).bind(newPathway, body.episodeId).run()
 
-      // TODO: Create service_order and link via linked_order_id
+      // Notify parent of scheduling
+      try {
+        const msg = body.scheduleType === 'inperson'
+          ? 'Your pediatrician has requested an in-person visit. Tap to book your appointment.'
+          : 'Your pediatrician has requested a video consultation. Tap to book a time.'
+        await createNotification(env.DB, {
+          parentId: episode.parent_id,
+          childId: episode.child_id,
+          type: 'service_update',
+          title: body.scheduleType === 'inperson' ? 'In-person visit requested' : 'Video consultation requested',
+          body: msg,
+          actionUrl: `/care/episode/${body.episodeId}`,
+          dataJson: { episodeId: body.episodeId, action: 'ped_schedule', scheduleType: body.scheduleType },
+        })
+      } catch { /* non-blocking */ }
+
+      // TODO: Phase 4 — Create service_order and link via linked_order_id
 
       return new Response(JSON.stringify({ updated: true, pathway: newPathway, status: 'awaiting_ped' }), {
         headers: { 'Content-Type': 'application/json' },

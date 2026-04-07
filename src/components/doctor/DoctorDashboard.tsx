@@ -3,6 +3,7 @@ import { useAuth } from '@/lib/hooks/useAuth'
 import DoctorNavbar from './DoctorNavbar'
 import LinkPatientModal from './LinkPatientModal'
 import PatientPHRView from './PatientPHRView'
+import CareQueue from './CareQueue'
 
 interface Patient {
   link_id: string
@@ -35,6 +36,7 @@ export default function DoctorDashboard() {
   const [selectedChild, setSelectedChild] = useState<{ id: string; name: string } | null>(null)
   const [search, setSearch] = useState('')
   const [escalationCounts, setEscalationCounts] = useState<Record<string, number>>({})
+  const [activeTab, setActiveTab] = useState<'patients' | 'care-queue'>('patients')
 
   useEffect(() => {
     if (token) {
@@ -121,6 +123,37 @@ export default function DoctorDashboard() {
       <DoctorNavbar />
 
       <main className="max-w-4xl mx-auto px-4 py-6">
+        {/* Tab Navigation */}
+        <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 mb-6">
+          <button
+            onClick={() => setActiveTab('patients')}
+            className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'patients'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Patient Panel
+          </button>
+          <button
+            onClick={() => setActiveTab('care-queue')}
+            className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all relative ${
+              activeTab === 'care-queue'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Care Queue
+          </button>
+        </div>
+
+        {/* Care Queue Tab */}
+        {activeTab === 'care-queue' && token && (
+          <CareQueue token={token} />
+        )}
+
+        {/* Patient Panel Tab */}
+        {activeTab === 'patients' && <>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -239,6 +272,7 @@ export default function DoctorDashboard() {
             ))}
           </div>
         )}
+        </>}
       </main>
 
       {/* Link Modal */}
