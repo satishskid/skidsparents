@@ -26,6 +26,14 @@
     "binding": "AI"
   },
 
+  // Cloudflare Vectorize (blog RAG search)
+  "vectorize": [
+    {
+      "binding": "VECTORIZE",
+      "index_name": "skids-blog-index"
+    }
+  ],
+
   // Environment variables (non-secret)
   "vars": {
     "FIREBASE_PROJECT_ID": "skidsparent",
