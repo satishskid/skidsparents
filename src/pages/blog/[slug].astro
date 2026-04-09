@@ -11,21 +11,41 @@ export const prerender = false  // SSR — dynamic route
 
 const { slug } = Astro.params
 
-// Fetch all blogs and find matching one
+// Fetch individual blog (returns full content) + all blogs for related articles
 let blog: any = null
 let relatedBlogs: any[] = []
 try {
-  const res = await fetch('https://9vhd0onw23.execute-api.ap-south-1.amazonaws.com/published-blogs')
-  if (res.ok) {
-    const blogs = (await res.json()) as any[]
-    blog = blogs.find((b: any) => b.blogId === slug)
-    if (blog) {
-      // Get related blogs from same category (up to 3)
-      relatedBlogs = blogs
-        .filter((b: any) => b.blogId !== slug && b.category === blog.category)
-        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .slice(0, 3)
+  const [singleRes, listRes] = await Promise.all([
+    fetch(`https://9vhd0onw23.execute-api.ap-south-1.amazonaws.com/blog/${slug}`),
+    fetch('https://9vhd0onw23.execute-api.ap-south-1.amazonaws.com/published-blogs'),
+  ])
+
+  // Parse list once for reuse
+  const allBlogs: any[] = listRes.ok ? await listRes.json() as any[] : []
+
+  // Single blog endpoint returns { status, data } with full HTML content in description
+  if (singleRes.ok) {
+    const singleData = (await singleRes.json()) as { status: number; data: any }
+    if (singleData.data) {
+      blog = singleData.data
+      // The single endpoint returns content in 'description' as HTML string
+      if (typeof blog.description === 'string') {
+        blog.content = blog.description
+      }
     }
+  }
+
+  // Fallback: if single endpoint fails, find in the list
+  if (!blog) {
+    blog = allBlogs.find((b: any) => b.blogId === slug)
+  }
+
+  // Get related blogs from the list
+  if (blog && allBlogs.length > 0) {
+    relatedBlogs = allBlogs
+      .filter((b: any) => b.blogId !== slug && b.category === blog.category)
+      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 3)
   }
 } catch {
   // Fallback
